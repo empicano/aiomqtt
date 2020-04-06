@@ -80,7 +80,6 @@ class Client:
             return
         # Create event for when the on_publish callback is called
         confirmation = asyncio.Event()
-        MQTT_LOGGER.error(f'message id: {info.mid}')
         with self._pending_call(info.mid, confirmation):
             # Wait for confirmation
             await asyncio.wait_for(confirmation.wait(), timeout=timeout)
