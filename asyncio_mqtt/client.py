@@ -71,12 +71,16 @@ class Client:
             await asyncio.wait_for(confirmation.wait(), timeout=timeout)
 
     async def publish(self, *args, timeout=10):
-        info = self._client.publish(*args)
+        info = self._client.publish(*args)  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttError(info.rc, 'Could not publish message')
+        # Early out on immediate success
+        if info.is_published():
+            return
         # Create event for when the on_publish callback is called
         confirmation = asyncio.Event()
+        MQTT_LOGGER.error(f'message id: {info.mid}')
         with self._pending_call(info.mid, confirmation):
             # Wait for confirmation
             await asyncio.wait_for(confirmation.wait(), timeout=timeout)
@@ -186,7 +190,10 @@ class Client:
         try:
             self._pending_calls.pop(mid).set()
         except KeyError:
-            MQTT_LOGGER.error(f'Unexpected message ID "{mid}" in on_publish callback')
+            # Do nothing since [2] may return call on_publish before it even returns.
+            # That is, the message may already be published before we even get a
+            # chance to set up the 'pending_call' logic.
+            pass
 
     def _on_socket_open(self, client, userdata, sock):
         def cb():
