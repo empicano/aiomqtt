@@ -23,6 +23,10 @@ asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://githu
 
 The whole thing is less than [250 lines of code](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/asyncio_mqtt/client.py).
 
+## Installation 📚
+
+`pip install asyncio-mqtt`
+
 ## Advanced use ⚡
 
 Let's make the example from before more interesting:
@@ -84,7 +88,9 @@ Is asyncio-mqtt not what you are looking for? Try another client:
 
 This is not an exhaustive list.
 
-## Dependencies
+## Requirements
+
+Python 3.7 or later.
 
 There is only a single dependency:
 
