@@ -70,8 +70,8 @@ class Client:
             # Wait for confirmation
             await asyncio.wait_for(confirmation.wait(), timeout=timeout)
 
-    async def publish(self, topic, message, qos, *, timeout=10):
-        info = self._client.publish(topic, message, qos)
+    async def publish(self, *args, timeout=10):
+        info = self._client.publish(*args)
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttError(info.rc, 'Could not publish message')
