@@ -88,6 +88,9 @@ Is asyncio-mqtt not what you are looking for? Try another client:
  * [aiomqtt](https://github.com/mossblaser/aiomqtt) - Direct wrapper around paho-mqtt.  
    ![GitHub stars](https://img.shields.io/github/stars/mossblaser/aiomqtt)
    ![license](https://img.shields.io/github/license/mossblaser/aiomqtt)
+ * [mqttools](https://github.com/eerimoq/mqttools) - Own protocol implementation. No dependencies.  
+   ![GitHub stars](https://img.shields.io/github/stars/eerimoq/mqttools)
+   ![license](https://img.shields.io/github/license/eerimoq/mqttools)
  * [aio-mqtt](https://github.com/NotJustAToy/aio-mqtt) - Own protocol implementation. No dependencies.  
    ![GitHub stars](https://img.shields.io/github/stars/NotJustAToy/aio-mqtt)
    ![license](https://img.shields.io/github/license/NotJustAToy/aio-mqtt)
