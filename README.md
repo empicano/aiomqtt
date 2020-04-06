@@ -95,6 +95,6 @@ There is only a single dependency:
 
 ![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
 
-Note that paho-mqtt is dual-licensed. One of the licenses is the so-called [Eclipse Distribution License v1.0](https://www.eclipse.org/org/documents/edl-v10.php). It is almost word-for-word identical to the [BSD 3-clause License](https://opensource.org/licenses/BSD-3-Clause). There only differences are:
+Note that the underlying paho-mqtt library is dual-licensed. One of the licenses is the so-called [Eclipse Distribution License v1.0](https://www.eclipse.org/org/documents/edl-v10.php). It is almost word-for-word identical to the [BSD 3-clause License](https://opensource.org/licenses/BSD-3-Clause). The only differences are:
  * One use of "COPYRIGHT OWNER" (EDL) instead of "COPYRIGHT HOLDER" (BSD)
  * One use of "Eclipse Foundation, Inc." (EDL) instead of "copyright holder" (bsd)
