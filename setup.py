@@ -4,6 +4,9 @@ from setuptools import setup, find_packages
 with open('asyncio_mqtt/version.py', 'r') as f:
     exec(f.read())
 
+with open('README.md', 'r') as readme_file:
+    readme = readme_file.read()
+
 setup(
     name='asyncio_mqtt',
     version=__version__,
@@ -12,6 +15,8 @@ setup(
     author='Frederik Aalund',
     author_email='fpa@sbtinstruments.com',
     description='Idomatic asyncio wrapper around paho-mqtt.',
+    long_description=readme,
+    long_description_content_type='text/markdown',
     license='BSD 3-clause License',
     classifiers=[
         'Development Status :: 3 - Alpha',
