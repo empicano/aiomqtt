@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 from setuptools import setup, find_packages
 
 with open('asyncio_mqtt/version.py', 'r') as f:
@@ -11,7 +12,7 @@ setup(
     author='Frederik Aalund',
     author_email='fpa@sbtinstruments.com',
     description='Idomatic asyncio wrapper around paho-mqtt.',
-    license='Eclipse Public License v1.0 / Eclipse Distribution License v1.0',
+    license='BSD 3-clause License',
     classifiers=[
         'Development Status :: 3 - Alpha',
 

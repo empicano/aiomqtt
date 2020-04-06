@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 import asyncio
 import logging
 import socket
