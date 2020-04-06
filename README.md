@@ -79,12 +79,18 @@ asyncio.run(main())
 
 Is asyncio-mqtt not what you are looking for? Try another client:
 
- * [hbmqtt](https://github.com/beerfactory/hbmqtt) - Includes a broker  
-   ![GitHub stars](https://img.shields.io/github/stars/beerfactory/hbmqtt) ![license](https://img.shields.io/github/license/beerfactory/hbmqtt)
- * [aiomqtt](https://github.com/mossblaser/aiomqtt) - Direct wrapper around paho-mqtt  
-   ![GitHub stars](https://img.shields.io/github/stars/mossblaser/aiomqtt) ![license](https://img.shields.io/github/license/mossblaser/aiomqtt)
- * [aio-mqtt](https://github.com/NotJustAToy/aio-mqtt) - Written from scratch  
-   ![GitHub stars](https://img.shields.io/github/stars/NotJustAToy/aio-mqtt) ![license](https://img.shields.io/github/license/NotJustAToy/aio-mqtt)
+ * [hbmqtt](https://github.com/beerfactory/hbmqtt) - Own protocol implementation. Includes a broker.  
+   ![GitHub stars](https://img.shields.io/github/stars/beerfactory/hbmqtt)
+   ![license](https://img.shields.io/github/license/beerfactory/hbmqtt)
+ * [gmqtt](https://github.com/wialon/gmqtt) - Own protocol implementation. No dependencies.  
+   ![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt)
+   ![license](https://img.shields.io/github/license/wialon/gmqtt)
+ * [aiomqtt](https://github.com/mossblaser/aiomqtt) - Direct wrapper around paho-mqtt.  
+   ![GitHub stars](https://img.shields.io/github/stars/mossblaser/aiomqtt)
+   ![license](https://img.shields.io/github/license/mossblaser/aiomqtt)
+ * [aio-mqtt](https://github.com/NotJustAToy/aio-mqtt) - Own protocol implementation. No dependencies.  
+   ![GitHub stars](https://img.shields.io/github/stars/NotJustAToy/aio-mqtt)
+   ![license](https://img.shields.io/github/license/NotJustAToy/aio-mqtt)
 
 This is not an exhaustive list.
 
