@@ -1,4 +1,5 @@
 ![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
+![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
 
 # MQTT client with idiomatic asyncio interface 🙌
 
@@ -13,13 +14,13 @@ async with Client('test.mosquitto.org') as client:
             print(message.decode())
 ```
 
+asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
+
 * No more callbacks! 👍
 * No more return codes (welcome to the `MqttError`)
 * Graceful disconnection (forget about `on_unsubscribe`, `on_disconnect`, etc.)
 * Compatible with `async` code
 * Did we mention no more callbacks?
-
-asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
 
 The whole thing is less than [250 lines of code](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/asyncio_mqtt/client.py).
 
