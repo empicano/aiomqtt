@@ -86,7 +86,7 @@ Is asyncio-mqtt not what you are looking for? Try another client:
  * [gmqtt](https://github.com/wialon/gmqtt) - Own protocol implementation. No dependencies.  
    ![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt)
    ![license](https://img.shields.io/github/license/wialon/gmqtt)
- * [aiomqtt](https://github.com/mossblaser/aiomqtt) - Direct wrapper around paho-mqtt.  
+ * [aiomqtt](https://github.com/mossblaser/aiomqtt) - Wrapper around paho-mqtt.  
    ![GitHub stars](https://img.shields.io/github/stars/mossblaser/aiomqtt)
    ![license](https://img.shields.io/github/license/mossblaser/aiomqtt)
  * [mqttools](https://github.com/eerimoq/mqttools) - Own protocol implementation. No dependencies.  
@@ -97,6 +97,12 @@ Is asyncio-mqtt not what you are looking for? Try another client:
    ![license](https://img.shields.io/github/license/NotJustAToy/aio-mqtt)
 
 This is not an exhaustive list.
+
+### Honorable mentions
+
+ * [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) - Trio-based. Wrapper around paho-mqtt.  
+   ![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt)
+   ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
 
 ## Requirements
 
