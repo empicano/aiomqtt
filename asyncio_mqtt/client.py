@@ -189,7 +189,7 @@ class Client:
         try:
             self._pending_calls.pop(mid).set()
         except KeyError:
-            # Do nothing since [2] may return call on_publish before it even returns.
+            # Do nothing since [2] may call on_publish before it even returns.
             # That is, the message may already be published before we even get a
             # chance to set up the 'pending_call' logic.
             pass
