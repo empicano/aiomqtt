@@ -140,8 +140,7 @@ class Client:
                 yield await messages.get()
         return _put_in_queue, _message_generator()
 
-    @asynccontextmanager
-    def _wait_for(self, *args, **kwargs):
+    async def _wait_for(self, *args, **kwargs):
         try:
             return await asyncio.wait_for(*args, **kwargs)
         except asyncio.TimeoutError:
