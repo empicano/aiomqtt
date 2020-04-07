@@ -4,7 +4,7 @@ import logging
 import socket
 from contextlib import asynccontextmanager, contextmanager, suppress
 import paho.mqtt.client as mqtt
-from .error import MqttError
+from .error import MqttError, MqttCodeError
 
 
 MQTT_LOGGER = logging.getLogger('mqtt')
@@ -52,29 +52,29 @@ class Client:
         result, mid = self._client.subscribe(*args, **kwargs)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
-            raise MqttError(result, 'Could not subscribe to topic')
+            raise MqttCodeError(result, 'Could not subscribe to topic')
         # Create future for when the on_subscribe callback is called
         cb_result = asyncio.Future()
         with self._pending_call(mid, cb_result):
             # Wait for cb_result
-            return await asyncio.wait_for(cb_result, timeout=timeout)
+            return await self._wait_for(cb_result, timeout=timeout)
 
     async def unsubscribe(self, *args, timeout=10):
         result, mid = self._client.unsubscribe(*args)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
-            raise MqttError(result, 'Could not unsubscribe from topic')
+            raise MqttCodeError(result, 'Could not unsubscribe from topic')
         # Create event for when the on_unsubscribe callback is called
         confirmation = asyncio.Event()
         with self._pending_call(mid, confirmation):
             # Wait for confirmation
-            await asyncio.wait_for(confirmation.wait(), timeout=timeout)
+            await self._wait_for(confirmation.wait(), timeout=timeout)
 
     async def publish(self, *args, timeout=10, **kwargs):
         info = self._client.publish(*args, **kwargs)  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
-            raise MqttError(info.rc, 'Could not publish message')
+            raise MqttCodeError(info.rc, 'Could not publish message')
         # Early out on immediate success
         if info.is_published():
             return
@@ -82,7 +82,7 @@ class Client:
         confirmation = asyncio.Event()
         with self._pending_call(info.mid, confirmation):
             # Wait for confirmation
-            await asyncio.wait_for(confirmation.wait(), timeout=timeout)
+            await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @asynccontextmanager
     async def filtered_messages(self, topic_filter, *, queue_maxsize=0):
@@ -140,6 +140,13 @@ class Client:
                 yield await messages.get()
         return _put_in_queue, _message_generator()
 
+    @asynccontextmanager
+    def _wait_for(self, *args, **kwargs):
+        try:
+            return await asyncio.wait_for(*args, **kwargs)
+        except asyncio.TimeoutError:
+            raise MqttError('Operation timed out')
+
     @contextmanager
     def _pending_call(self, mid, value):
         if mid in self._pending_calls:
@@ -165,13 +172,13 @@ class Client:
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(rc)
         else:
-            self._connected.set_exception(MqttError(rc, 'Could not connect'))
+            self._connected.set_exception(MqttCodeError(rc, 'Could not connect'))
 
     def _on_disconnect(self, client, userdata, rc):
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
         else:
-            self._disconnected.set_exception(MqttError(rc, 'Could not disconnect'))
+            self._disconnected.set_exception(MqttCodeError(rc, 'Could not disconnect'))
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         try:
