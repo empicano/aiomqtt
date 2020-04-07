@@ -97,7 +97,7 @@ class Client:
                 async for message in messages:
                     print(f'Humidity reading: {message.decode()}')
         """
-        cb, generator = self._cb_and_generator(log_context='topic_filter="{topic_filter}"',
+        cb, generator = self._cb_and_generator(log_context=f'topic_filter="{topic_filter}"',
                                                queue_maxsize=queue_maxsize)
         try:
             self._client.message_callback_add(topic_filter, cb)
