@@ -48,8 +48,8 @@ class Client:
         self._client.disconnect()
         await self._disconnected
 
-    async def subscribe(self, *args, timeout=10):
-        result, mid = self._client.subscribe(*args)
+    async def subscribe(self, *args, timeout=10, **kwargs):
+        result, mid = self._client.subscribe(*args, **kwargs)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise MqttError(result, 'Could not subscribe to topic')
@@ -70,8 +70,8 @@ class Client:
             # Wait for confirmation
             await asyncio.wait_for(confirmation.wait(), timeout=timeout)
 
-    async def publish(self, *args, timeout=10):
-        info = self._client.publish(*args)  # [2]
+    async def publish(self, *args, timeout=10, **kwargs):
+        info = self._client.publish(*args, **kwargs)  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttError(info.rc, 'Could not publish message')
