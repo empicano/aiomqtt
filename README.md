@@ -76,7 +76,7 @@ async def main():
 asyncio.run(main())
 ```
 
-## Alternative asyncio-based MQTT clients:
+## Alternative asyncio-based MQTT clients
 
 Is asyncio-mqtt not what you are looking for? Try another client:
 
