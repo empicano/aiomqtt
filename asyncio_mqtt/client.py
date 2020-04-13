@@ -12,7 +12,7 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 
 
 class Client:
-    def __init__(self, hostname, port=1883, *, logger=None):
+    def __init__(self, hostname, port=1883, *, username=None, password=None, logger=None):
         self._hostname = hostname
         self._port = port
         self._loop = asyncio.get_event_loop()
@@ -38,6 +38,9 @@ class Client:
         if logger is None:
             logger = MQTT_LOGGER
         self._client.enable_logger(logger)
+        
+        if username is not None and password is not None:
+            self._client.username_pw_set(username=username, password=password)
 
     async def connect(self):
         self._client.connect(self._hostname, self._port, 60)
