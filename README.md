@@ -40,12 +40,12 @@ from asyncio_mqtt import Client
 async def log_filtered_messages(client, topic_filter):
     async with client.filtered_messages(topic_filter) as messages:
         async for message in messages:
-            print(f'[topic_filter="{topic_filter}"]: {message.decode()}')
+            print(f'[topic_filter="{topic_filter}"]: {message.payload.decode()}')
 
 async def log_unfiltered_messages(client):
     async with client.unfiltered_messages() as messages:
         async for message in messages:
-            print(f'[unfiltered]: {message.decode()}')
+            print(f'[unfiltered]: {message.payload.decode()}')
 
 async def main():
     async with Client('test.mosquitto.org') as client:
