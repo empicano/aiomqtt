@@ -133,7 +133,7 @@ class Client:
         # Callback for the underlying API
         def _put_in_queue(client, userdata, msg):
             try:
-                messages.put_nowait(msg.payload)
+                messages.put_nowait(msg)
             except asyncio.QueueFull:
                 MQTT_LOGGER.warning(f'[{log_context}] Message queue is full. Discarding message.')
         # The generator that we give to the caller
