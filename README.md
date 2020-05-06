@@ -11,7 +11,7 @@ async with Client('test.mosquitto.org') as client:
 
     async with client.filtered_messages('floors/+/humidity') as messages:
         async for message in messages:
-            print(message.decode())
+            print(message.payload.decode())
 ```
 
 asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
