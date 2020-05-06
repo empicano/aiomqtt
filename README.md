@@ -113,6 +113,18 @@ There is only a single dependency:
  * [paho-mqtt](https://github.com/eclipse/paho.mqtt.python)  
    ![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
 
+## Changelog
+
+Please refer to the [CHANGELOG](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/CHANGELOG.md) document. It adheres to the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## Versioning
+
+![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Expect API changes until we reach version `1.0.0`. After `1.0.0`, breaking changes will only occur in major release (e.g., `2.0.0`, `3.0.0`, etc.).
+
 ## License
 
 ![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
