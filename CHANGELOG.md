@@ -15,6 +15,8 @@ Nothing so far.
 
   This way, user code not only gets the message `payload` but also the `topic`, `qos` level, `retain` flag, etc.
 
+  Contributed by [Matthew Bradbury (@MBradbury)](https://github.com/MBradbury) in [#3](https://github.com/sbtinstruments/asyncio-mqtt/pull/3).
+
 ## [v0.3.0] - 2020-04-13
 ### Added
 - Add `username` and `password` keyword arguments to the `Client` constructor.
