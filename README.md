@@ -113,6 +113,13 @@ There is only a single dependency:
  * [paho-mqtt](https://github.com/eclipse/paho.mqtt.python)  
    ![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
 
+## Note for Windows Users
+
+Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by asyncio-mqtt. To use asyncio-mqtt, please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`. E.g:
+```
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+```
+
 ## Changelog
 
 Please refer to the [CHANGELOG](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/CHANGELOG.md) document. It adheres to the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
