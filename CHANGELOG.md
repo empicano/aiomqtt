@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 Nothing so far.
 
-## [v0.4.0] - 2020-05-06
+## [0.4.0] - 2020-05-06
 ### Changed
 - **BREAKING CHANGE:** Forward the [MQTTMessage](https://github.com/eclipse/paho.mqtt.python/blob/1eec03edf39128e461e6729694cf5d7c1959e5e4/src/paho/mqtt/client.py#L355)
   class from paho-mqtt instead of just the `payload`. This applies to both
@@ -17,7 +17,7 @@ Nothing so far.
 
   Contributed by [Matthew Bradbury (@MBradbury)](https://github.com/MBradbury) in [#3](https://github.com/sbtinstruments/asyncio-mqtt/pull/3).
 
-## [v0.3.0] - 2020-04-13
+## [0.3.0] - 2020-04-13
 ### Added
 - Add `username` and `password` keyword arguments to the `Client` constructor.
   Contributed by [@gluap](https://github.com/gluap) in [#1](https://github.com/sbtinstruments/asyncio-mqtt/pull/1).
