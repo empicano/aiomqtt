@@ -6,10 +6,9 @@
 Write code like this:
 
 ```python
-async with Client('test.mosquitto.org') as client:
-    await client.subscribe('floors/#')
-
-    async with client.filtered_messages('floors/+/humidity') as messages:
+async with Client("test.mosquitto.org") as client:
+    async with client.filtered_messages("floors/+/humidity") as messages:
+        await client.subscribe("floors/#")
         async for message in messages:
             print(message.payload.decode())
 ```
@@ -34,38 +33,48 @@ Let's make the example from before more interesting:
 
 ```python
 import asyncio
+from contextlib import AsyncExitStack, asynccontextmanager
 from random import randrange
 from asyncio_mqtt import Client
 
-async def log_filtered_messages(client, topic_filter):
-    async with client.filtered_messages(topic_filter) as messages:
-        async for message in messages:
-            print(f'[topic_filter="{topic_filter}"]: {message.payload.decode()}')
-
-async def log_unfiltered_messages(client):
-    async with client.unfiltered_messages() as messages:
-        async for message in messages:
-            print(f'[unfiltered]: {message.payload.decode()}')
 
 async def main():
-    async with Client('test.mosquitto.org') as client:
-        await client.subscribe('floors/#')
+    # We 💛 context managers. Let's create a stack to help
+    # us manage them.
+    async with AsyncExitStack() as stack:
+        # Connect to the MQTT broker
+        client = Client("test.mosquitto.org")
+        await stack.enter_async_context(client)
 
-        # You can create any number of message filters
-        asyncio.create_task(log_filtered_messages(client, 'floors/+/humidity'))
-        asyncio.create_task(log_filtered_messages(client, 'floors/rooftop/#'))
-        # 👉 Try to add more filters!
+        # You can create any number of topic filters
+        topic_filters = (
+            "floors/+/humidity",
+            "floors/rooftop/#"
+            # 👉 Try to add more filters!
+        )
+        for topic_filter in topic_filters:
+            # Log all messages that matches the filter
+            manager = client.filtered_messages(topic_filter)
+            messages = await stack.enter_async_context(manager)
+            template = f'[topic_filter="{topic_filter}"] {{}}'
+            asyncio.create_task(log_messages(messages, template))
 
-        # All messages that doesn't match a filter will get logged here
-        asyncio.create_task(log_unfiltered_messages(client))
+        # Messages that doesn't match a filter will get logged here
+        messages = await stack.enter_async_context(client.unfiltered_messages())
+        asyncio.create_task(log_messages(messages, "[unfiltered] {}"))
+
+        # Subscribe to topic(s)
+        # 🤔 Note that we subscribe *after* starting the message
+        # loggers. Otherwise, we may miss retained messages.
+        await client.subscribe("floors/#")
 
         # Publish a random value to each of these topics
-        topics = [
-            'floors/basement/humidity',
-            'floors/rooftop/humidity',
-            'floors/rooftop/illuminance',
+        topics = (
+            "floors/basement/humidity",
+            "floors/rooftop/humidity",
+            "floors/rooftop/illuminance",
             # 👉 Try to add more topics!
-        ]
+        )
         while True:
             for topic in topics:
                 message = randrange(100)
@@ -73,7 +82,14 @@ async def main():
                 await client.publish(topic, message, qos=1)
                 await asyncio.sleep(2)
 
+
+async def log_messages(messages, template):
+    async for message in messages:
+        print(template.format(message.payload.decode()))
+
+
 asyncio.run(main())
+
 ```
 
 ## Alternative asyncio-based MQTT clients
