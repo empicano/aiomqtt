@@ -43,7 +43,10 @@ class Client:
             self._client.username_pw_set(username=username, password=password)
 
     async def connect(self):
-        self._client.connect(self._hostname, self._port, 60)
+        try:
+            self._client.connect(self._hostname, self._port, 60)
+        except ConnectionError as error:
+            raise MqttError(str(error))
         await self._connected
         self._client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
 
@@ -231,6 +234,8 @@ class Client:
         await self.connect()
         return self
 
-    async def __aexit__(self, *args, **kwargs):
+    async def __aexit__(self, exc_type, exc, tb):
         """Disconnect from the broker."""
+        if exc is not None:
+            MQTT_LOGGER.error(f'Disconnecting due to "{exc}"')
         await self.disconnect()
