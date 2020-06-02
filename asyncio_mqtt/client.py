@@ -2,7 +2,11 @@
 import asyncio
 import logging
 import socket
-from contextlib import asynccontextmanager, contextmanager, suppress
+from contextlib import contextmanager, suppress
+try:
+    from contextlib import asynccontextmanager
+except ImportError:
+    from async_generator import asynccontextmanager
 import paho.mqtt.client as mqtt
 from .error import MqttError, MqttCodeError
 
