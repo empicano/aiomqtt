@@ -16,7 +16,8 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 
 
 class Client:
-    def __init__(self, hostname, port=1883, *, username=None, password=None, logger=None):
+    def __init__(self, hostname, port=1883, *, username=None, password=None,
+                 logger=None, client_id=None, tls_context=None):
         self._hostname = hostname
         self._port = port
         self._loop = asyncio.get_event_loop()
@@ -26,7 +27,7 @@ class Client:
         self._pending_calls_threshold = 10
         self._misc_task = None
 
-        self._client = mqtt.Client()
+        self._client = mqtt.Client(client_id=client_id)
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
         self._client.on_subscribe = self._on_subscribe
@@ -45,6 +46,9 @@ class Client:
         
         if username is not None and password is not None:
             self._client.username_pw_set(username=username, password=password)
+
+        if tls_context is not None:
+            self._client.tls_set_context(tls_context)
 
     async def connect(self):
         try:
