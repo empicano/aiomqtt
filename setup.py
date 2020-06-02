@@ -30,8 +30,12 @@ setup(
         'Operating System :: MacOS',
 
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
     ],
     keywords='mqtt async asyncio paho-mqtt wrapper',
-    install_requires=['paho-mqtt>=1.5.0'],
+    install_requires=[
+        'paho-mqtt>=1.5.0',
+        "async_generator;python_version<'3.7'",
+    ],
 )
