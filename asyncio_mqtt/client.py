@@ -50,17 +50,24 @@ class Client:
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
 
-    async def connect(self):
+    async def connect(self, *, timeout=10):
         try:
             self._client.connect(self._hostname, self._port, 60)
         except ConnectionError as error:
             raise MqttError(str(error))
-        await self._connected
+        await self._wait_for(self._connected, timeout=timeout)
         self._client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
 
-    async def disconnect(self):
-        self._client.disconnect()
-        await self._disconnected
+    async def disconnect(self, *, timeout=10):
+        rc = self._client.disconnect()
+        # Early out on error
+        if rc != mqtt.MQTT_ERR_SUCCESS:
+            raise MqttCodeError(rc, "Could not disconnect")
+        # Wait for acknowledgement
+        await self._wait_for(self._disconnected, timeout=timeout)
+
+    async def force_disconnect(self):
+        self._disconnected.set_result(None)
 
     async def subscribe(self, *args, timeout=10, **kwargs):
         result, mid = self._client.subscribe(*args, **kwargs)
@@ -151,7 +158,25 @@ class Client:
         async def _message_generator():
             # Forward all messages from the queue
             while True:
-                yield await messages.get()
+                # Wait until we either:
+                #  1. Receive a message
+                #  2. Disconnect from the broker
+                get = asyncio.create_task(messages.get())
+                done, _ = await asyncio.wait(
+                    (get, self._disconnected),
+                    return_when=asyncio.FIRST_COMPLETED
+                )
+                if get in done:
+                    # We received a message. Return the result.
+                    yield get.result()
+                else:
+                    # We got disconnected from the broker. Cancel the "get" task.
+                    get.cancel()
+                    # Await the "_disconnected" future to propagate the cause.
+                    # If an exception is the cause of the disconnect, it will be raised.
+                    await self._disconnected
+                    # Exception or not, the generator stops here.
+                    return
         return _put_in_queue, _message_generator()
 
     async def _wait_for(self, *args, **kwargs):
@@ -191,7 +216,7 @@ class Client:
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
         else:
-            self._disconnected.set_exception(MqttCodeError(rc, 'Could not disconnect'))
+            self._disconnected.set_exception(MqttCodeError(rc, 'Unexpected disconnect'))
 
     def _on_subscribe(self, client, userdata, mid, granted_qos):
         try:
@@ -244,6 +269,16 @@ class Client:
 
     async def __aexit__(self, exc_type, exc, tb):
         """Disconnect from the broker."""
+        # Early out if already disconnected
+        if self._disconnected.done():
+            return
+        # If an exception caused us to exit, we log it
         if exc is not None:
-            MQTT_LOGGER.error(f'Disconnecting due to "{exc}"')
-        await self.disconnect()
+            MQTT_LOGGER.error(f'Disconnecting due to exception:', exc_info=exc)
+        # Try to gracefully disconnect from the broker
+        try:
+            await self.disconnect()
+        except MqttError as error:
+            # We tried to be graceful. Now there is no mercy.
+            MQTT_LOGGER.warning(f'Could not gracefully disconnect due to "{error}". Forcing disconnection.')
+            await self.force_disconnect()
