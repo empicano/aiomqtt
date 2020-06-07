@@ -5,7 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-Nothing so far.
+### Added
+- Add support for python 3.6.
+  Contributed by [@pallas](https://github.com/gluap) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (1/2).
+- Add `client_id` and `tls_context` keyword arguments to the `Client` constructor.
+  Contributed by [@pallas](https://github.com/gluap) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (2/2).
+- Add `timeout` keyword argument to both `Client.connect` and `Client.disconnect`. Default value of `10` seconds (like the other functions).
+
+### Changed
+- Propagate disconnection errors to subscribers. This enables user code to detect if a disconnect occurs. E.g., due to network errors.
 
 ## [0.4.0] - 2020-05-06
 ### Changed
