@@ -116,7 +116,7 @@ class Client:
         Example use:
             async with client.filtered_messages('floors/+/humidity') as messages:
                 async for message in messages:
-                    print(f'Humidity reading: {message.decode()}')
+                    print(f'Humidity reading: {message.payload.decode()}')
         """
         cb, generator = self._cb_and_generator(log_context=f'topic_filter="{topic_filter}"',
                                                queue_maxsize=queue_maxsize)
