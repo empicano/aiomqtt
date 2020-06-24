@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+- No longer logs exception in `Client.__aexit__`. It's perfectly valid
+  to exit due to, e.g., `asyncio.CancelledError` so let's not treat it as an
+  error.
+
+## [0.5.0] - 2020-06-08
 ### Added
 - Add support for python 3.6.
   Contributed by [@pallas](https://github.com/gluap) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (1/2).
