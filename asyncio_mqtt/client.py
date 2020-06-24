@@ -272,9 +272,6 @@ class Client:
         # Early out if already disconnected
         if self._disconnected.done():
             return
-        # If an exception caused us to exit, we log it
-        if exc is not None:
-            MQTT_LOGGER.error(f'Disconnecting due to exception:', exc_info=exc)
         # Try to gracefully disconnect from the broker
         try:
             await self.disconnect()
