@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing so far.
+
+## [0.6.0] - 2020-06-26
 ### Changed
 - No longer logs exception in `Client.__aexit__`. It's perfectly valid
   to exit due to, e.g., `asyncio.CancelledError` so let's not treat it as an
