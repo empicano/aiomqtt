@@ -162,10 +162,16 @@ class Client:
                 #  1. Receive a message
                 #  2. Disconnect from the broker
                 get = asyncio.create_task(messages.get())
-                done, _ = await asyncio.wait(
-                    (get, self._disconnected),
-                    return_when=asyncio.FIRST_COMPLETED
-                )
+                try:
+                    done, _ = await asyncio.wait(
+                        (get, self._disconnected),
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                except asyncio.CancelledError:
+                    # If the asyncio.wait is cancelled, we must make sure
+                    # to also cancel the underlying tasks.
+                    get.cancel()
+                    raise
                 if get in done:
                     # We received a message. Return the result.
                     yield get.result()
