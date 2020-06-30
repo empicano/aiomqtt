@@ -242,11 +242,11 @@ class Client:
     def _on_socket_open(self, client, userdata, sock):
         def cb():
             client.loop_read()
-        self._loop.add_reader(sock, cb)
+        self._loop.add_reader(sock.fileno(), cb)
         self._misc_task = self._loop.create_task(self._misc_loop())
 
     def _on_socket_close(self, client, userdata, sock):
-        self._loop.remove_reader(sock)
+        self._loop.remove_reader(sock.fileno())
         with suppress(asyncio.CancelledError):
             self._misc_task.cancel()
 
