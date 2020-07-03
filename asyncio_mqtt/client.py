@@ -17,7 +17,7 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 
 class Client:
     def __init__(self, hostname, port=1883, *, username=None, password=None,
-                 logger=None, client_id=None, tls_context=None):
+                 logger=None, client_id=None, tls_context=None, protocol=None):
         self._hostname = hostname
         self._port = port
         self._loop = asyncio.get_event_loop()
@@ -27,7 +27,10 @@ class Client:
         self._pending_calls_threshold = 10
         self._misc_task = None
 
-        self._client = mqtt.Client(client_id=client_id)
+        if protocol is None:
+            protocol = mqtt.MQTTv311
+
+        self._client = mqtt.Client(client_id=client_id, protocol=protocol)
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
         self._client.on_subscribe = self._on_subscribe
@@ -212,25 +215,25 @@ class Client:
             # network error) we still need to remove the item from the dict.
             self._pending_calls.pop(mid, None)
                 
-    def _on_connect(self, client, userdata, flags, rc):
+    def _on_connect(self, client, userdata, flags, rc, properties=None):
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(rc)
         else:
             self._connected.set_exception(MqttCodeError(rc, 'Could not connect'))
 
-    def _on_disconnect(self, client, userdata, rc):
+    def _on_disconnect(self, client, userdata, rc, properties=None):
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
         else:
             self._disconnected.set_exception(MqttCodeError(rc, 'Unexpected disconnect'))
 
-    def _on_subscribe(self, client, userdata, mid, granted_qos):
+    def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
         try:
             self._pending_calls.pop(mid).set_result(granted_qos)
         except KeyError:
             MQTT_LOGGER.error(f'Unexpected message ID "{mid}" in on_subscribe callback')
 
-    def _on_unsubscribe(self, client, userdata, mid):
+    def _on_unsubscribe(self, client, userdata, mid, properties=None, reasonCodes=None):
         try:
             self._pending_calls.pop(mid).set()
         except KeyError:
