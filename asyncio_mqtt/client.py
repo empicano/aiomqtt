@@ -17,7 +17,8 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 
 class Client:
     def __init__(self, hostname, port=1883, *, username=None, password=None,
-                 logger=None, client_id=None, tls_context=None, protocol=None):
+                 logger=None, client_id=None, tls_context=None, protocol=None,
+                 will=None):
         self._hostname = hostname
         self._port = port
         self._loop = asyncio.get_event_loop()
@@ -52,6 +53,15 @@ class Client:
 
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
+
+        if will is not None:
+            self._client.will_set(
+                will.topic,
+                will.payload,
+                will.qos,
+                will.retain,
+                will.properties
+            )
 
     async def connect(self, *, timeout=10):
         try:
@@ -288,3 +298,14 @@ class Client:
             # We tried to be graceful. Now there is no mercy.
             MQTT_LOGGER.warning(f'Could not gracefully disconnect due to "{error}". Forcing disconnection.')
             await self.force_disconnect()
+
+
+# TODO: This should be a (frozen) dataclass (from Python 3.7)
+# when we drop Python 3.6 support
+class Will:
+    def __init__(self, topic, payload=None, qos=0, retain=False, properties=None):
+        self.topic = topic
+        self.payload = payload
+        self.qos = qos
+        self.retain = retain
+        self.properties = properties
