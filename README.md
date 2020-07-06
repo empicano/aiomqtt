@@ -105,6 +105,8 @@ async def log_messages(messages, template):
 
 async def cancel_tasks(tasks):
     for task in tasks:
+        if task.done():
+            continue
         task.cancel()
         try:
             await task
