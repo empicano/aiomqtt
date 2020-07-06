@@ -48,7 +48,7 @@ async def advanced_example():
         stack.push_async_callback(cancel_tasks, tasks)
 
         # Connect to the MQTT broker
-        client = Client("localhost")
+        client = Client("test.mosquitto.org")
         await stack.enter_async_context(client)
 
         # You can create any number of topic filters
@@ -99,6 +99,8 @@ async def post_to_topics(client, topics):
 
 async def log_messages(messages, template):
     async for message in messages:
+        # 🤔 Note that we assume that the message paylod is an
+        # UTF8-encoded string (hence the `bytes.decode` call).
         print(template.format(message.payload.decode()))
 
 async def cancel_tasks(tasks):
