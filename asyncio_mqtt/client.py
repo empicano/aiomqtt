@@ -8,7 +8,7 @@ try:
 except ImportError:
     from async_generator import asynccontextmanager
 import paho.mqtt.client as mqtt
-from .error import MqttError, MqttCodeError
+from .error import MqttError, MqttCodeError, MqttConnectError
 
 
 MQTT_LOGGER = logging.getLogger('mqtt')
@@ -229,7 +229,7 @@ class Client:
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(rc)
         else:
-            self._connected.set_exception(MqttCodeError(rc, 'Could not connect'))
+            self._connected.set_exception(MqttConnectError(rc))
 
     def _on_disconnect(self, client, userdata, rc, properties=None):
         if rc == mqtt.MQTT_ERR_SUCCESS:
