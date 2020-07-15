@@ -66,7 +66,10 @@ class Client:
     async def connect(self, *, timeout=10):
         try:
             self._client.connect(self._hostname, self._port, 60)
-        except ConnectionError as error:
+        # paho.mqtt.Client.connect may raise one of several exceptions.
+        # We convert all of them to the common MqttError for user convenience.
+        # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
+        except (socket.error, OSError, mqtt.WebsocketConnectionError) as error:
             raise MqttError(str(error))
         await self._wait_for(self._connected, timeout=timeout)
         self._client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
@@ -191,11 +194,8 @@ class Client:
                 else:
                     # We got disconnected from the broker. Cancel the "get" task.
                     get.cancel()
-                    # Await the "_disconnected" future to propagate the cause.
-                    # If an exception is the cause of the disconnect, it will be raised.
-                    await self._disconnected
-                    # Exception or not, the generator stops here.
-                    return
+                    # Stop the generator with the following exception
+                    raise MqttError("Disconnected during message iteration")
         return _put_in_queue, _message_generator()
 
     async def _wait_for(self, *args, **kwargs):
@@ -232,6 +232,12 @@ class Client:
             self._connected.set_exception(MqttConnectError(rc))
 
     def _on_disconnect(self, client, userdata, rc, properties=None):
+        # Return early if the disconnect is already acknowledged.
+        # Sometimes (e.g., due to timeouts), paho-mqtt calls _on_disconnect
+        # twice. We return early to avoid setting self._disconnected twice
+        # (as it raises an asyncio.InvalidStateError).
+        if self._disconnected.done():
+            return
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
         else:
@@ -288,8 +294,13 @@ class Client:
 
     async def __aexit__(self, exc_type, exc, tb):
         """Disconnect from the broker."""
-        # Early out if already disconnected
+        # Early out if already disconnected...
         if self._disconnected.done():
+            disc_exc = self._disconnected.exception()
+            if disc_exc is None:
+                # ...by raising the error that caused the disconnect
+                raise disc_exc
+            # ...by returning since the disconnect was intentional
             return
         # Try to gracefully disconnect from the broker
         try:
