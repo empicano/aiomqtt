@@ -76,13 +76,15 @@ class Client:
     async def connect(self, *, timeout=10):
         try:
             self._client.connect(self._hostname, self._port, 60)
+            # paho.mqttClient.socket() return non-None after the call to
+            # connect.
+            self._client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
         # paho.mqtt.Client.connect may raise one of several exceptions.
         # We convert all of them to the common MqttError for user convenience.
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
         except (socket.error, OSError, mqtt.WebsocketConnectionError) as error:
             raise MqttError(str(error))
         await self._wait_for(self._connected, timeout=timeout)
-        self._client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
 
     async def disconnect(self, *, timeout=10):
         rc = self._client.disconnect()
