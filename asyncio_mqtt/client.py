@@ -63,6 +63,16 @@ class Client:
                 will.properties
             )
 
+    @property
+    def id(self):
+        """Return the client ID.
+
+        Note that paho-mqtt stores the client ID as `bytes` internally.
+        We assume that the client ID is a UTF8-encoded string and decode
+        it first.
+        """
+        return self._client._client_id.decode()
+
     async def connect(self, *, timeout=10):
         try:
             self._client.connect(self._hostname, self._port, 60)
