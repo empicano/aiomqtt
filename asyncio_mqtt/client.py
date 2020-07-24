@@ -250,6 +250,17 @@ class Client:
         # (as it raises an asyncio.InvalidStateError).
         if self._disconnected.done():
             return
+        # Return early if we are not connected yet. This avoids calling
+        # `_disconnected.set_exception` with an exception that will never
+        # be retrieved (since `__aexit__` won't get called if `__aenter__`
+        # fails). In turn, this avoids asyncio debug messages like the
+        # following:
+        #
+        #   "[asyncio] Future exception was never retrieved"
+        #
+        # See also: https://docs.python.org/3/library/asyncio-dev.html#detect-never-retrieved-exceptions
+        if not self._connected.done():
+            return
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
         else:
