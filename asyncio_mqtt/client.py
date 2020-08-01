@@ -189,7 +189,7 @@ class Client:
                 # Wait until we either:
                 #  1. Receive a message
                 #  2. Disconnect from the broker
-                get = asyncio.create_task(messages.get())
+                get = self._loop.create_task(messages.get())
                 try:
                     done, _ = await asyncio.wait(
                         (get, self._disconnected),
