@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.7.0] - 2020-08-04
+
+I've tested the library for production use at SBT Instruments.
+This uncovered a bunch of bugs and missing features that I've adressed
+in this release. We are approaching a 1.0.0 release. Let me know
+if you want something changed before that via the issue tracker on GitHub.
+
+### Added
+- Add support for MQTTv5.
+- Add `will` keyword argument to `Client`.
+- Add `MqttConnectError` with specific error messages for connection failures.
+- Add `Client.id` property that returns the client ID (or `None` if 
+  the client ID was not specified during construction).
+
+### Fixed
+- Fix unhandled exception error.
+- Fix "Task was destroyed but it is pending" error.
+- Fix compatibility with `asyncqt`'s event loop.
+- Fix race condition in `Client.connect` that raised an `AttributeError`.
+- Fix "[asyncio] Future exception was never retrieved" debug message.
+- Fix support for python 3.6.
+  Contributed by [Derrick Lyndon Pallas (@pallas)](https://github.com/pallas) in [#12](https://github.com/sbtinstruments/asyncio-mqtt/pull/12)
+
 ## [0.6.0] - 2020-06-26
 ### Changed
 - No longer logs exception in `Client.__aexit__`. It's perfectly valid
@@ -17,9 +40,9 @@ Nothing so far.
 ## [0.5.0] - 2020-06-08
 ### Added
 - Add support for python 3.6.
-  Contributed by [@pallas](https://github.com/pallas) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (1/2).
+  Contributed by [Derrick Lyndon Pallas (@pallas)](https://github.com/pallas) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (1/2).
 - Add `client_id` and `tls_context` keyword arguments to the `Client` constructor.
-  Contributed by [@pallas](https://github.com/pallas) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (2/2).
+  Contributed by [Derrick Lyndon Pallas (@pallas)](https://github.com/pallas) in [#7](https://github.com/sbtinstruments/asyncio-mqtt/pull/7) (2/2).
 - Add `timeout` keyword argument to both `Client.connect` and `Client.disconnect`. Default value of `10` seconds (like the other functions).
 
 ### Changed
