@@ -18,7 +18,7 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 class Client:
     def __init__(self, hostname, port=1883, *, username=None, password=None,
                  logger=None, client_id=None, tls_context=None, protocol=None,
-                 will=None):
+                 will=None, clean_session=True):
         self._hostname = hostname
         self._port = port
         self._loop = asyncio.get_event_loop()
@@ -31,7 +31,7 @@ class Client:
         if protocol is None:
             protocol = mqtt.MQTTv311
 
-        self._client = mqtt.Client(client_id=client_id, protocol=protocol)
+        self._client = mqtt.Client(client_id=client_id, protocol=protocol, clean_session=clean_session)
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
         self._client.on_subscribe = self._on_subscribe
