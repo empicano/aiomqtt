@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.8.0] - 2020-11-09
+
+### Added
+
+- Add `transport` argument to `Client` 
+  Contributed by [@opengs](https://github.com/opengs) in [#21](https://github.com/sbtinstruments/asyncio-mqtt/pull/21)
+- Add `clean_session` argument to `Client` 
+  Contributed by [@nadyka](https://github.com/madnadyka) in [#17](https://github.com/sbtinstruments/asyncio-mqtt/pull/17)
+
+
 ## [0.7.0] - 2020-08-04
 
 I've tested the library for production use at SBT Instruments.
