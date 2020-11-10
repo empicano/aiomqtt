@@ -3,3 +3,5 @@ build
 dist
 *.egg-info
 local_test.py
+
+.idea/
