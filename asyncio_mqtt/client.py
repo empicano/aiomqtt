@@ -47,7 +47,7 @@ class Client:
         if logger is None:
             logger = MQTT_LOGGER
         self._client.enable_logger(logger)
-        
+
         if username is not None and password is not None:
             self._client.username_pw_set(username=username, password=password)
 
@@ -140,7 +140,7 @@ class Client:
         Use queue_maxsize to restrict the queue size. If the queue is full,
         incoming messages will be discarded (and a warning is logged).
         If queue_maxsize is less than or equal to zero, the queue size is infinite.
-        
+
         Example use:
             async with client.filtered_messages('floors/+/humidity') as messages:
                 async for message in messages:
@@ -236,7 +236,7 @@ class Client:
             # However, if the callback doesn't get called (e.g., due to a
             # network error) we still need to remove the item from the dict.
             self._pending_calls.pop(mid, None)
-                
+
     def _on_connect(self, client, userdata, flags, rc, properties=None):
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(rc)
@@ -320,7 +320,7 @@ class Client:
         # Early out if already disconnected...
         if self._disconnected.done():
             disc_exc = self._disconnected.exception()
-            if disc_exc is None:
+            if disc_exc is not None:
                 # ...by raising the error that caused the disconnect
                 raise disc_exc
             # ...by returning since the disconnect was intentional
