@@ -259,7 +259,7 @@ class Client:
         #   "[asyncio] Future exception was never retrieved"
         #
         # See also: https://docs.python.org/3/library/asyncio-dev.html#detect-never-retrieved-exceptions
-        if not self._connected.done():
+        if not self._connected.done() or self._connected.exception() is not None:
             return
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
