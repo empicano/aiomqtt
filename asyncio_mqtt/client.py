@@ -238,7 +238,10 @@ class Client:
             self._pending_calls.pop(mid, None)
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):
-        # if alread connected return
+        # Return early if already connected. Sometimes, paho-mqtt calls _on_connect
+        # multiple times. Maybe because we receive multiple CONNACK messages
+        # from the server. In any case, we return early so that we don't set
+        # self._connected twice (as it raises an asyncio.InvalidStateError).
         if self._connected.done():
             return
         
