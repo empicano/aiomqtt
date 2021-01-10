@@ -238,6 +238,10 @@ class Client:
             self._pending_calls.pop(mid, None)
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):
+        # if alread connected return
+        if self._connected.done():
+            return
+        
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(rc)
         else:
