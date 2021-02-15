@@ -296,7 +296,10 @@ class Client:
 
     def _on_socket_open(self, client, userdata, sock):
         def cb():
-            client.loop_read()
+            try:
+                client.loop_read()
+            except Exception as exc:
+                self._disconnected.set_exception(exc)
         self._loop.add_reader(sock.fileno(), cb)
         self._misc_task = self._loop.create_task(self._misc_loop())
 
@@ -307,7 +310,10 @@ class Client:
 
     def _on_socket_register_write(self, client, userdata, sock):
         def cb():
-            client.loop_write()
+            try:
+                client.loop_write()
+            except Exception as exc:
+                self._disconnected.set_exception(exc)
         self._loop.add_writer(sock, cb)
 
     def _on_socket_unregister_write(self, client, userdata, sock):
