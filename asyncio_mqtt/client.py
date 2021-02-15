@@ -78,7 +78,9 @@ class Client:
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(None, self._client.connect, self._hostname, self._port, 60)
             # paho.mqttClient.socket() return non-None after the call to connect.
-            self._client.socket().setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
+            client_socket = self._client.socket()
+            if type(client_socket) is not mqtt.WebsocketWrapper:
+                client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
         # paho.mqtt.Client.connect may raise one of several exceptions.
         # We convert all of them to the common MqttError for user convenience.
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
