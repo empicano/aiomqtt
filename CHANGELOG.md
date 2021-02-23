@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.8.1] - 2021-02-23
+
+#### Fixed
+
+- Fix `AttributeError` when you use WebSockets.
+  Contributed by [Robert Chmielowiec (@chmielowiec)](https://github.com/chmielowiec) in [#36](https://github.com/sbtinstruments/asyncio-mqtt/pull/36)
+
+- Fix `asyncio.InvalidStateError` in the `_on_connect` callback.
+  Contributed by [Maxim Shmalovsky (@vitalalerter)](https://github.com/vitalalerter) in [#31](https://github.com/sbtinstruments/asyncio-mqtt/pull/31)
+
+- Fix "Future exception was never retrieved" on disconnect.
+  Contributed by [Martin Hjelmare (@martinhjelmare)](https://github.com/martinhjelmare) in [#25](https://github.com/sbtinstruments/asyncio-mqtt/pull/25)
+
+- Fix `connect` so it no longer blocks the event loop.
+  Contributed by [Øystein Haug Olsen (@oholsen)](https://github.com/oholsen) in [#23](https://github.com/sbtinstruments/asyncio-mqtt/pull/23)
+
 ## [0.8.0] - 2020-11-09
 
 ### Added
