@@ -76,6 +76,8 @@ class Client:
     async def connect(self, *, timeout=10):
         try:
             loop = asyncio.get_running_loop()
+            # [3] Run connect() within an executor thread, since it blocks on socket
+            # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
             await loop.run_in_executor(None, self._client.connect, self._hostname, self._port, 60)
             # paho.mqttClient.socket() return non-None after the call to connect.
             client_socket = self._client.socket()
@@ -300,6 +302,9 @@ class Client:
         def cb():
             client.loop_read()
         self._loop.add_reader(sock.fileno(), cb)
+        # paho-mqtt calls this function from the executor thread on which we've called
+        # `self._client.connect()` (see [3]), so we create a callback function to schedule
+        # `_misc_loop()` and run it on the loop thread-safely.
         def create_task_cb():
             self._misc_task = self._loop.create_task(self._misc_loop())
         self._loop.call_soon_threadsafe(create_task_cb)
