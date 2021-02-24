@@ -300,7 +300,9 @@ class Client:
         def cb():
             client.loop_read()
         self._loop.add_reader(sock.fileno(), cb)
-        self._misc_task = self._loop.create_task(self._misc_loop())
+        def create_task_cb():
+            self._misc_task = self._loop.create_task(self._misc_loop())
+        self._loop.call_soon_threadsafe(create_task_cb)
 
     def _on_socket_close(self, client, userdata, sock):
         self._loop.remove_reader(sock.fileno())
