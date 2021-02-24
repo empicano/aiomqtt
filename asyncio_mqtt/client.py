@@ -304,8 +304,9 @@ class Client:
 
     def _on_socket_close(self, client, userdata, sock):
         self._loop.remove_reader(sock.fileno())
-        with suppress(asyncio.CancelledError):
-            self._misc_task.cancel()
+        if self._misc_task is not None:
+            with suppress(asyncio.CancelledError):
+                self._misc_task.cancel()
 
     def _on_socket_register_write(self, client, userdata, sock):
         def cb():
