@@ -11,6 +11,9 @@ setup(
     name="asyncio_mqtt",
     version=__version__,
     packages=find_packages(),
+    package_data={
+        "asyncio_mqtt": ["py.typed"],
+    },
     url="https://github.com/sbtinstruments/asyncio-mqtt",
     author="Frederik Aalund",
     author_email="fpa@sbtinstruments.com",
