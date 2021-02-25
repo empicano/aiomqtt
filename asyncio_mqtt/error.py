@@ -3,15 +3,18 @@
 
 class MqttError(Exception):
     """Base exception for all asyncio-mqtt exceptions."""
+
     pass
+
 
 class MqttCodeError(MqttError):
     def __init__(self, rc, *args):
         super().__init__(*args)
         self.rc = rc
-    
+
     def __str__(self):
-        return f'[code:{self.rc}] {super().__str__()}'
+        return f"[code:{self.rc}] {super().__str__()}"
+
 
 class MqttConnectError(MqttCodeError):
     def __init__(self, rc):
@@ -21,6 +24,7 @@ class MqttConnectError(MqttCodeError):
         except KeyError:
             pass
         super().__init__(rc, msg)
+
 
 _CONNECT_RC_STRINGS = {
     # Reference: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1898

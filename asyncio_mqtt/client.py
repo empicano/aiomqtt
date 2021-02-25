@@ -3,6 +3,7 @@ import asyncio
 import logging
 import socket
 from contextlib import contextmanager, suppress
+
 try:
     from contextlib import asynccontextmanager
 except ImportError:
@@ -11,14 +12,26 @@ import paho.mqtt.client as mqtt
 from .error import MqttError, MqttCodeError, MqttConnectError
 
 
-MQTT_LOGGER = logging.getLogger('mqtt')
+MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
 
 class Client:
-    def __init__(self, hostname, port=1883, *, username=None, password=None,
-                 logger=None, client_id=None, tls_context=None, protocol=None,
-                 will=None, clean_session=None, transport="tcp"):
+    def __init__(
+        self,
+        hostname,
+        port=1883,
+        *,
+        username=None,
+        password=None,
+        logger=None,
+        client_id=None,
+        tls_context=None,
+        protocol=None,
+        will=None,
+        clean_session=None,
+        transport="tcp",
+    ):
         self._hostname = hostname
         self._port = port
         self._loop = asyncio.get_event_loop()
@@ -31,7 +44,12 @@ class Client:
         if protocol is None:
             protocol = mqtt.MQTTv311
 
-        self._client = mqtt.Client(client_id=client_id, protocol=protocol, clean_session=clean_session, transport=transport)
+        self._client = mqtt.Client(
+            client_id=client_id,
+            protocol=protocol,
+            clean_session=clean_session,
+            transport=transport,
+        )
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
         self._client.on_subscribe = self._on_subscribe
@@ -56,11 +74,7 @@ class Client:
 
         if will is not None:
             self._client.will_set(
-                will.topic,
-                will.payload,
-                will.qos,
-                will.retain,
-                will.properties
+                will.topic, will.payload, will.qos, will.retain, will.properties
             )
 
     @property
@@ -78,7 +92,9 @@ class Client:
             loop = asyncio.get_running_loop()
             # [3] Run connect() within an executor thread, since it blocks on socket
             # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
-            await loop.run_in_executor(None, self._client.connect, self._hostname, self._port, 60)
+            await loop.run_in_executor(
+                None, self._client.connect, self._hostname, self._port, 60
+            )
             # paho.mqttClient.socket() return non-None after the call to connect.
             client_socket = self._client.socket()
             if not isinstance(client_socket, mqtt.WebsocketWrapper):
@@ -105,7 +121,7 @@ class Client:
         result, mid = self._client.subscribe(*args, **kwargs)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
-            raise MqttCodeError(result, 'Could not subscribe to topic')
+            raise MqttCodeError(result, "Could not subscribe to topic")
         # Create future for when the on_subscribe callback is called
         cb_result = asyncio.Future()
         with self._pending_call(mid, cb_result):
@@ -116,7 +132,7 @@ class Client:
         result, mid = self._client.unsubscribe(*args)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
-            raise MqttCodeError(result, 'Could not unsubscribe from topic')
+            raise MqttCodeError(result, "Could not unsubscribe from topic")
         # Create event for when the on_unsubscribe callback is called
         confirmation = asyncio.Event()
         with self._pending_call(mid, confirmation):
@@ -127,7 +143,7 @@ class Client:
         info = self._client.publish(*args, **kwargs)  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
-            raise MqttCodeError(info.rc, 'Could not publish message')
+            raise MqttCodeError(info.rc, "Could not publish message")
         # Early out on immediate success
         if info.is_published():
             return
@@ -150,8 +166,9 @@ class Client:
                 async for message in messages:
                     print(f'Humidity reading: {message.payload.decode()}')
         """
-        cb, generator = self._cb_and_generator(log_context=f'topic_filter="{topic_filter}"',
-                                               queue_maxsize=queue_maxsize)
+        cb, generator = self._cb_and_generator(
+            log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
+        )
         try:
             self._client.message_callback_add(topic_filter, cb)
             # Back to the caller (run whatever is inside the with statement)
@@ -166,9 +183,12 @@ class Client:
         # Early out
         if self._client.on_message is not None:
             # TODO: This restriction can easily be removed.
-            raise RuntimeError('Only a single unfiltered_messages generator can be used at a time.')
-        cb, generator = self._cb_and_generator(log_context='unfiltered',
-                                               queue_maxsize=queue_maxsize)
+            raise RuntimeError(
+                "Only a single unfiltered_messages generator can be used at a time."
+            )
+        cb, generator = self._cb_and_generator(
+            log_context="unfiltered", queue_maxsize=queue_maxsize
+        )
         try:
             self._client.on_message = cb
             # Back to the caller (run whatever is inside the with statement)
@@ -185,7 +205,10 @@ class Client:
             try:
                 messages.put_nowait(msg)
             except asyncio.QueueFull:
-                MQTT_LOGGER.warning(f'[{log_context}] Message queue is full. Discarding message.')
+                MQTT_LOGGER.warning(
+                    f"[{log_context}] Message queue is full. Discarding message."
+                )
+
         # The generator that we give to the caller
         async def _message_generator():
             # Forward all messages from the queue
@@ -196,8 +219,7 @@ class Client:
                 get = self._loop.create_task(messages.get())
                 try:
                     done, _ = await asyncio.wait(
-                        (get, self._disconnected),
-                        return_when=asyncio.FIRST_COMPLETED
+                        (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
                     )
                 except asyncio.CancelledError:
                     # If the asyncio.wait is cancelled, we must make sure
@@ -212,24 +234,27 @@ class Client:
                     get.cancel()
                     # Stop the generator with the following exception
                     raise MqttError("Disconnected during message iteration")
+
         return _put_in_queue, _message_generator()
 
     async def _wait_for(self, *args, **kwargs):
         try:
             return await asyncio.wait_for(*args, **kwargs)
         except asyncio.TimeoutError:
-            raise MqttError('Operation timed out')
+            raise MqttError("Operation timed out")
 
     @contextmanager
     def _pending_call(self, mid, value):
         if mid in self._pending_calls:
-            raise RuntimeError(f'There already exists a pending call for message ID "{mid}"')
+            raise RuntimeError(
+                f'There already exists a pending call for message ID "{mid}"'
+            )
         self._pending_calls[mid] = value  # [1]
         try:
             # Log a warning if there is a concerning number of pending calls
             pending = len(self._pending_calls)
             if pending > self._pending_calls_threshold:
-                MQTT_LOGGER.warning(f'There are {pending} pending publish calls.')
+                MQTT_LOGGER.warning(f"There are {pending} pending publish calls.")
             # Back to the caller (run whatever is inside the with statement)
             yield
         finally:
@@ -248,7 +273,7 @@ class Client:
         # self._connected twice (as it raises an asyncio.InvalidStateError).
         if self._connected.done():
             return
-        
+
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(rc)
         else:
@@ -275,7 +300,7 @@ class Client:
         if rc == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set_result(rc)
         else:
-            self._disconnected.set_exception(MqttCodeError(rc, 'Unexpected disconnect'))
+            self._disconnected.set_exception(MqttCodeError(rc, "Unexpected disconnect"))
 
     def _on_subscribe(self, client, userdata, mid, granted_qos, properties=None):
         try:
@@ -301,12 +326,14 @@ class Client:
     def _on_socket_open(self, client, userdata, sock):
         def cb():
             client.loop_read()
+
         self._loop.add_reader(sock.fileno(), cb)
         # paho-mqtt calls this function from the executor thread on which we've called
         # `self._client.connect()` (see [3]), so we create a callback function to schedule
         # `_misc_loop()` and run it on the loop thread-safely.
         def create_task_cb():
             self._misc_task = self._loop.create_task(self._misc_loop())
+
         self._loop.call_soon_threadsafe(create_task_cb)
 
     def _on_socket_close(self, client, userdata, sock):
@@ -318,6 +345,7 @@ class Client:
     def _on_socket_register_write(self, client, userdata, sock):
         def cb():
             client.loop_write()
+
         self._loop.add_writer(sock, cb)
 
     def _on_socket_unregister_write(self, client, userdata, sock):
@@ -347,7 +375,9 @@ class Client:
             await self.disconnect()
         except MqttError as error:
             # We tried to be graceful. Now there is no mercy.
-            MQTT_LOGGER.warning(f'Could not gracefully disconnect due to "{error}". Forcing disconnection.')
+            MQTT_LOGGER.warning(
+                f'Could not gracefully disconnect due to "{error}". Forcing disconnection.'
+            )
             await self.force_disconnect()
 
 
