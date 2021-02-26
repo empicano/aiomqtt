@@ -4,7 +4,7 @@ import logging
 import socket
 import ssl
 from contextlib import contextmanager, suppress
-from types import FunctionType, TracebackType
+from types import TracebackType
 from typing import (
     Any,
     AsyncGenerator,
