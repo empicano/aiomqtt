@@ -312,7 +312,9 @@ class Client:
         try:
             self._pending_calls.pop(mid).set()
         except KeyError:
-            MQTT_LOGGER.error(f'Unexpected message ID "{mid}" in on_unsubscribe callback')
+            MQTT_LOGGER.error(
+                f'Unexpected message ID "{mid}" in on_unsubscribe callback'
+            )
 
     def _on_publish(self, client, userdata, mid):
         try:
