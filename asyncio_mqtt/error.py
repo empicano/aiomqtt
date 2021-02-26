@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 
+from typing import Any, Dict
+
+
 class MqttError(Exception):
     """Base exception for all asyncio-mqtt exceptions."""
 
@@ -8,16 +11,16 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc, *args):
+    def __init__(self, rc: int, *args: Any):
         super().__init__(*args)
         self.rc = rc
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"[code:{self.rc}] {super().__str__()}"
 
 
 class MqttConnectError(MqttCodeError):
-    def __init__(self, rc):
+    def __init__(self, rc: int):
         msg = "Connection refused"
         try:
             msg += f": {_CONNECT_RC_STRINGS[rc]}"
@@ -26,7 +29,7 @@ class MqttConnectError(MqttCodeError):
         super().__init__(rc, msg)
 
 
-_CONNECT_RC_STRINGS = {
+_CONNECT_RC_STRINGS: Dict[int, str] = {
     # Reference: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1898
     # 0: Connection successful
     # 1: Connection refused - incorrect protocol version
