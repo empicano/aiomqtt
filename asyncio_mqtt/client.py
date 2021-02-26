@@ -12,6 +12,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Generator,
     Iterator,
     List,
     Optional,
@@ -45,10 +46,10 @@ class Will:
     def __init__(
         self,
         topic: str,
-        payload: PayloadType = None,
+        payload: Optional[PayloadType] = None,
         qos: int = 0,
         retain: bool = False,
-        properties: mqtt.Properties = None,
+        properties: Optional[mqtt.Properties] = None,
     ):
         self.topic = topic
         self.payload = payload
@@ -65,10 +66,10 @@ class Client:
         *,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        logger: logging.Logger = MQTT_LOGGER,
+        logger: Optional[logging.Logger] = None,
         client_id: Optional[str] = None,
         tls_context: Optional[ssl.SSLContext] = None,
-        protocol: ProtocolType = mqtt.MQTTv311,
+        protocol: Optional[ProtocolType] = None,
         will: Optional[Will] = None,
         clean_session: Optional[bool] = None,
         transport: str = "tcp",
@@ -84,6 +85,9 @@ class Client:
         self._pending_publishes: Dict[int, asyncio.Event] = {}
         self._pending_calls_threshold: int = 10
         self._misc_task: Optional["asyncio.Task[None]"] = None
+
+        if protocol is None:
+            protocol = mqtt.MQTTv311
 
         self._client: mqtt.Client = mqtt.Client(
             client_id=client_id,
@@ -103,6 +107,8 @@ class Client:
         self._client.on_socket_register_write = self._on_socket_register_write
         self._client.on_socket_unregister_write = self._on_socket_unregister_write
 
+        if logger is None:
+            logger = MQTT_LOGGER
         self._client.enable_logger(logger)
 
         if username is not None and password is not None:
@@ -127,15 +133,13 @@ class Client:
         return cast(bytes, self._client._client_id).decode()
 
     @property
-    def _pending_calls(self) -> Set[int]:
+    def _pending_calls(self) -> Generator[int, None, None]:
         """
-        Return a set of all message IDs with pending calls.
+        Yield all message IDs with pending calls.
         """
-        mids: Set[int] = set()
-        mids.update(self._pending_subscribes.keys())
-        mids.update(self._pending_unsubscribes.keys())
-        mids.update(self._pending_publishes.keys())
-        return mids
+        yield from self._pending_subscribes.keys()
+        yield from self._pending_unsubscribes.keys()
+        yield from self._pending_publishes.keys()
 
     async def connect(self, *, timeout: int = 10) -> None:
         try:
@@ -321,7 +325,7 @@ class Client:
         pending_dict[mid] = value  # [1]
         try:
             # Log a warning if there is a concerning number of pending calls
-            pending = len(self._pending_calls)
+            pending = len(list(self._pending_calls))
             if pending > self._pending_calls_threshold:
                 MQTT_LOGGER.warning(f"There are {pending} pending publish calls.")
             # Back to the caller (run whatever is inside the with statement)
@@ -393,7 +397,7 @@ class Client:
         userdata: Any,
         mid: int,
         granted_qos: int,
-        properties: mqtt.Properties = None,
+        properties: Optional[mqtt.Properties] = None,
     ) -> None:
         try:
             self._pending_subscribes.pop(mid).set_result(granted_qos)
