@@ -4,6 +4,7 @@ import logging
 import socket
 import ssl
 from contextlib import contextmanager, suppress
+from enum import Enum
 from types import TracebackType
 from typing import (
     Any,
@@ -16,7 +17,6 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Set,
     Tuple,
     Type,
     cast,
@@ -30,14 +30,20 @@ except ImportError:
 import paho.mqtt.client as mqtt  # type: ignore
 
 from .error import MqttCodeError, MqttConnectError, MqttError
-from .types import (
-    PayloadType,
-    ProtocolType,
-    T,
-)
+from .types import PayloadType, T
 
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
+
+
+class ProtocolVersion(Enum):
+    """
+    A mapping of Paho MQTT protocol version constants to an Enum for use in type hints.
+    """
+
+    V31 = mqtt.MQTTv31
+    V311 = mqtt.MQTTv311
+    V5 = mqtt.MQTTv5
 
 
 # TODO: This should be a (frozen) dataclass (from Python 3.7)
@@ -69,7 +75,7 @@ class Client:
         logger: Optional[logging.Logger] = None,
         client_id: Optional[str] = None,
         tls_context: Optional[ssl.SSLContext] = None,
-        protocol: Optional[ProtocolType] = None,
+        protocol: Optional[ProtocolVersion] = None,
         will: Optional[Will] = None,
         clean_session: Optional[bool] = None,
         transport: str = "tcp",
@@ -87,7 +93,7 @@ class Client:
         self._misc_task: Optional["asyncio.Task[None]"] = None
 
         if protocol is None:
-            protocol = mqtt.MQTTv311
+            protocol = ProtocolVersion.V311
 
         self._client: mqtt.Client = mqtt.Client(
             client_id=client_id,
