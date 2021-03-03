@@ -4,7 +4,7 @@ import logging
 import socket
 import ssl
 from contextlib import contextmanager, suppress
-from enum import Enum
+from enum import IntEnum
 from types import TracebackType
 from typing import (
     Any,
@@ -36,7 +36,7 @@ MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
 
-class ProtocolVersion(Enum):
+class ProtocolVersion(IntEnum):
     """
     A mapping of Paho MQTT protocol version constants to an Enum for use in type hints.
     """
