@@ -19,6 +19,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    Union,
     cast,
 )
 
@@ -155,10 +156,8 @@ class Client:
             await loop.run_in_executor(
                 None, self._client.connect, self._hostname, self._port, 60
             )
-            # paho.mqttClient.socket() return non-None after the call to connect.
             client_socket = self._client.socket()
-            if not isinstance(client_socket, mqtt.WebsocketWrapper):
-                client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
+            _set_client_socket_defaults(client_socket)
         # paho.mqtt.Client.connect may raise one of several exceptions.
         # We convert all of them to the common MqttError for user convenience.
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
@@ -500,3 +499,20 @@ class Client:
                 f'Could not gracefully disconnect due to "{error}". Forcing disconnection.'
             )
             await self.force_disconnect()
+
+
+_PahoSocket = Union[socket.socket, mqtt.WebsocketWrapper]
+
+
+def _set_client_socket_defaults(client_socket: Optional[_PahoSocket]) -> None:
+    # Note that socket may be None if, e.g., the username and
+    # password combination didn't work. In this case, we return early.
+    if client_socket is None:
+        return
+    # Furthermore, paho sometimes gives us a socket wrapper instead of
+    # the raw socket. E.g., for WebSocket-based connections.
+    if isinstance(client_socket, socket.socket):
+        return
+    # At this point, we know that we got an actual socket. We change
+    # some of the default options.
+    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 2048)
