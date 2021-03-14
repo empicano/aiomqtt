@@ -30,7 +30,11 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 requires-python = ">= 3.7"
-dependencies = ["paho-mqtt>=1.6.0", "typing_extensions; python_version<'3.10'"]
+dependencies = [
+    "paho-mqtt>=1.6.0",
+    "anyio>=3.6.2",
+    "typing_extensions; python_version<'3.10'",
+]
 dynamic = ["version"]
 
 [project.urls]
@@ -40,7 +44,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 lint = ["mypy>=0.982", "flake8>=5.0.4", "types-paho-mqtt>=1.6.0.1"]
 format = ["black>=22.10.0", "isort>=5.10.1"]
-tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
+tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0"]
 
 [tool.setuptools_scm]
 write_to = "asyncio_mqtt/_version.py"

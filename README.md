@@ -1,4 +1,11 @@
-<h1 align="center">Idiomatic asyncio MQTT Client 🙌</h1>
+# This is a re-write based on anyio
+
+Maybe we should fork this to another repo.
+
+I added `anyio_example.py` that you can test with locally. When we agree
+on the API, we can update the rest of this readme.
+
+<h1 align="center">Idiomatic AnyIO MQTT Client 🙌</h1>
 <p align="center">
     <a href="https://github.com/sbtinstruments/asyncio-mqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt"></a>
     <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/asyncio-mqtt"></a>

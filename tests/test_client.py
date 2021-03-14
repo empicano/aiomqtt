@@ -31,8 +31,8 @@ async def test_client_filtered_messages() -> None:
                 assert message.topic == good_topic
                 tg.cancel_scope.cancel()
 
-    async with Client(HOSTNAME) as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME) as client:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_messages, tg)
             await client.publish(bad_topic, 2)
@@ -55,8 +55,8 @@ async def test_client_unfiltered_messages() -> None:
             async for message in messages:
                 assert message.topic == topic_filtered
 
-    async with Client(HOSTNAME) as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME) as client:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_filtered_messages)
             tg.start_soon(handle_unfiltered_messages, tg)
@@ -80,8 +80,8 @@ async def test_client_unsubscribe() -> None:
                     assert message.topic == topic2
                     tg.cancel_scope.cancel()
 
-    async with Client(HOSTNAME) as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME) as client:
             await client.subscribe(topic1)
             await client.subscribe(topic2)
             tg.start_soon(handle_messages, tg)
@@ -96,8 +96,9 @@ async def test_client_unsubscribe() -> None:
     ((ProtocolVersion.V31, 22), (ProtocolVersion.V311, 0), (ProtocolVersion.V5, 0)),
 )
 async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
-    client = Client(HOSTNAME, protocol=protocol)
-    assert len(client.id) == length
+    async with anyio.create_task_group() as tg:
+        client = Client(tg, HOSTNAME, protocol=protocol)
+        assert len(client.id) == length
 
 
 async def test_client_will() -> None:
@@ -105,19 +106,20 @@ async def test_client_will() -> None:
     event = anyio.Event()
 
     async def launch_client() -> None:
-        with anyio.CancelScope(shield=True) as cs:
-            async with Client(HOSTNAME) as client:
-                await client.subscribe(topic)
-                event.set()
-                async with client.filtered_messages(topic) as messages:
-                    async for message in messages:
-                        assert message.topic == topic
-                        cs.cancel()
+        async with anyio.create_task_group() as tg:
+            with anyio.CancelScope(shield=True) as cs:
+                async with Client(tg, HOSTNAME) as client:
+                    await client.subscribe(topic)
+                    event.set()
+                    async with client.filtered_messages(topic) as messages:
+                        async for message in messages:
+                            assert message.topic == topic
+                            cs.cancel()
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(launch_client)
         await event.wait()
-        async with Client(HOSTNAME, will=Will(topic)) as client:
+        async with Client(tg, HOSTNAME, will=Will(topic)) as client:
             client._client._sock_close()  # type: ignore[attr-defined]
 
 
@@ -130,12 +132,13 @@ async def test_client_tls_context() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(
-        HOSTNAME,
-        8883,
-        tls_context=ssl.SSLContext(protocol=ssl.PROTOCOL_TLS),
-    ) as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(
+            tg,
+            HOSTNAME,
+            8883,
+            tls_context=ssl.SSLContext(protocol=ssl.PROTOCOL_TLS),
+        ) as client:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
             await client.publish(topic)
@@ -150,14 +153,15 @@ async def test_client_tls_params() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(
-        HOSTNAME,
-        8883,
-        tls_params=TLSParameters(
-            ca_certs=str(Path.cwd() / "tests" / "mosquitto.org.crt")
-        ),
-    ) as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(
+            tg,
+            HOSTNAME,
+            8883,
+            tls_params=TLSParameters(
+                ca_certs=str(Path.cwd() / "tests" / "mosquitto.org.crt")
+            ),
+        ) as client:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
             await client.publish(topic)
@@ -172,8 +176,10 @@ async def test_client_username_password() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(HOSTNAME, username="asyncio-mqtt", password="012") as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(
+            tg, HOSTNAME, username="asyncio-mqtt", password="012"
+        ) as client:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
             await client.publish(topic)
@@ -181,8 +187,9 @@ async def test_client_username_password() -> None:
 
 async def test_client_logger() -> None:
     logger = logging.getLogger("asyncio-mqtt")
-    async with Client(HOSTNAME, logger=logger) as client:
-        assert logger is client._client._logger  # type: ignore[attr-defined]
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME, logger=logger) as client:
+            assert logger is client._client._logger  # type: ignore[attr-defined]
 
 
 async def test_client_max_concurrent_outgoing_calls(
@@ -202,14 +209,14 @@ async def test_client_max_concurrent_outgoing_calls(
             properties: mqtt.Properties | None = None,
         ) -> tuple[int, int]:
             assert client._outgoing_calls_sem is not None
-            assert client._outgoing_calls_sem.locked()
+            assert client._outgoing_calls_sem.value == 0
             return super().subscribe(topic, qos, options, properties)
 
         def unsubscribe(
             self, topic: str | list[str], properties: mqtt.Properties | None = None
         ) -> tuple[int, int]:
             assert client._outgoing_calls_sem is not None
-            assert client._outgoing_calls_sem.locked()
+            assert client._outgoing_calls_sem.value == 0
             return super().unsubscribe(topic, properties)
 
         def publish(
@@ -221,15 +228,16 @@ async def test_client_max_concurrent_outgoing_calls(
             properties: mqtt.Properties | None = None,
         ) -> mqtt.MQTTMessageInfo:
             assert client._outgoing_calls_sem is not None
-            assert client._outgoing_calls_sem.locked()
+            assert client._outgoing_calls_sem.value == 0
             return super().publish(topic, payload, qos, retain, properties)
 
     monkeypatch.setattr(mqtt, "Client", MockPahoClient)
 
-    async with Client(HOSTNAME, max_concurrent_outgoing_calls=1) as client:
-        await client.subscribe(topic)
-        await client.unsubscribe(topic)
-        await client.publish(topic)
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME, max_concurrent_outgoing_calls=1) as client:
+            await client.subscribe(topic)
+            await client.unsubscribe(topic)
+            await client.publish(topic)
 
 
 async def test_client_websockets() -> None:
@@ -241,14 +249,15 @@ async def test_client_websockets() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(
-        HOSTNAME,
-        8080,
-        transport="websockets",
-        websocket_path="/",
-        websocket_headers={"foo": "bar"},
-    ) as client:
-        async with anyio.create_task_group() as tg:
+    async with anyio.create_task_group() as tg:
+        async with Client(
+            tg,
+            HOSTNAME,
+            8080,
+            transport="websockets",
+            websocket_path="/",
+            websocket_headers={"foo": "bar"},
+        ) as client:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
             await client.publish(topic)
@@ -257,20 +266,20 @@ async def test_client_websockets() -> None:
 async def test_client_pending_calls_threshold(caplog: pytest.LogCaptureFixture) -> None:
     topic = TOPIC_HEADER + "pending_calls_threshold"
 
-    async with Client(HOSTNAME) as client:
-        nb_publish = client._pending_calls_threshold + 1
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME) as client:
+            nb_publish = client._pending_calls_threshold + 1
 
-        async with anyio.create_task_group() as tg:
             for _ in range(nb_publish):
                 tg.start_soon(client.publish, topic)
 
-        assert caplog.record_tuples == [
-            (
-                "mqtt",
-                logging.WARNING,
-                f"There are {nb_publish} pending publish calls.",
-            )
-        ]
+    assert caplog.record_tuples == [
+        (
+            "mqtt",
+            logging.WARNING,
+            f"There are {nb_publish} pending publish calls.",
+        )
+    ]
 
 
 async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_calls(
@@ -280,11 +289,12 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
         TOPIC_HEADER + "no_pending_calls_warnings_with_max_concurrent_outgoing_calls"
     )
 
-    async with Client(HOSTNAME, max_concurrent_outgoing_calls=1) as client:
-        nb_publish = client._pending_calls_threshold + 1
+    async with anyio.create_task_group() as tg:
+        async with Client(tg, HOSTNAME, max_concurrent_outgoing_calls=1) as client:
+            nb_publish = client._pending_calls_threshold + 1
 
-        async with anyio.create_task_group() as tg:
             for _ in range(nb_publish):
                 tg.start_soon(client.publish, topic)
+            tg.cancel_scope.cancel()
 
-        assert caplog.record_tuples == []
+    assert caplog.record_tuples == []

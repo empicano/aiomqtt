@@ -8,3 +8,4 @@ local_test.py
 .coverage
 coverage.xml
 asyncio_mqtt/_version.py
+.vscode/
