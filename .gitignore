@@ -5,3 +5,4 @@ dist
 local_test.py
 
 .idea/
+.vscode/

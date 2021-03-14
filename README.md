@@ -1,6 +1,16 @@
 ![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
 ![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
 
+# This is a re-write based on anyio
+
+You need the latest master of anyio for this to work (commit 070e2831c1b33fc1f40a7d9db2bcb76a3d1cf938 and later). This is because
+we use the new synchronous API.
+
+Maybe we should fork this to another repo.
+
+I added `anyio_example.py` that you can test with locally. When we agree
+on the API, we can update the rest of this readme.
+
 # MQTT client with idiomatic asyncio interface 🙌
 
 Write code like this:
