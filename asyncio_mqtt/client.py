@@ -511,7 +511,7 @@ def _set_client_socket_defaults(client_socket: Optional[_PahoSocket]) -> None:
         return
     # Furthermore, paho sometimes gives us a socket wrapper instead of
     # the raw socket. E.g., for WebSocket-based connections.
-    if isinstance(client_socket, socket.socket):
+    if not isinstance(client_socket, socket.socket):
         return
     # At this point, we know that we got an actual socket. We change
     # some of the default options.
