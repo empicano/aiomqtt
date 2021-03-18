@@ -444,7 +444,6 @@ class Client:
                 client.loop_read()
             except Exception as exc:
                 self._disconnected.set_exception(exc)
-
         self._loop.add_reader(sock.fileno(), cb)
         # paho-mqtt calls this function from the executor thread on which we've called
         # `self._client.connect()` (see [3]), so we create a callback function to schedule
