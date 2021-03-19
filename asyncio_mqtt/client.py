@@ -437,7 +437,13 @@ class Client:
         self, client: mqtt.Client, userdata: Any, sock: socket.socket
     ) -> None:
         def cb() -> None:
-            client.loop_read()
+            # client.loop_read() may raise an exception, such as BadPipe. It's
+            # usually a sign that the underlaying connection broke, therefore we 
+            # disconnect straight away
+            try:
+                client.loop_read()
+            except Exception as exc:
+                self._disconnected.set_exception(exc)
 
         self._loop.add_reader(sock.fileno(), cb)
         # paho-mqtt calls this function from the executor thread on which we've called
@@ -460,7 +466,13 @@ class Client:
         self, client: mqtt.Client, userdata: Any, sock: socket.socket
     ) -> None:
         def cb() -> None:
-            client.loop_write()
+            # client.loop_write() may raise an exception, such as BadPipe. It's
+            # usually a sign that the underlaying connection broke, therefore we 
+            # disconnect straight away
+            try:
+                client.loop_write()
+            except Exception as exc:
+                self._disconnected.set_exception(exc)
 
         self._loop.add_writer(sock, cb)
 
