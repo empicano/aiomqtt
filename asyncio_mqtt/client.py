@@ -5,6 +5,7 @@ import socket
 import ssl
 from contextlib import contextmanager, suppress
 from enum import IntEnum
+from functools import partial
 from types import TracebackType
 from typing import (
     Any,
@@ -23,12 +24,14 @@ from typing import (
     cast,
 )
 
+
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager  # type: ignore
 
 import paho.mqtt.client as mqtt  # type: ignore
+from paho.mqtt.properties import Properties
 
 from .error import MqttCodeError, MqttConnectError, MqttError
 from .types import PayloadType, T
@@ -65,6 +68,34 @@ class Will:
         self.properties = properties
 
 
+class ConnectArgs:
+    def __init__(
+            self,
+            keepalive: int = 60,
+            bind_address: str = None,
+            bind_port: int = None,
+            clean_start: bool = None,
+            properties: Properties = None,
+    ):
+        self.keepalive = keepalive
+        self.bind_address = bind_address
+        self.bind_port = bind_port
+        self.clean_start = clean_start
+        self.properties = properties
+
+    def get_connect_kwargs(self) -> dict:
+        kwargs = dict(keepalive=self.keepalive)
+        if self.bind_address is not None:
+            kwargs["bind_address"] = self.bind_address
+        if self.bind_port is not None:
+            kwargs["bind_port"] = self.bind_port
+        if self.clean_start is not None:
+            kwargs["clean_start"] = self.clean_start
+        if self.properties is not None:
+            kwargs["properties"] = self.properties
+        return kwargs
+
+
 class Client:
     def __init__(
         self,
@@ -80,9 +111,11 @@ class Client:
         will: Optional[Will] = None,
         clean_session: Optional[bool] = None,
         transport: str = "tcp",
+        connect_args: ConnectArgs = None,
     ):
         self._hostname = hostname
         self._port = port
+        self._connect_args = connect_args if connect_args is not None else ConnectArgs()
         self._loop = asyncio.get_event_loop()
         self._connected: "asyncio.Future[int]" = asyncio.Future()
         self._disconnected: "asyncio.Future[Optional[int]]" = asyncio.Future()
@@ -153,9 +186,9 @@ class Client:
             loop = asyncio.get_running_loop()
             # [3] Run connect() within an executor thread, since it blocks on socket
             # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
-            await loop.run_in_executor(
-                None, self._client.connect, self._hostname, self._port, 60
-            )
+            await loop.run_in_executor(None, partial(
+                self._client.connect, self._hostname, self._port, **self._connect_args.get_connect_kwargs()
+            ))
             client_socket = self._client.socket()
             _set_client_socket_defaults(client_socket)
         # paho.mqtt.Client.connect may raise one of several exceptions.
