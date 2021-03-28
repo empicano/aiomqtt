@@ -23,12 +23,14 @@ from typing import (
     cast,
 )
 
+
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager  # type: ignore
 
 import paho.mqtt.client as mqtt  # type: ignore
+from paho.mqtt.properties import Properties
 
 from .error import MqttCodeError, MqttConnectError, MqttError
 from .types import PayloadType, T
@@ -80,9 +82,19 @@ class Client:
         will: Optional[Will] = None,
         clean_session: Optional[bool] = None,
         transport: str = "tcp",
+        keepalive: int = 60,
+        bind_address: str = "",
+        bind_port: int = 0,
+        clean_start: bool = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
+        properties: Optional[Properties] = None,
     ):
         self._hostname = hostname
         self._port = port
+        self._keepalive = keepalive
+        self._bind_address = bind_address
+        self._bind_port = bind_port
+        self._clean_start = clean_start
+        self._properties = properties
         self._loop = asyncio.get_event_loop()
         self._connected: "asyncio.Future[int]" = asyncio.Future()
         self._disconnected: "asyncio.Future[Optional[int]]" = asyncio.Future()
@@ -154,7 +166,9 @@ class Client:
             # [3] Run connect() within an executor thread, since it blocks on socket
             # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
             await loop.run_in_executor(
-                None, self._client.connect, self._hostname, self._port, 60
+                None, self._client.connect,
+                self._hostname, self._port, self._keepalive, self._bind_address, self._bind_port,
+                self._clean_start, self._properties
             )
             client_socket = self._client.socket()
             _set_client_socket_defaults(client_socket)
