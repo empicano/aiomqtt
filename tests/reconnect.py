@@ -38,7 +38,7 @@ def main():
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    asyncio.run(asyncio.wait([test(), tick()]))
+    asyncio.get_event_loop().run_until_complete(asyncio.wait([test(), tick()]))
 
 
 if __name__ == "__main__":
