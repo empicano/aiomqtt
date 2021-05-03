@@ -8,6 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.9.0] - 2021-05-03
+
+#### Added
+
+- Add type hints. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) [#37](https://github.com/sbtinstruments/asyncio-mqtt/pull/37)
+
+- Add the `keepalive`, `bind_address`, `bind_port`, `clean_start`, `properties` arguments. Contributed by [Marcin Jaworski (@yawor)](https://github.com/yawor) in [#56](https://github.com/sbtinstruments/asyncio-mqtt/pull/56)
+
+#### Fixed
+
+- Fix Python 3.6 compatibility. Contributed by [(@fipwmaqzufheoxq92ebc)](https://github.com/fipwmaqzufheoxq92ebc) in [#57](https://github.com/sbtinstruments/asyncio-mqtt/pull/57).
+  Note that asyncio-mqtt officially targets Python 3.7. Compatibility with 3.6 is community-driven.
+
+- Fix "Broken pipe" error. Contributed by [Gilbert (@gilbertsmink)](https://github.com/gilbertsmink) in [#55](https://github.com/sbtinstruments/asyncio-mqtt/pull/55)
+
+- Fix socket check when you select the WebSocket transport. Contributed by [Robert Chmielowiec (@chmielowiec)](https://github.com/chmielowiec) in [#54](https://github.com/sbtinstruments/asyncio-mqtt/pull/54)
+
+- Fix `TypeError` on invalid username and password combination
+
+- Check that _misc_task is not None before trying to cancel it. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) in [#41](https://github.com/sbtinstruments/asyncio-mqtt/pull/41)
+
+- Fix exception in `on_socket_open`: Non-thread-safe operation invoked on an event loop other than the current one. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) in [#40](https://github.com/sbtinstruments/asyncio-mqtt/pull/40)
+
 ## [0.8.1] - 2021-02-23
 
 #### Fixed
