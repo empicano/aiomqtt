@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 
-from typing import Any, Dict
+from typing import Any, Dict, Union
+
+import paho.mqtt.client as mqtt  # type: ignore
 
 
 class MqttError(Exception):
@@ -11,16 +13,21 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc: int, *args: Any):
+    def __init__(self, rc: Union[int, mqtt.ReasonCodes], *args: Any):
         super().__init__(*args)
         self.rc = rc
 
     def __str__(self) -> str:
-        return f"[code:{self.rc}] {super().__str__()}"
+        if isinstance(self.rc, mqtt.ReasonCodes):
+            return f"[code:{self.rc.value}] {str(self.rc)}"
+        else:
+            return f"[code:{self.rc}] {super().__str__()}"
 
 
 class MqttConnectError(MqttCodeError):
-    def __init__(self, rc: int):
+    def __init__(self, rc: Union[int, mqtt.ReasonCodes]):
+        if isinstance(rc, mqtt.ReasonCodes):
+            return super().__init__(rc)
         msg = "Connection refused"
         try:
             msg += f": {_CONNECT_RC_STRINGS[rc]}"
