@@ -476,8 +476,11 @@ class Client:
     def _on_socket_close(
         self, client: mqtt.Client, userdata: Any, sock: socket.socket
     ) -> None:
-        self._loop.remove_reader(sock.fileno())
-        if self._misc_task is not None:
+
+        fileno = sock.fileno()
+        if fileno > -1:
+            self._loop.remove_reader(fileno)
+        if self._misc_task is not None and not self._misc_task.done():
             with suppress(asyncio.CancelledError):
                 self._misc_task.cancel()
 
