@@ -8,15 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.9.1] - 2021-05-13
+
+### Fixed
+
+- Fix handling of MQTTv5 reason codes. Contributed by [Jakob Schlyter (@jschlyter)](https://github.com/jschlyter) [#59](https://github.com/sbtinstruments/asyncio-mqtt/pull/59)
+
+- Account for `-1` socket handles in the close callback. Contributed by [@wrobell](https://github.com/wrobell) [#60](https://github.com/sbtinstruments/asyncio-mqtt/pull/60)
+
 ## [0.9.0] - 2021-05-03
 
-#### Added
+### Added
 
 - Add type hints. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) [#37](https://github.com/sbtinstruments/asyncio-mqtt/pull/37)
 
 - Add the `keepalive`, `bind_address`, `bind_port`, `clean_start`, `properties` arguments. Contributed by [Marcin Jaworski (@yawor)](https://github.com/yawor) in [#56](https://github.com/sbtinstruments/asyncio-mqtt/pull/56)
 
-#### Fixed
+### Fixed
 
 - Fix Python 3.6 compatibility. Contributed by [(@fipwmaqzufheoxq92ebc)](https://github.com/fipwmaqzufheoxq92ebc) in [#57](https://github.com/sbtinstruments/asyncio-mqtt/pull/57).
   Note that asyncio-mqtt officially targets Python 3.7. Compatibility with 3.6 is community-driven.
@@ -33,7 +41,7 @@ Nothing so far.
 
 ## [0.8.1] - 2021-02-23
 
-#### Fixed
+### Fixed
 
 - Fix `AttributeError` when you use WebSockets.
   Contributed by [Robert Chmielowiec (@chmielowiec)](https://github.com/chmielowiec) in [#36](https://github.com/sbtinstruments/asyncio-mqtt/pull/36)
