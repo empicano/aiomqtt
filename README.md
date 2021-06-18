@@ -5,6 +5,7 @@
 
 Write code like this:
 
+
 ##### Subscriber
 ```python
 async with Client("test.mosquitto.org") as client:
@@ -17,18 +18,14 @@ async with Client("test.mosquitto.org") as client:
 ##### Publisher
 ```python
 async with Client("test.mosquitto.org") as client:
-    message = "state"
+    message = "10%"
     await client.publish(
             "floors/bed_room/humidity",
-             payload=message.encode(),
-             qos=2,
-             retain=False)
+             payload=message.encode()
+          )
 ```
 
-Notice that the message received by the Subscriber is not the payload directly,
-but, instead, is a message of type [MQTTMessage](https://github.com/eclipse/paho.mqtt.python/blob/c339cea2652a957d47de68eafb2a76736c1514e6/src/paho/mqtt/client.py#L355)
-Thus, we need to access the attribute payload of the object to get the content
-of the message.
+
 
 asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
 
@@ -146,56 +143,6 @@ async def main():
 
 asyncio.run(main())
 ```
-### Sending a JSON payload
-
-##### Subscriber
-The following example describes a subscriber expecting to receive a JSON
-payload, which, also, connects to the client using Basic Auth and specifying
-the MQTT protocol to be used. Please beware that some MQTT brokers requires you
-to specify the protocol to be used. For more arguments that the Client may 
-accept, please check [client.py](https://github.com/sbtinstruments/asyncio-mqtt/blob/f4736adf0d3c5b87a39ea27afd025ed58c7bb54c/asyncio_mqtt/client.py#L70)
-
-Please observe that the content which is decoded is not the message received but
-the content (payload).
-
-```python
-import json
-from asyncio_mqtt import Client, ProtocolVersion
-
-async with Client(
-        "test.mosquitto.org",
-        username="username",
-        password="password",
-        protocol=ProtocolVersion.V31
-) as client:
-    async with client.filtered_messages("floors/+/humidity") as messages:
-        # subscribe is done afterwards so that we just start receiving messages 
-        # from this point on
-        await client.subscribe("floors/#")
-        async for message in messages:
-            print(message.topic)
-            print(json.loads(message.payload))
-```
-##### Publisher
-The publisher, besides specifying the Protocol and using also Basic Auth to
-acess the broker, it also specifies the [QoS](https://www.hivemq.com/blog/mqtt-essentials-part-6-mqtt-quality-of-service-levels/) desired
-
-```python
-import json
-from asyncio_mqtt import Client, ProtocolVersion
-
-async with Client(
-        "test.mosquitto.org",
-        username="username",
-        password="password",
-        protocol=ProtocolVersion.V31
-) as client:
-    message = {"state": 3}
-    await client.publish("floors/bed_room/humidity",
-                         payload=json.dumps(message), qos=2, retain=False)
-```
-
-
 
 ## Alternative asyncio-based MQTT clients
 
