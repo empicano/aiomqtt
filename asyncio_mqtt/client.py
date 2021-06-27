@@ -193,7 +193,8 @@ class Client:
         await self._wait_for(self._disconnected, timeout=timeout)
 
     async def force_disconnect(self) -> None:
-        self._disconnected.set_result(None)
+        if not self._disconnected.done():
+            self._disconnected.set_result(None)
 
     async def subscribe(self, *args: Any, timeout: int = 10, **kwargs: Any) -> int:
         result, mid = self._client.subscribe(*args, **kwargs)
