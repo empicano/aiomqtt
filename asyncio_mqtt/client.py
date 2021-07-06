@@ -87,6 +87,7 @@ class Client:
         bind_port: int = 0,
         clean_start: bool = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         properties: Optional[Properties] = None,
+        message_retry_set: int = 20,
     ):
         self._hostname = hostname
         self._port = port
@@ -140,6 +141,8 @@ class Client:
             self._client.will_set(
                 will.topic, will.payload, will.qos, will.retain, will.properties
             )
+
+        self._client.message_retry_set(message_retry_set)
 
     @property
     def id(self) -> str:
