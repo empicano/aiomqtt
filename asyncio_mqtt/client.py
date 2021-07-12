@@ -20,7 +20,7 @@ from typing import (
     Tuple,
     Type,
     Union,
-    cast,
+    cast, Iterable,
 )
 
 
@@ -67,6 +67,13 @@ class Will:
         self.properties = properties
 
 
+# See the overloads of `socket.setsockopt` for details.
+SocketOption = Union[
+    Tuple[int, int, Union[int, bytes]],
+    Tuple[int, int, None, int],
+]
+
+
 class Client:
     def __init__(
         self,
@@ -88,13 +95,7 @@ class Client:
         clean_start: bool = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         properties: Optional[Properties] = None,
         message_retry_set: int = 20,
-        # By default, in order to optimize the transmission of small data packets,
-        # the send buffer size is set to 2048 bytes. To transfer large data packets (>50MB),
-        # it is recommended to increase the buffer value.
-        # It is also possible to set all possible socket settings.
-        # See https://docs.python.org/3/library/socket.html#socket.socket.setsockopt for more information.
-        # If the socket_options is None, then the system defaults are used.
-        socket_options: Optional[Tuple[int, int, Union[int, bytes]]] = (socket.SOL_SOCKET, socket.SO_SNDBUF, 2048),
+        socket_options: Optional[Iterable[SocketOption]] = (),
     ):
         self._hostname = hostname
         self._port = port
@@ -150,7 +151,7 @@ class Client:
             )
 
         self._client.message_retry_set(message_retry_set)
-        self._socket_options = socket_options
+        self._socket_options: Tuple[SocketOption] = tuple(socket_options)
 
     @property
     def id(self) -> str:
@@ -187,8 +188,7 @@ class Client:
                 self._clean_start, self._properties
             )
             client_socket = self._client.socket()
-            if self._socket_options is not None:
-                _set_client_socket_defaults(client_socket, self._socket_options)
+            _set_client_socket_defaults(client_socket, self._socket_options)
         # paho.mqtt.Client.connect may raise one of several exceptions.
         # We convert all of them to the common MqttError for user convenience.
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
@@ -552,7 +552,7 @@ _PahoSocket = Union[socket.socket, mqtt.WebsocketWrapper]
 
 
 def _set_client_socket_defaults(client_socket: Optional[_PahoSocket],
-                                socket_param: Optional[Tuple[int, int, Union[int, bytes]]]) -> None:
+                                socket_options: Iterable[SocketOption]) -> None:
     # Note that socket may be None if, e.g., the username and
     # password combination didn't work. In this case, we return early.
     if client_socket is None:
@@ -563,4 +563,5 @@ def _set_client_socket_defaults(client_socket: Optional[_PahoSocket],
         return
     # At this point, we know that we got an actual socket. We change
     # some of the default options.
-    client_socket.setsockopt(*socket_param)
+    for socket_option in socket_options:
+        client_socket.setsockopt(*socket_option)
