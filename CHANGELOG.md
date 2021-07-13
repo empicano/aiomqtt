@@ -8,19 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.10.0] - 2021-07-13
+
+### Added
+
+- Add new parameter `socket_options` to `Client.__init__`. Contributed by [@xydan83](https://github.com/xydan83) in [#71](https://github.com/sbtinstruments/asyncio-mqtt/pull/71)
+
+- Add new parameter `message_retry_set` to `Client.__init__`. Contributed by [@xydan83](https://github.com/xydan83) in [#69](https://github.com/sbtinstruments/asyncio-mqtt/pull/69)
+
+- Export `ProtocolVersion` from the main module. Contributed by [André (@tropxy)](https://github.com/tropxy) in [#65](https://github.com/sbtinstruments/asyncio-mqtt/pull/65) (1/2)
+
+- Add documentation about publishers, client arguments, etc. Contributed by [André (@tropxy)](https://github.com/tropxy) in [#65](https://github.com/sbtinstruments/asyncio-mqtt/pull/65) (2/2)
+
+### Fixed
+
+- Fix race condition that caused `InvalidStateError` in `force_disconnect()`. Contributed by [@functionpointer](https://github.com/functionpointer) in [#67](https://github.com/sbtinstruments/asyncio-mqtt/pull/67)
+
 ## [0.9.1] - 2021-05-13
 
 ### Fixed
 
-- Fix handling of MQTTv5 reason codes. Contributed by [Jakob Schlyter (@jschlyter)](https://github.com/jschlyter) [#59](https://github.com/sbtinstruments/asyncio-mqtt/pull/59)
+- Fix handling of MQTTv5 reason codes. Contributed by [Jakob Schlyter (@jschlyter)](https://github.com/jschlyter) in [#59](https://github.com/sbtinstruments/asyncio-mqtt/pull/59)
 
-- Account for `-1` socket handles in the close callback. Contributed by [@wrobell](https://github.com/wrobell) [#60](https://github.com/sbtinstruments/asyncio-mqtt/pull/60)
+- Account for `-1` socket handles in the close callback. Contributed by [@wrobell](https://github.com/wrobell) in [#60](https://github.com/sbtinstruments/asyncio-mqtt/pull/60)
 
 ## [0.9.0] - 2021-05-03
 
 ### Added
 
-- Add type hints. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) [#37](https://github.com/sbtinstruments/asyncio-mqtt/pull/37)
+- Add type hints. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) in [#37](https://github.com/sbtinstruments/asyncio-mqtt/pull/37)
 
 - Add the `keepalive`, `bind_address`, `bind_port`, `clean_start`, `properties` arguments. Contributed by [Marcin Jaworski (@yawor)](https://github.com/yawor) in [#56](https://github.com/sbtinstruments/asyncio-mqtt/pull/56)
 
