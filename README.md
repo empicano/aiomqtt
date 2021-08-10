@@ -1,5 +1,6 @@
 ![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
 ![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
+[![PyPI](https://img.shields.io/pypi/v/asyncio-mqtt)](https://pypi.org/project/asyncio-mqtt/)
 
 # MQTT client with idiomatic asyncio interface 🙌
 
