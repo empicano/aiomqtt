@@ -34,7 +34,7 @@ setup(
     ],
     keywords="mqtt async asyncio paho-mqtt wrapper",
     install_requires=[
-        "paho-mqtt>=1.5.0",
+        "paho-mqtt>=1.6.0",
         "async_generator;python_version<'3.7'",
     ],
 )
