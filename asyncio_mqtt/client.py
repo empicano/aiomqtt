@@ -122,6 +122,7 @@ class Client:
             protocol=protocol,
             clean_session=clean_session,
             transport=transport,
+            reconnect_on_failure=False,
         )
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
@@ -470,7 +471,7 @@ class Client:
     ) -> None:
         def cb() -> None:
             # client.loop_read() may raise an exception, such as BadPipe. It's
-            # usually a sign that the underlaying connection broke, therefore we 
+            # usually a sign that the underlaying connection broke, therefore we
             # disconnect straight away
             try:
                 client.loop_read()
@@ -502,7 +503,7 @@ class Client:
     ) -> None:
         def cb() -> None:
             # client.loop_write() may raise an exception, such as BadPipe. It's
-            # usually a sign that the underlaying connection broke, therefore we 
+            # usually a sign that the underlaying connection broke, therefore we
             # disconnect straight away
             try:
                 client.loop_write()
