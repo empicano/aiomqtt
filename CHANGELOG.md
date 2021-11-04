@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.11.0] - 2021-11-04
+
+### Added
+
+- Add link to PyPI package with a badge in `README.md`. Contributed by [Paul Barker (@pbrkr)](https://github.com/pbrkr) in [#72](https://github.com/sbtinstruments/asyncio-mqtt/pull/72)
+
+### Changed
+
+- Convert reason codes into English error messages. Contributed by [@CptSpaceToaster](https://github.cm/CptSpaceToaster) in [#74](https://github.com/sbtinstruments/asyncio-mqtt/pull/74)
+
+### Fixed
+
+- Fix event loop block caused by paho's reconnection feature. Contributed by [Martin Hjelmare (@MartinHjelmare)](https://github.cm/MartinHjelmare) in [#85](https://github.com/sbtinstruments/asyncio-mqtt/pull/85)
+
 ## [0.10.0] - 2021-07-13
 
 ### Added
