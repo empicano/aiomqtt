@@ -36,5 +36,6 @@ setup(
     install_requires=[
         "paho-mqtt>=1.6.0",
         "async_generator;python_version<'3.7'",
+        "typing_extensions;python_version<'3.7'"
     ],
 )
