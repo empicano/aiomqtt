@@ -21,13 +21,20 @@ from typing import (
     Type,
     Union,
     cast, Iterable,
+    AsyncContextManager,
+    TypeVar,
 )
+from typing_extensions import ParamSpec
 
 
 try:
     from contextlib import asynccontextmanager
 except ImportError:
-    from async_generator import asynccontextmanager  # type: ignore
+    from async_generator import asynccontextmanager as _asynccontextmanager # type: ignore
+    _P = ParamSpec('_P')
+    _T = TypeVar('_T')
+    def asynccontextmanager(func: Callable[_P, AsyncIterator[_T]]) -> Callable[_P, AsyncContextManager[_T]]: # type: ignore
+        return _asynccontextmanager(func)
 
 import paho.mqtt.client as mqtt  # type: ignore
 from paho.mqtt.properties import Properties
@@ -92,7 +99,7 @@ class Client:
         keepalive: int = 60,
         bind_address: str = "",
         bind_port: int = 0,
-        clean_start: bool = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
+        clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         properties: Optional[Properties] = None,
         message_retry_set: int = 20,
         socket_options: Optional[Iterable[SocketOption]] = (),
@@ -527,7 +534,7 @@ class Client:
         return self
 
     async def __aexit__(
-        self, exc_type: Type[Exception], exc: Exception, tb: TracebackType
+        self, exc_type: Optional[Type[BaseException]], exc: Optional[BaseException], tb: Optional[TracebackType]
     ) -> None:
         """Disconnect from the broker."""
         # Early out if already disconnected...
