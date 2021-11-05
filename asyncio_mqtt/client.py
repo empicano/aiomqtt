@@ -24,13 +24,14 @@ from typing import (
     AsyncContextManager,
     TypeVar,
 )
-from typing_extensions import ParamSpec
+
 
 
 try:
     from contextlib import asynccontextmanager
 except ImportError:
     from async_generator import asynccontextmanager as _asynccontextmanager # type: ignore
+    from typing_extensions import ParamSpec
     _P = ParamSpec('_P')
     _T = TypeVar('_T')
     def asynccontextmanager(func: Callable[_P, AsyncIterator[_T]]) -> Callable[_P, AsyncContextManager[_T]]: # type: ignore
