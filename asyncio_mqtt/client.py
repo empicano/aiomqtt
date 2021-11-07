@@ -3,6 +3,7 @@ import asyncio
 import logging
 import socket
 import ssl
+import sys
 from contextlib import contextmanager, suppress
 from enum import IntEnum
 from types import TracebackType
@@ -24,9 +25,11 @@ from typing import (
 )
 
 
-try:
+
+# asynccontextmanager exists in contextlib in python3.7 and later.
+if sys.version_info >= (3, 7)
     from contextlib import asynccontextmanager
-except ImportError:
+else:
     from async_generator import asynccontextmanager  # type: ignore
 
 import paho.mqtt.client as mqtt  # type: ignore
