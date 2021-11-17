@@ -148,7 +148,7 @@ class Client:
             logger = MQTT_LOGGER
         self._client.enable_logger(logger)
 
-        if username is not None and password is not None:
+        if username is not None:
             self._client.username_pw_set(username=username, password=password)
 
         if tls_context is not None:
