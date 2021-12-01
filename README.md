@@ -123,8 +123,8 @@ async def cancel_tasks(tasks):
     for task in tasks:
         if task.done():
             continue
-        task.cancel()
         try:
+            task.cancel()
             await task
         except asyncio.CancelledError:
             pass
