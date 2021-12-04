@@ -22,15 +22,21 @@ from typing import (
     Type,
     Union,
     cast, Iterable,
+    AsyncContextManager,
+    TypeVar,
 )
 
 
 
-# asynccontextmanager exists in contextlib in python3.7 and later.
 if sys.version_info >= (3, 7)
     from contextlib import asynccontextmanager
 else:
-    from async_generator import asynccontextmanager  # type: ignore
+    from async_generator import asynccontextmanager as _asynccontextmanager # type: ignore
+    from typing_extensions import ParamSpec
+    _P = ParamSpec('_P')
+    _T = TypeVar('_T')
+    def asynccontextmanager(func: Callable[_P, AsyncIterator[_T]]) -> Callable[_P, AsyncContextManager[_T]]: # type: ignore
+        return _asynccontextmanager(func)
 
 import paho.mqtt.client as mqtt  # type: ignore
 from paho.mqtt.properties import Properties
@@ -95,7 +101,7 @@ class Client:
         keepalive: int = 60,
         bind_address: str = "",
         bind_port: int = 0,
-        clean_start: bool = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
+        clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         properties: Optional[Properties] = None,
         message_retry_set: int = 20,
         socket_options: Optional[Iterable[SocketOption]] = (),
@@ -143,7 +149,7 @@ class Client:
             logger = MQTT_LOGGER
         self._client.enable_logger(logger)
 
-        if username is not None and password is not None:
+        if username is not None:
             self._client.username_pw_set(username=username, password=password)
 
         if tls_context is not None:
@@ -530,7 +536,7 @@ class Client:
         return self
 
     async def __aexit__(
-        self, exc_type: Type[Exception], exc: Exception, tb: TracebackType
+        self, exc_type: Optional[Type[BaseException]], exc: Optional[BaseException], tb: Optional[TracebackType]
     ) -> None:
         """Disconnect from the broker."""
         # Early out if already disconnected...
