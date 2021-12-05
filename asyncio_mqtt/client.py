@@ -3,6 +3,7 @@ import asyncio
 import logging
 import socket
 import ssl
+import sys
 from contextlib import contextmanager, suppress
 from enum import IntEnum
 from types import TracebackType
@@ -27,9 +28,9 @@ from typing import (
 
 
 
-try:
+if sys.version_info >= (3, 7)
     from contextlib import asynccontextmanager
-except ImportError:
+else:
     from async_generator import asynccontextmanager as _asynccontextmanager # type: ignore
     from typing_extensions import ParamSpec
     _P = ParamSpec('_P')
