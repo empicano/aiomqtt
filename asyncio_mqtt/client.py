@@ -28,7 +28,7 @@ from typing import (
 
 
 
-if sys.version_info >= (3, 7)
+if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
 else:
     from async_generator import asynccontextmanager as _asynccontextmanager # type: ignore
