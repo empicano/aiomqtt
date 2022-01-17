@@ -105,6 +105,7 @@ class Client:
         properties: Optional[Properties] = None,
         message_retry_set: int = 20,
         socket_options: Optional[Iterable[SocketOption]] = (),
+        max_concurrent_outgoing_calls: Optional[int] = None,
     ):
         self._hostname = hostname
         self._port = port
@@ -122,6 +123,14 @@ class Client:
         self._pending_publishes: Dict[int, asyncio.Event] = {}
         self._pending_calls_threshold: int = 10
         self._misc_task: Optional["asyncio.Task[None]"] = None
+
+        self._outgoing_calls_sem: Optional[asyncio.Semaphore]
+        if max_concurrent_outgoing_calls:
+            self._outgoing_calls_sem = asyncio.Semaphore(
+                max_concurrent_outgoing_calls
+            )
+        else:
+            self._outgoing_calls_sem = None
 
         if protocol is None:
             protocol = ProtocolVersion.V311
@@ -218,6 +227,18 @@ class Client:
         if not self._disconnected.done():
             self._disconnected.set_result(None)
 
+    def _outgoing_call(self, func: Callable) -> Callable[..., Awaitable]:
+        async def decorated(*args: Any, timeout: int = 10, **kwargs: Any) -> None:
+            if not self._outgoing_calls_sem:
+                func(*args, timeout=timeout, **kwargs)
+                return
+
+            async with self._outgoing_calls_sem:
+                func(*args, timeout=timeout, **kwargs)
+
+        return decorated
+
+    @_outgoing_call
     async def subscribe(self, *args: Any, timeout: int = 10, **kwargs: Any) -> int:
         result, mid = self._client.subscribe(*args, **kwargs)
         # Early out on error
@@ -229,6 +250,7 @@ class Client:
             # Wait for cb_result
             return await self._wait_for(cb_result, timeout=timeout)
 
+    @_outgoing_call
     async def unsubscribe(self, *args: Any, timeout: int = 10) -> None:
         result, mid = self._client.unsubscribe(*args)
         # Early out on error
@@ -240,6 +262,7 @@ class Client:
             # Wait for confirmation
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
+    @_outgoing_call
     async def publish(self, *args: Any, timeout: int = 10, **kwargs: Any) -> None:
         info = self._client.publish(*args, **kwargs)  # [2]
         # Early out on error
