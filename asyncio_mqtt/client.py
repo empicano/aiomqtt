@@ -48,6 +48,8 @@ from .types import PayloadType, T
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
+OutgoingType = TypeVar("OutgoingType", None, int)
+
 
 class ProtocolVersion(IntEnum):
     """
@@ -62,6 +64,8 @@ class ProtocolVersion(IntEnum):
 # TODO: This should be a (frozen) dataclass (from Python 3.7)
 # when we drop Python 3.6 support
 class Will:
+
+    OutgoingType = TypeVar("OutgoingType", None, int)
     def __init__(
         self,
         topic: str,
@@ -233,7 +237,7 @@ class Client:
     # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
     def _outgoing_call(self, func: Callable) -> Callable[..., Awaitable]:
         @functools.wraps(func)
-        async def decorated(*args: Any, **kwargs: Any) -> Union[None, int]:
+        async def decorated(*args: Any, **kwargs: Any) -> OutgoingType:
             if not self._outgoing_calls_sem:
                 return await func(*args, **kwargs)
 
