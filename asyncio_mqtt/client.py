@@ -233,7 +233,7 @@ class Client:
     # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
     def _outgoing_call(self, func: Callable) -> Callable[..., Awaitable]:
         @functools.wraps(func)
-        async def decorated(*args: Any, **kwargs: Any) -> None:
+        async def decorated(*args: Any, **kwargs: Any) -> Union[None, int]:
             if not self._outgoing_calls_sem:
                 return await func(*args, **kwargs)
 
