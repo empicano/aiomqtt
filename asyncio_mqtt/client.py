@@ -64,8 +64,6 @@ class ProtocolVersion(IntEnum):
 # TODO: This should be a (frozen) dataclass (from Python 3.7)
 # when we drop Python 3.6 support
 class Will:
-
-    OutgoingType = TypeVar("OutgoingType", None, int)
     def __init__(
         self,
         topic: str,
