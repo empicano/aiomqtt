@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import asyncio
+import functools
 import logging
 import socket
 import ssl
@@ -125,7 +126,7 @@ class Client:
         self._misc_task: Optional["asyncio.Task[None]"] = None
 
         self._outgoing_calls_sem: Optional[asyncio.Semaphore]
-        if max_concurrent_outgoing_calls:
+        if max_concurrent_outgoing_calls is not None:
             self._outgoing_calls_sem = asyncio.Semaphore(
                 max_concurrent_outgoing_calls
             )
@@ -227,14 +228,17 @@ class Client:
         if not self._disconnected.done():
             self._disconnected.set_result(None)
 
+    # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
+    # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
+    # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
     def _outgoing_call(self, func: Callable) -> Callable[..., Awaitable]:
-        async def decorated(*args: Any, timeout: int = 10, **kwargs: Any) -> None:
+        @functools.wraps(func)
+        async def decorated(*args: Any, **kwargs: Any) -> None:
             if not self._outgoing_calls_sem:
-                func(*args, timeout=timeout, **kwargs)
-                return
+                return await func(*args, **kwargs)
 
             async with self._outgoing_calls_sem:
-                func(*args, timeout=timeout, **kwargs)
+                return await func(*args, **kwargs)
 
         return decorated
 
