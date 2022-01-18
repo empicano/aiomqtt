@@ -48,7 +48,7 @@ from .types import PayloadType, T
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
-OutgoingType = TypeVar("OutgoingType", None, int)
+T = TypeVar("T")
 
 
 class ProtocolVersion(IntEnum):
@@ -235,9 +235,9 @@ class Client:
     # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
     # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
     # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
-    def _outgoing_call(self, func: Callable) -> Callable[..., Awaitable]:
+    def _outgoing_call(self, func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @functools.wraps(func)
-        async def decorated(*args: Any, **kwargs: Any) -> OutgoingType:
+        async def decorated(*args: Any, **kwargs: Any) -> T:
             if not self._outgoing_calls_sem:
                 return await func(*args, **kwargs)
 
