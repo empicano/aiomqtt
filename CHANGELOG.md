@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.12.0] - 2022-01-19
+
+### Added
+
+- Add backpressure mechanism to limit the number of concurrent outgoing calls. Contributed by [Aaron Bach (@bachya)](https://github.com/bachya) in [#72](https://github.com/sbtinstruments/asyncio-mqtt/pull/101)
+
 ## [0.11.1] - 2022-01-10
 
 ### Fixed
