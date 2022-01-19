@@ -86,6 +86,21 @@ SocketOption = Union[
 ]
 
 
+# TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
+# `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
+# 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
+def _outgoing_call(method: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    @functools.wraps(method)
+    async def decorated(self, *args: Any, **kwargs: Any) -> T:
+        if not self._outgoing_calls_sem:
+            return await method(self, *args, **kwargs)
+
+        async with self._outgoing_calls_sem:
+            return await method(self, *args, **kwargs)
+
+    return decorated
+
+
 class Client:
     def __init__(
         self,
@@ -229,20 +244,6 @@ class Client:
     async def force_disconnect(self) -> None:
         if not self._disconnected.done():
             self._disconnected.set_result(None)
-
-    # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
-    # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
-    # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
-    def _outgoing_call(self, func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
-        @functools.wraps(func)
-        async def decorated(*args: Any, **kwargs: Any) -> T:
-            if not self._outgoing_calls_sem:
-                return await func(*args, **kwargs)
-
-            async with self._outgoing_calls_sem:
-                return await func(*args, **kwargs)
-
-        return decorated
 
     @_outgoing_call
     async def subscribe(self, *args: Any, timeout: int = 10, **kwargs: Any) -> int:

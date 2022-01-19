@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing so far.
 
+## [0.12.1] - 2022-01-19
+
+### Fixed
+
+- Fix `TypeError` with the new `_outgoing_call` decorator.
+
 ## [0.12.0] - 2022-01-19
 
 ### Added
