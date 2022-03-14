@@ -37,7 +37,7 @@ asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://githu
 * Fully type-hinted
 * Did we mention no more callbacks?
 
-The whole thing is less than [600 lines of code](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/asyncio_mqtt/client.py).
+The whole thing is less than [700 lines of code](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/asyncio_mqtt/client.py).
 
 ## Installation 📚
 
