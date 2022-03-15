@@ -21,6 +21,7 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     license="BSD 3-clause License",
+    license_files = ('LICENSE',),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
