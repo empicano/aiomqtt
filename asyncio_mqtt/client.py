@@ -534,8 +534,7 @@ class Client:
         if fileno > -1:
             self._loop.remove_reader(fileno)
         if self._misc_task is not None and not self._misc_task.done():
-            with suppress(asyncio.CancelledError):
-                self._misc_task.cancel()
+            self._loop.call_soon_threadsafe(self._misc_task.cancel)
 
     def _on_socket_register_write(
         self, client: mqtt.Client, userdata: Any, sock: socket.socket
