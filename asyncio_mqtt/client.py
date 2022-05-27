@@ -51,6 +51,11 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 T = TypeVar("T")
 
 
+WebSocketHeaders = Union[
+    Dict[str, Any],
+    Callable[[Dict[str, Any]], Dict[str, Any]],
+]
+
 class ProtocolVersion(IntEnum):
     """
     A mapping of Paho MQTT protocol version constants to an Enum for use in type hints.
@@ -124,6 +129,8 @@ class Client:
         message_retry_set: int = 20,
         socket_options: Optional[Iterable[SocketOption]] = (),
         max_concurrent_outgoing_calls: Optional[int] = None,
+        websocket_path: Optional[str] = None,
+        websocket_headers: Optional[WebSocketHeaders] = None,
     ):
         self._hostname = hostname
         self._port = port
@@ -181,6 +188,11 @@ class Client:
 
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
+
+        if websocket_path is not None or websocket_headers is not None:
+            self._client.ws_set_options(
+                path=websocket_path, headers=websocket_headers
+            )
 
         if will is not None:
             self._client.will_set(
