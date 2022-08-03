@@ -226,7 +226,7 @@ class Client:
             # get_running_loop is preferred, but only available in python>=3.7
             try:
                 loop = asyncio.get_running_loop()
-            except AttributeError:
+            except RuntimeError:
                 loop = asyncio.get_event_loop()
 
             # [3] Run connect() within an executor thread, since it blocks on socket
