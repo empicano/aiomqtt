@@ -489,7 +489,9 @@ class Client:
         properties: Optional[mqtt.Properties] = None,
     ) -> None:
         try:
-            self._pending_subscribes.pop(mid).set_result(granted_qos)
+            fut = self._pending_subscribes.pop(mid)
+            if not fut.done():
+                fut.set_result(granted_qos)
         except KeyError:
             MQTT_LOGGER.error(f'Unexpected message ID "{mid}" in on_subscribe callback')
 
@@ -527,7 +529,8 @@ class Client:
             try:
                 client.loop_read()
             except Exception as exc:
-                self._disconnected.set_exception(exc)
+                if not self._disconnected.done():
+                    self._disconnected.set_exception(exc)
 
         self._loop.add_reader(sock.fileno(), cb)
         # paho-mqtt calls this function from the executor thread on which we've called
@@ -558,7 +561,8 @@ class Client:
             try:
                 client.loop_write()
             except Exception as exc:
-                self._disconnected.set_exception(exc)
+                if not self._disconnected.done():
+                    self._disconnected.set_exception(exc)
 
         self._loop.add_writer(sock, cb)
 
