@@ -83,6 +83,27 @@ class Will:
         self.retain = retain
         self.properties = properties
 
+# TLS set parameter class
+class TLSParameters:
+    def __init__(
+        self,
+        ca_certs: Optional[str] = None,
+        certfile: Optional[str] = None,
+        keyfile: Optional[str] = None,
+        cert_reqs: Optional[ssl.VerifyMode] = ssl.CERT_REQUIRED,
+        tls_version: Optional[ssl._SSLMethod]= ssl.PROTOCOL_TLSv1_2,
+        ciphers: Optional[str] = None,
+        keyfile_password: Optional[str] = None       
+    ):
+        self.ca_certs = ca_certs
+        self.certfile = certfile
+        self.keyfile = keyfile
+        self.cert_reqs = cert_reqs
+        self.tls_version = tls_version
+        self.ciphers = ciphers
+        self.keyfile_password = keyfile_password 
+        
+
 
 # See the overloads of `socket.setsockopt` for details.
 SocketOption = Union[
@@ -117,6 +138,7 @@ class Client:
         logger: Optional[logging.Logger] = None,
         client_id: Optional[str] = None,
         tls_context: Optional[ssl.SSLContext] = None,
+        tls_set_params: Optional[TLSParameters] = None,
         protocol: Optional[ProtocolVersion] = None,
         will: Optional[Will] = None,
         clean_session: Optional[bool] = None,
@@ -188,6 +210,15 @@ class Client:
 
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
+        
+        if tls_set_params is not None:
+            self._client.tls_set(ca_certs= tls_set_params.ca_certs,
+                                 certfile= tls_set_params.certfile,
+                                 keyfile= tls_set_params.keyfile,
+                                 cert_reqs= tls_set_params.cert_reqs,
+                                 tls_version= tls_set_params.tls_version,
+                                 ciphers= tls_set_params.ciphers,
+                                 keyfile_password= tls_set_params.keyfile_password)
 
         if websocket_path is not None or websocket_headers is not None:
             self._client.ws_set_options(
