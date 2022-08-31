@@ -90,8 +90,8 @@ class TLSParameters:
         ca_certs: Optional[str] = None,
         certfile: Optional[str] = None,
         keyfile: Optional[str] = None,
-        cert_reqs: Optional[ssl.VerifyMode] = ssl.CERT_REQUIRED,
-        tls_version: Optional[ssl._SSLMethod]= ssl.PROTOCOL_TLSv1_2,
+        cert_reqs: Optional[ssl.VerifyMode] = None,
+        tls_version: Optional[ssl._SSLMethod]= None,
         ciphers: Optional[str] = None,
         keyfile_password: Optional[str] = None       
     ):
