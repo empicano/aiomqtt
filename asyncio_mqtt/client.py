@@ -104,7 +104,25 @@ class TLSParameters:
         self.ciphers = ciphers
         self.keyfile_password = keyfile_password 
         
-
+# Proxy parameters class 
+class ProxySettings:
+    def __init__(
+        self,
+        *, 
+        proxy_type: int = None,
+        proxy_addr: str = None,
+        proxy_rdns: Optional[bool] = True,
+        proxy_username: Optional[str] = None,
+        proxy_password: Optional[str] = None
+    ):
+        self.proxy_args = {
+            "proxy_type" : proxy_type,
+            "proxy_addr" : proxy_addr,
+            "proxy_rdns" : proxy_rdns,
+            "proxy_username" : proxy_username,
+            "proxy_password" : proxy_password 
+        }
+        
 
 # See the overloads of `socket.setsockopt` for details.
 SocketOption = Union[
@@ -140,6 +158,7 @@ class Client:
         client_id: Optional[str] = None,
         tls_context: Optional[ssl.SSLContext] = None,
         tls_params: Optional[TLSParameters] = None,
+        proxy: Optional[ProxySettings] = None,
         protocol: Optional[ProtocolVersion] = None,
         will: Optional[Will] = None,
         clean_session: Optional[bool] = None,
@@ -220,6 +239,9 @@ class Client:
                                  tls_version= tls_params.tls_version,
                                  ciphers= tls_params.ciphers,
                                  keyfile_password= tls_params.keyfile_password)
+        
+        if proxy is not None:
+            self._client.proxy_set(**proxy.proxy_args)    
 
         if websocket_path is not None or websocket_headers is not None:
             self._client.ws_set_options(
