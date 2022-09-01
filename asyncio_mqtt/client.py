@@ -109,8 +109,8 @@ class ProxySettings:
     def __init__(
         self,
         *, 
-        proxy_type: int = None,
-        proxy_addr: str = None,
+        proxy_type: int,
+        proxy_addr: str,
         proxy_rdns: Optional[bool] = True,
         proxy_username: Optional[str] = None,
         proxy_password: Optional[str] = None
