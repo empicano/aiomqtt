@@ -149,10 +149,10 @@ asyncio.run(main())
 asyncio-mqtt also exposes paho-mqtt's `tls_set` functionality for the users. The following minimal example explains how to enable SSL/TLS support for asyncio-mqtt client
 
 ```python
-import ssl 
+import ssl
 from asyncio_mqtt import Client, TLSParameters
 
-'''
+"""
 ca_certs          : a string path to the Certificate Authority certificate files
                     that are to be treated as trusted by this client
 certfile & keyfile: strings pointing to the PEM encoded client certificate and 
@@ -167,26 +167,26 @@ keyfile_password  : if either certfile or keyfile is encrypted and needs a passw
                     decrypt it, then this can be passed using the keyfile_password
                     argument. If you do not provide keyfile_password, the password will
                     be requested to be typed in at a terminal window
-'''
-tls_params = TLSParameters (
-                            ca_certs = "/path/to/certificates",
-                            certfile = "/path/to/certfile",
-                            keyfile  =  "/path/to/keyfile",
-                            cert_reqs =  ssl.CERT_REQUIRED,
-                            tls_version = ssl.PROTOCOL_TLSv2,
-                            ciphers = None, 
-                            keyfile_password = None
-                            )
+"""
+tls_params = TLSParameters(
+    ca_certs="/path/to/certificates",
+    certfile="/path/to/certfile",
+    keyfile="/path/to/keyfile",
+    cert_reqs=ssl.CERT_REQUIRED,
+    tls_version=ssl.PROTOCOL_TLSv2,
+    ciphers=None,
+    keyfile_password=None,
+)
 
 async with Client(
-        "test.mosquitto.org",
-        username="username",
-        password="password",
-        protocol=ProtocolVersion.V31, 
-        tls_params = tls_params
+    "test.mosquitto.org",
+    username="username",
+    password="password",
+    protocol=ProtocolVersion.V31,
+    tls_params=tls_params,
 ) as client:
     async with client.filtered_messages("floors/+/humidity") as messages:
-        # subscribe is done afterwards so that we just start receiving messages 
+        # subscribe is done afterwards so that we just start receiving messages
         # from this point on
         await client.subscribe("floors/#")
         async for message in messages:
