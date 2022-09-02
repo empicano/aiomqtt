@@ -194,6 +194,35 @@ async with Client(
             print(json.loads(message.payload))
 ```
 
+## Proxy settings for asyncio-mqtt client
+
+asyncio-mqtt allows the user to configure proxing of MQTT connection and enables the support for SOCKS or HTTP proxies. asyncio-mqtt uses the paho-mqtt `proxy_set` functionality to allow setting up the proxy. One thing to note here is that setting up a proxy is an extra feature (even in paho-mqtt) that requires the `PySocks` dependency.
+
+The following minimal example depicts how to configure proxing of the MQTT connection
+
+```python
+import socks
+from asyncio_mqtt import Client, ProxySettings
+
+proxy_params = ProxySettings(
+    proxy_type=socks.HTTP,
+    proxy_addr="example.com",
+    proxy_rdns=True,
+    proxy_username="username",
+    proxy_password="password",
+)
+
+async with Client(
+    "test.mosquitto.org",
+    username="username",
+    password="password",
+    protocol=ProtocolVersion.V31,
+    procxy=proxy_params,
+) as client:
+    ...
+    ...
+```
+
 ## Alternative asyncio-based MQTT clients
 
 Is asyncio-mqtt not what you are looking for? Try another client:
