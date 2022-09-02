@@ -144,6 +144,84 @@ async def main():
 
 asyncio.run(main())
 ```
+## TLS configuration for MQTT client
+
+asyncio-mqtt also exposes paho-mqtt's `tls_set` functionality for the users. The following minimal example explains how to enable SSL/TLS support for asyncio-mqtt client
+
+```python
+import ssl
+from asyncio_mqtt import Client, TLSParameters
+
+"""
+ca_certs          : a string path to the Certificate Authority certificate files
+                    that are to be treated as trusted by this client
+certfile & keyfile: strings pointing to the PEM encoded client certificate and 
+                    private keys respectively
+cert_reqs         : allows the certificate requirements that the client imposes on 
+                    the broker to be changed. By default this is ssl.CERT_REQUIRED  
+tls_version       : allows the version of the SSL/TLS protocol used to be specified. 
+                    By default TLS v1 is used
+ciphers           : string specifying which encryption ciphers are allowable for this 
+                    connection, or None to use the defaults
+keyfile_password  : if either certfile or keyfile is encrypted and needs a password to
+                    decrypt it, then this can be passed using the keyfile_password
+                    argument. If you do not provide keyfile_password, the password will
+                    be requested to be typed in at a terminal window
+"""
+tls_params = TLSParameters(
+    ca_certs="/path/to/certificates",
+    certfile="/path/to/certfile",
+    keyfile="/path/to/keyfile",
+    cert_reqs=ssl.CERT_REQUIRED,
+    tls_version=ssl.PROTOCOL_TLSv2,
+    ciphers=None,
+    keyfile_password=None,
+)
+
+async with Client(
+    "test.mosquitto.org",
+    username="username",
+    password="password",
+    protocol=ProtocolVersion.V31,
+    tls_params=tls_params,
+) as client:
+    async with client.filtered_messages("floors/+/humidity") as messages:
+        # subscribe is done afterwards so that we just start receiving messages
+        # from this point on
+        await client.subscribe("floors/#")
+        async for message in messages:
+            print(message.topic)
+            print(json.loads(message.payload))
+```
+
+## Proxy settings for asyncio-mqtt client
+
+asyncio-mqtt allows the user to configure proxing of MQTT connection and enables the support for SOCKS or HTTP proxies. asyncio-mqtt uses the paho-mqtt `proxy_set` functionality to allow setting up the proxy. One thing to note here is that setting up a proxy is an extra feature (even in paho-mqtt) that requires the `PySocks` dependency.
+
+The following minimal example depicts how to configure proxing of the MQTT connection
+
+```python
+import socks
+from asyncio_mqtt import Client, ProxySettings
+
+proxy_params = ProxySettings(
+    proxy_type=socks.HTTP,
+    proxy_addr="example.com",
+    proxy_rdns=True,
+    proxy_username="username",
+    proxy_password="password",
+)
+
+async with Client(
+    "test.mosquitto.org",
+    username="username",
+    password="password",
+    protocol=ProtocolVersion.V31,
+    procxy=proxy_params,
+) as client:
+    ...
+    ...
+```
 
 ## Alternative asyncio-based MQTT clients
 
