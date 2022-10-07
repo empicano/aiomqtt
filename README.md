@@ -6,7 +6,7 @@
 
 Write code like this:
 
-##### Subscriber
+**Subscriber**
 
 ```python
 async with Client("test.mosquitto.org") as client:
@@ -16,7 +16,7 @@ async with Client("test.mosquitto.org") as client:
             print(message.payload.decode())
 ```
 
-##### Publisher
+**Publisher**
 
 ```python
 async with Client("test.mosquitto.org") as client:
@@ -42,7 +42,7 @@ The whole thing is less than [700 lines of code](https://github.com/sbtinstrumen
 
 `pip install asyncio-mqtt`
 
-## Advanced use ⚡
+## Advanced usage ⚡
 
 Let's make the example from before more interesting:
 
@@ -80,7 +80,7 @@ async def advanced_example():
             task = asyncio.create_task(log_messages(messages, template))
             tasks.add(task)
 
-        # Messages that doesn't match a filter will get logged here
+        # Messages that don't match a filter will get logged here
         messages = await stack.enter_async_context(client.unfiltered_messages())
         task = asyncio.create_task(log_messages(messages, "[unfiltered] {}"))
         tasks.add(task)
@@ -196,9 +196,9 @@ async with Client(
 
 ## Proxy settings for asyncio-mqtt client
 
-asyncio-mqtt allows the user to configure proxing of MQTT connection and enables the support for SOCKS or HTTP proxies. asyncio-mqtt uses the paho-mqtt `proxy_set` functionality to allow setting up the proxy. One thing to note here is that setting up a proxy is an extra feature (even in paho-mqtt) that requires the `PySocks` dependency.
+asyncio-mqtt allows the user to configure proxying of MQTT connection and enables the support for SOCKS or HTTP proxies. asyncio-mqtt uses the paho-mqtt `proxy_set` functionality to allow setting up the proxy. One thing to note here is that setting up a proxy is an extra feature (even in paho-mqtt) that requires the `PySocks` dependency.
 
-The following minimal example depicts how to configure proxing of the MQTT connection
+The following minimal example depicts how to configure proxying of the MQTT connection
 
 ```python
 import socks
@@ -238,7 +238,7 @@ Is asyncio-mqtt not what you are looking for? Try another client:
 
 Python 3.7 or later. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
-## Note for Windows Users
+## Note for Windows users
 
 Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by asyncio-mqtt. To use asyncio-mqtt, please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`. E.g:
 
