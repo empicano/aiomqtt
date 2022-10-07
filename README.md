@@ -223,42 +223,19 @@ async with Client(
     ...
 ```
 
-## Alternative asyncio-based MQTT clients
+## Related projects
 
 Is asyncio-mqtt not what you are looking for? Try another client:
 
-- [hbmqtt](https://github.com/beerfactory/hbmqtt) - Own protocol implementation. Includes a broker.
-  ![GitHub stars](https://img.shields.io/github/stars/beerfactory/hbmqtt)
-  ![license](https://img.shields.io/github/license/beerfactory/hbmqtt)
-- [gmqtt](https://github.com/wialon/gmqtt) - Own protocol implementation. No dependencies.
-  ![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt)
-  ![license](https://img.shields.io/github/license/wialon/gmqtt)
-- [aiomqtt](https://github.com/mossblaser/aiomqtt) - Wrapper around paho-mqtt.
-  ![GitHub stars](https://img.shields.io/github/stars/mossblaser/aiomqtt)
-  ![license](https://img.shields.io/github/license/mossblaser/aiomqtt)
-- [mqttools](https://github.com/eerimoq/mqttools) - Own protocol implementation. No dependencies.
-  ![GitHub stars](https://img.shields.io/github/stars/eerimoq/mqttools)
-  ![license](https://img.shields.io/github/license/eerimoq/mqttools)
-- [aio-mqtt](https://github.com/NotJustAToy/aio-mqtt) - Own protocol implementation. No dependencies.
-  ![GitHub stars](https://img.shields.io/github/stars/NotJustAToy/aio-mqtt)
-  ![license](https://img.shields.io/github/license/NotJustAToy/aio-mqtt)
-
-This is not an exhaustive list.
-
-### Honorable mentions
-
-- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) - Trio-based. Wrapper around paho-mqtt.
-  ![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt)
-  ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
+- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) — Own protocol implementation. Synchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
+- [gmqtt](https://github.com/wialon/gmqtt) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt) ![license](https://img.shields.io/github/license/wialon/gmqtt)
+- [amqtt](https://github.com/Yakifo/amqtt) — Own protocol implementation. Asynchronous. Includes a broker.<br>![GitHub stars](https://img.shields.io/github/stars/Yakifo/amqtt) ![license](https://img.shields.io/github/license/Yakifo/amqtt)
+- [mqttools](https://github.com/eerimoq/mqttools) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eerimoq/mqttools) ![license](https://img.shields.io/github/license/eerimoq/mqttools)
+- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) — Also an asynchronous wrapper around paho-mqtt. Based on trio instead of asyncio.<br>![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt) ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
 
 ## Requirements
 
-Python 3.7 or later.
-
-There is only a single dependency:
-
-- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python)
-  ![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
+Python 3.7 or later. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
 ## Note for Windows Users
 
