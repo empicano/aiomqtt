@@ -2,7 +2,7 @@
 ![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
 [![PyPI](https://img.shields.io/pypi/v/asyncio-mqtt)](https://pypi.org/project/asyncio-mqtt/)
 
-# MQTT client with idiomatic asyncio interface 🙌
+# Idiomatic asyncio MQTT client 🙌
 
 Write code like this:
 
@@ -10,21 +10,17 @@ Write code like this:
 
 ```python
 async with Client("test.mosquitto.org") as client:
-    async with client.filtered_messages("floors/+/humidity") as messages:
-        await client.subscribe("floors/#")
+    async with client.unfiltered_messages() as messages:
+        await client.subscribe("measurements/#")
         async for message in messages:
-            print(message.payload.decode())
+            print(message.payload)
 ```
 
 **Publisher**
 
 ```python
 async with Client("test.mosquitto.org") as client:
-    message = "10%"
-    await client.publish(
-            "floors/bed_room/humidity",
-             payload=message.encode()
-          )
+    await client.publish("measurements/humidity", payload=0.38)
 ```
 
 asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
@@ -42,13 +38,13 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
 
 - [Installation](#installation-📚)
 - [Advanced usage](#advanced-usage-⚡)
-  - Configuring the client
-  - Reconnecting
-  - Managing context managers
-  - Topic filters
-  - TLS
-  - Proxying
-- [Alternative asyncio-based MQTT clients](#alternative-asyncio-based-mqtt-clients)
+  - [Configuring the client](#configuring-the-client)
+  - [Reconnecting](#reconnecting)
+  - [Managing context managers](#managing-context-managers)
+  - [Topic filters](#topic-filters)
+  - [TLS](#tls)
+  - [Proxying](#proxying)
+- [Related projects](#related-projects)
 - [Requirements](#requirements)
 - [Note for Windows users](#note-for-windows-users)
 - [Changelog](#changelog)
@@ -63,77 +59,82 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
 
 Let's make the example from before more interesting:
 
+### Configuring the client
+
+You can configure quite a few things when initializing the client. These are all the possible parameters together with their default values. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python) for more information about the individual parameters.
+
+```python
+import asyncio_mqtt as aiomqtt
+import paho.mqtt as mqtt
+
+aiomqtt.Client(
+    hostname="test.mosquitto.org",
+    port=1883,
+    username=None,
+    password=None,
+    logger=None,
+    client_id=None,
+    tls_context=None,
+    tls_params=None,
+    proxy=None,
+    protocol=None,
+    will=None,
+    clean_session=None,
+    transport="tcp",
+    keepalive=60,
+    bind_address="",
+    bind_port=0,
+    clean_start=mqtt.client.MQTT_CLEAN_START_FIRST_ONLY,
+    properties=None,
+    message_retry_set=20,
+    socket_options=(),
+    max_concurrent_outgoing_calls=None,
+    websocket_path=None,
+    websocket_headers=None,
+)
+```
+
+### Reconnecting
+
+You can reconnect when the connection to the broker is lost by wrapping your code in a `try/except`-block and listening for `MqttError`s.
+
 ```python
 import asyncio
-from contextlib import AsyncExitStack, asynccontextmanager
-from random import randrange
-from asyncio_mqtt import Client, MqttError
+import asyncio_mqtt as aiomqtt
 
 
-async def advanced_example():
-    # We 💛 context managers. Let's create a stack to help
-    # us manage them.
-    async with AsyncExitStack() as stack:
-        # Keep track of the asyncio tasks that we create, so that
-        # we can cancel them on exit
-        tasks = set()
-        stack.push_async_callback(cancel_tasks, tasks)
-
-        # Connect to the MQTT broker
-        client = Client("test.mosquitto.org")
-        await stack.enter_async_context(client)
-
-        # You can create any number of topic filters
-        topic_filters = (
-            "floors/+/humidity",
-            "floors/rooftop/#"
-            # 👉 Try to add more filters!
-        )
-        for topic_filter in topic_filters:
-            # Log all messages that matches the filter
-            manager = client.filtered_messages(topic_filter)
-            messages = await stack.enter_async_context(manager)
-            template = f'[topic_filter="{topic_filter}"] {{}}'
-            task = asyncio.create_task(log_messages(messages, template))
-            tasks.add(task)
-
-        # Messages that don't match a filter will get logged here
-        messages = await stack.enter_async_context(client.unfiltered_messages())
-        task = asyncio.create_task(log_messages(messages, "[unfiltered] {}"))
-        tasks.add(task)
-
-        # Subscribe to topic(s)
-        # 🤔 Note that we subscribe *after* starting the message
-        # loggers. Otherwise, we may miss retained messages.
-        await client.subscribe("floors/#")
-
-        # Publish a random value to each of these topics
-        topics = (
-            "floors/basement/humidity",
-            "floors/rooftop/humidity",
-            "floors/rooftop/illuminance",
-            # 👉 Try to add more topics!
-        )
-        task = asyncio.create_task(post_to_topics(client, topics))
-        tasks.add(task)
-
-        # Wait for everything to complete (or fail due to, e.g., network
-        # errors)
-        await asyncio.gather(*tasks)
-
-async def post_to_topics(client, topics):
+async def main():
+    reconnect_interval = 5  # in seconds
     while True:
-        for topic in topics:
-            message = randrange(100)
-            print(f'[topic="{topic}"] Publishing message={message}')
-            await client.publish(topic, message, qos=1)
-            await asyncio.sleep(2)
+        try:
+            async with aiomqtt.Client("test.mosquitto.org") as client:
+                async with client.filtered_messages('/measurements/humidity') as messages:
+                    await client.subscribe("measurements/#")
+                    async for message in messages:
+                        print(message.payload.decode())
+        except aiomqtt.MqttError as error:
+            print(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
+            await asyncio.sleep(reconnect_interval)
 
-async def log_messages(messages, template):
+
+
+asyncio.run(main())
+```
+
+### Topic filters
+
+Let's take the example from the beginning again, but this time with messages in both `measurements/humidity` and `measurements/temperature`. You want to receive both types of measurements, but handle them differently. asyncio-mqtt has topic filters to make this easy:
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+import contextlib
+
+
+async def print_messages(messages, template):
     async for message in messages:
-        # 🤔 Note that we assume that the message paylod is an
-        # UTF8-encoded string (hence the `bytes.decode` call).
-        print(template.format(message.payload.decode()))
+        print(template.format(message.payload))
+
 
 async def cancel_tasks(tasks):
     for task in tasks:
@@ -145,99 +146,109 @@ async def cancel_tasks(tasks):
         except asyncio.CancelledError:
             pass
 
+
 async def main():
-    # Run the advanced_example indefinitely. Reconnect automatically
-    # if the connection is lost.
-    reconnect_interval = 3  # [seconds]
-    while True:
-        try:
-            await advanced_example()
-        except MqttError as error:
-            print(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
-        finally:
-            await asyncio.sleep(reconnect_interval)
+    # we 💛 context managers. Let's create a stack to help us manage them.
+    async with AsyncExitStack() as stack:
+        # keep track of the asyncio tasks that we create, so that
+        # we can cancel them on exit
+        tasks = set()
+        stack.push_async_callback(cancel_tasks, tasks)
+
+        # connect to MQTT broker
+        client = aiomqtt.Client("test.mosquitto.org")
+        await stack.enter_async_context(client)
+
+        # you can create any number of topic filters
+        topic_filters = (
+            "measurements/humidity",
+            "measurements/temperature"
+            # 👉 try to add more complex filters!
+        )
+
+        for topic_filter in topic_filters:
+            # print all messages that match the filter
+            manager = client.filtered_messages(topic_filter)
+            messages = await stack.enter_async_context(manager)
+            template = f'[topic_filter="{topic_filter}"] {{}}'
+            task = asyncio.create_task(log_messages(messages, template))
+            tasks.add(task)
+
+        # handle messages that don't match a filter
+        messages = await stack.enter_async_context(client.unfiltered_messages())
+        task = asyncio.create_task(log_messages(messages, "[unfiltered] {}"))
+        tasks.add(task)
+
+        # subscribe to topic(s)
+        # 🤔 note that we subscribe *after* starting the message
+        # loggers. Otherwise, we may miss retained messages.
+        await client.subscribe("measurements/#")
+
+        # wait for everything to complete (or fail due to, e.g., network errors)
+        await asyncio.gather(*tasks)
 
 
 asyncio.run(main())
 ```
 
-## TLS configuration for MQTT client
+### Managing context managers
 
-asyncio-mqtt also exposes paho-mqtt's `tls_set` functionality for the users. The following minimal example explains how to enable SSL/TLS support for asyncio-mqtt client
-
-```python
-import ssl
-from asyncio_mqtt import Client, TLSParameters, ProtocolVersion
-
-"""
-ca_certs          : a string path to the Certificate Authority certificate files
-                    that are to be treated as trusted by this client
-certfile & keyfile: strings pointing to the PEM encoded client certificate and
-                    private keys respectively
-cert_reqs         : allows the certificate requirements that the client imposes on
-                    the broker to be changed. By default this is ssl.CERT_REQUIRED
-tls_version       : allows the version of the SSL/TLS protocol used to be specified.
-                    By default TLS v1 is used
-ciphers           : string specifying which encryption ciphers are allowable for this
-                    connection, or None to use the defaults
-keyfile_password  : if either certfile or keyfile is encrypted and needs a password to
-                    decrypt it, then this can be passed using the keyfile_password
-                    argument. If you do not provide keyfile_password, the password will
-                    be requested to be typed in at a terminal window
-"""
-tls_params = TLSParameters(
-    ca_certs="/path/to/certificates",
-    certfile="/path/to/certfile",
-    keyfile="/path/to/keyfile",
-    cert_reqs=ssl.CERT_REQUIRED,
-    tls_version=ssl.PROTOCOL_TLSv2,
-    ciphers=None,
-    keyfile_password=None,
-)
-
-async with Client(
-    "test.mosquitto.org",
-    username="username",
-    password="password",
-    protocol=ProtocolVersion.V31,
-    tls_params=tls_params,
-) as client:
-    async with client.filtered_messages("floors/+/humidity") as messages:
-        # subscribe is done afterwards so that we just start receiving messages
-        # from this point on
-        await client.subscribe("floors/#")
-        async for message in messages:
-            print(message.topic)
-            print(json.loads(message.payload))
+```
+TODO
 ```
 
-## Proxy settings for asyncio-mqtt client
+### TLS
 
-asyncio-mqtt allows the user to configure proxying of MQTT connection and enables the support for SOCKS or HTTP proxies. asyncio-mqtt uses the paho-mqtt `proxy_set` functionality to allow setting up the proxy. One thing to note here is that setting up a proxy is an extra feature (even in paho-mqtt) that requires the `PySocks` dependency.
-
-The following minimal example depicts how to configure proxying of the MQTT connection
+You can configure TLS via the `TLSParameters` class. The parameters are directly passed through to paho-mqtt's `tls_set` function. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python) for more information about the individual parameters.
 
 ```python
-import socks
-from asyncio_mqtt import Client, ProxySettings
+import asyncio
+import asyncio_mqtt as aiomqtt
+import ssl
 
-proxy_params = ProxySettings(
-    proxy_type=socks.HTTP,
-    proxy_addr="example.com",
-    proxy_rdns=True,
-    proxy_username="username",
-    proxy_password="password",
+
+tls_params = aiomqtt.TLSParameters(
+    ca_certs=None,
+    certfile=None,
+    keyfile=None,
+    cert_reqs=ssl.CERT_REQUIRED,
+    tls_version=ssl.PROTOCOL_TLS,
+    ciphers=None,
 )
 
-async with Client(
-    "test.mosquitto.org",
-    username="username",
-    password="password",
-    protocol=ProtocolVersion.V31,
-    procxy=proxy_params,
-) as client:
-    ...
-    ...
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org", tls_params=tls_params) as client:
+        await client.publish("measurements/humidity", payload=0.38)
+
+
+asyncio.run(main())
+```
+
+### Proxying
+
+You can configure proxying via the `ProxySettings` class. The parameters are directly passed through to paho-mqtt's `proxy_set` functionality. Both SOCKS and HTTP proxies are supported. Note that proxying is an extra feature (even in paho-mqtt) that requires the `PySocks` dependency. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python) for more information about the individual parameters.
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+import socks
+
+
+proxy_params = aiomqtt.ProxySettings(
+    proxy_type=socks.HTTP,
+    proxy_addr="www.example.com",
+    proxy_rdns=True,
+    proxy_username=None,
+    proxy_password=None,
+)
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org", proxy=proxy_params) as client:
+        await client.publish("measurements/humidity", payload=0.38)
+
+
+asyncio.run(main())
 ```
 
 ## Related projects
