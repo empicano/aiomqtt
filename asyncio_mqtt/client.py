@@ -10,34 +10,38 @@ from enum import IntEnum
 from types import TracebackType
 from typing import (
     Any,
+    AsyncContextManager,
     AsyncGenerator,
     AsyncIterator,
     Awaitable,
     Callable,
     Dict,
     Generator,
+    Iterable,
     Iterator,
     List,
     Optional,
     Tuple,
     Type,
-    Union,
-    cast, Iterable,
-    AsyncContextManager,
     TypeVar,
+    Union,
+    cast,
 )
-
-
 
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
 else:
-    from async_generator import asynccontextmanager as _asynccontextmanager # type: ignore
+    from async_generator import (
+        asynccontextmanager as _asynccontextmanager,
+    )  # type: ignore
     from typing_extensions import ParamSpec
-    _P = ParamSpec('_P')
-    _T = TypeVar('_T')
-    def asynccontextmanager(func: Callable[_P, AsyncIterator[_T]]) -> Callable[_P, AsyncContextManager[_T]]: # type: ignore
+
+    _P = ParamSpec("_P")
+    _T = TypeVar("_T")
+
+    def asynccontextmanager(func: Callable[_P, AsyncIterator[_T]]) -> Callable[_P, AsyncContextManager[_T]]:  # type: ignore
         return _asynccontextmanager(func)
+
 
 import paho.mqtt.client as mqtt  # type: ignore
 from paho.mqtt.properties import Properties
@@ -55,6 +59,7 @@ WebSocketHeaders = Union[
     Dict[str, Any],
     Callable[[Dict[str, Any]], Dict[str, Any]],
 ]
+
 
 class ProtocolVersion(IntEnum):
     """
@@ -83,6 +88,7 @@ class Will:
         self.retain = retain
         self.properties = properties
 
+
 # TLS set parameter class
 class TLSParameters:
     def __init__(
@@ -92,9 +98,9 @@ class TLSParameters:
         certfile: Optional[str] = None,
         keyfile: Optional[str] = None,
         cert_reqs: Optional[ssl.VerifyMode] = None,
-        tls_version: Optional[ssl._SSLMethod]= None,
+        tls_version: Optional[ssl._SSLMethod] = None,
         ciphers: Optional[str] = None,
-        keyfile_password: Optional[str] = None       
+        keyfile_password: Optional[str] = None,
     ):
         self.ca_certs = ca_certs
         self.certfile = certfile
@@ -102,27 +108,28 @@ class TLSParameters:
         self.cert_reqs = cert_reqs
         self.tls_version = tls_version
         self.ciphers = ciphers
-        self.keyfile_password = keyfile_password 
-        
-# Proxy parameters class 
+        self.keyfile_password = keyfile_password
+
+
+# Proxy parameters class
 class ProxySettings:
     def __init__(
         self,
-        *, 
+        *,
         proxy_type: int,
         proxy_addr: str,
         proxy_rdns: Optional[bool] = True,
         proxy_username: Optional[str] = None,
-        proxy_password: Optional[str] = None
+        proxy_password: Optional[str] = None,
     ):
         self.proxy_args = {
-            "proxy_type" : proxy_type,
-            "proxy_addr" : proxy_addr,
-            "proxy_rdns" : proxy_rdns,
-            "proxy_username" : proxy_username,
-            "proxy_password" : proxy_password 
+            "proxy_type": proxy_type,
+            "proxy_addr": proxy_addr,
+            "proxy_rdns": proxy_rdns,
+            "proxy_username": proxy_username,
+            "proxy_password": proxy_password,
         }
-        
+
 
 # See the overloads of `socket.setsockopt` for details.
 SocketOption = Union[
@@ -193,9 +200,7 @@ class Client:
 
         self._outgoing_calls_sem: Optional[asyncio.Semaphore]
         if max_concurrent_outgoing_calls is not None:
-            self._outgoing_calls_sem = asyncio.Semaphore(
-                max_concurrent_outgoing_calls
-            )
+            self._outgoing_calls_sem = asyncio.Semaphore(max_concurrent_outgoing_calls)
         else:
             self._outgoing_calls_sem = None
 
@@ -230,23 +235,23 @@ class Client:
 
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
-        
+
         if tls_params is not None:
-            self._client.tls_set(ca_certs= tls_params.ca_certs,
-                                 certfile= tls_params.certfile,
-                                 keyfile= tls_params.keyfile,
-                                 cert_reqs= tls_params.cert_reqs,
-                                 tls_version= tls_params.tls_version,
-                                 ciphers= tls_params.ciphers,
-                                 keyfile_password= tls_params.keyfile_password)
-        
+            self._client.tls_set(
+                ca_certs=tls_params.ca_certs,
+                certfile=tls_params.certfile,
+                keyfile=tls_params.keyfile,
+                cert_reqs=tls_params.cert_reqs,
+                tls_version=tls_params.tls_version,
+                ciphers=tls_params.ciphers,
+                keyfile_password=tls_params.keyfile_password,
+            )
+
         if proxy is not None:
-            self._client.proxy_set(**proxy.proxy_args)    
+            self._client.proxy_set(**proxy.proxy_args)
 
         if websocket_path is not None or websocket_headers is not None:
-            self._client.ws_set_options(
-                path=websocket_path, headers=websocket_headers
-            )
+            self._client.ws_set_options(path=websocket_path, headers=websocket_headers)
 
         if will is not None:
             self._client.will_set(
@@ -286,9 +291,15 @@ class Client:
             # [3] Run connect() within an executor thread, since it blocks on socket
             # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
             await loop.run_in_executor(
-                None, self._client.connect,
-                self._hostname, self._port, self._keepalive, self._bind_address, self._bind_port,
-                self._clean_start, self._properties
+                None,
+                self._client.connect,
+                self._hostname,
+                self._port,
+                self._keepalive,
+                self._bind_address,
+                self._bind_port,
+                self._clean_start,
+                self._properties,
             )
             client_socket = self._client.socket()
             _set_client_socket_defaults(client_socket, self._socket_options)
@@ -635,7 +646,10 @@ class Client:
         return self
 
     async def __aexit__(
-        self, exc_type: Optional[Type[BaseException]], exc: Optional[BaseException], tb: Optional[TracebackType]
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
     ) -> None:
         """Disconnect from the broker."""
         # Early out if already disconnected...
@@ -660,8 +674,9 @@ class Client:
 _PahoSocket = Union[socket.socket, mqtt.WebsocketWrapper]
 
 
-def _set_client_socket_defaults(client_socket: Optional[_PahoSocket],
-                                socket_options: Iterable[SocketOption]) -> None:
+def _set_client_socket_defaults(
+    client_socket: Optional[_PahoSocket], socket_options: Iterable[SocketOption]
+) -> None:
     # Note that socket may be None if, e.g., the username and
     # password combination didn't work. In this case, we return early.
     if client_socket is None:
