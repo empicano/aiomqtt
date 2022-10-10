@@ -3,7 +3,7 @@
 
 from typing import Any, Dict, Union
 
-import paho.mqtt.client as mqtt  # type: ignore
+import paho.mqtt.client as mqtt
 
 
 class MqttError(Exception):
