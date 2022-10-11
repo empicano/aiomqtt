@@ -327,8 +327,20 @@ class Client:
             self._disconnected.set_result(None)
 
     @_outgoing_call
-    async def subscribe(self, *args: Any, timeout: int = 10, **kwargs: Any) -> int:
-        result, mid = self._client.subscribe(*args, **kwargs)
+    async def subscribe(
+        self,
+        topic: Union[
+            str,
+            tuple[str, mqtt.SubscribeOptions],
+            list[tuple[str, mqtt.SubscribeOptions]],
+            list[tuple[str, int]],
+        ],
+        qos: int = 0,
+        options: Optional[mqtt.SubscribeOptions] = None,
+        properties: Optional[Properties] = None,
+        timeout: int = 10,
+    ) -> int:
+        result, mid = self._client.subscribe(topic, qos, options, properties)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(result, "Could not subscribe to topic")
@@ -339,8 +351,13 @@ class Client:
             return await self._wait_for(cb_result.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def unsubscribe(self, *args: Any, timeout: int = 10) -> None:
-        result, mid = self._client.unsubscribe(*args)
+    async def unsubscribe(
+        self,
+        topic: Union[str, list[str]],
+        properties: Optional[Properties] = None,
+        timeout: int = 10,
+    ) -> None:
+        result, mid = self._client.unsubscribe(topic, properties)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
@@ -351,8 +368,16 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def publish(self, *args: Any, timeout: int = 10, **kwargs: Any) -> None:
-        info = self._client.publish(*args, **kwargs)  # [2]
+    async def publish(
+        self,
+        topic: str,
+        payload: PayloadType = None,
+        qos: int = 0,
+        retain: bool = False,
+        properties: Optional[Properties] = None,
+        timeout: int = 10,
+    ) -> None:
+        info = self._client.publish(topic, payload, qos, retain, properties)  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(info.rc, "Could not publish message")
