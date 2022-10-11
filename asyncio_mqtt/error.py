@@ -13,7 +13,7 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc: Union[int, mqtt.ReasonCodes], *args: Any):
+    def __init__(self, rc: Union[int, mqtt.ReasonCodes, None], *args: Any):
         super().__init__(*args)
         self.rc = rc
 

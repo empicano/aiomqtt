@@ -188,8 +188,12 @@ class Client:
         self._clean_start = clean_start
         self._properties = properties
         self._loop = asyncio.get_event_loop()
-        self._connected: "asyncio.Future[int]" = asyncio.Future()
-        self._disconnected: "asyncio.Future[Optional[int]]" = asyncio.Future()
+        self._connected: "asyncio.Future[Union[int, mqtt.ReasonCodes]]" = (
+            asyncio.Future()
+        )
+        self._disconnected: "asyncio.Future[Union[int, mqtt.ReasonCodes, None]]" = (
+            asyncio.Future()
+        )
         # Pending subscribe, unsubscribe, and publish calls
         self._pending_subscribes: Dict[int, asyncio.Event] = {}
         self._pending_unsubscribes: Dict[int, asyncio.Event] = {}
@@ -501,7 +505,7 @@ class Client:
         client: mqtt.Client,
         userdata: Any,
         flags: Dict[str, int],
-        rc: int,
+        rc: int | mqtt.ReasonCodes,
         properties: Optional[mqtt.Properties] = None,
     ) -> None:
         # Return early if already connected. Sometimes, paho-mqtt calls _on_connect
@@ -520,7 +524,7 @@ class Client:
         self,
         client: mqtt.Client,
         userdata: Any,
-        rc: int,
+        rc: Union[int, mqtt.ReasonCodes, None],
         properties: Optional[mqtt.Properties] = None,
     ) -> None:
         # Return early if the disconnect is already acknowledged.
@@ -550,11 +554,11 @@ class Client:
         client: mqtt.Client,
         userdata: Any,
         mid: int,
-        granted_qos: int,
+        granted_qos: Union[Tuple[int], List[mqtt.ReasonCodes]],
         properties: Optional[mqtt.Properties] = None,
     ) -> None:
         try:
-            fut = self._pending_subscribes.pop(mid).set()
+            self._pending_subscribes.pop(mid).set()
         except KeyError:
             MQTT_LOGGER.error(f'Unexpected message ID "{mid}" in on_subscribe callback')
 
@@ -564,7 +568,7 @@ class Client:
         userdata: Any,
         mid: int,
         properties: Optional[mqtt.Properties] = None,
-        reasonCodes: Optional[List[mqtt.ReasonCodes]] = None,
+        reasonCodes: Optional[List[mqtt.ReasonCodes] | mqtt.ReasonCodes] = None,
     ) -> None:
         try:
             self._pending_unsubscribes.pop(mid).set()
