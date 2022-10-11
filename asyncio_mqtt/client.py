@@ -99,7 +99,7 @@ class TLSParameters:
         cert_reqs: Optional[ssl.VerifyMode] = None,
         tls_version: Optional[ssl._SSLMethod] = None,
         ciphers: Optional[str] = None,
-        keyfile_password: Optional[str] = None,
+        keyfile_password: Optional[ssl._PasswordType] = None,
     ):
         self.ca_certs = ca_certs
         self.certfile = certfile
