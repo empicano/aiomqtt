@@ -97,7 +97,7 @@ class TLSParameters:
         certfile: Optional[str] = None,
         keyfile: Optional[str] = None,
         cert_reqs: Optional[ssl.VerifyMode] = None,
-        tls_version: Optional[int] = None,
+        tls_version: Optional[Any] = None,
         ciphers: Optional[str] = None,
         keyfile_password: Optional[str] = None,
     ):
