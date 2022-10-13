@@ -40,7 +40,7 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
 - [Advanced usage](#advanced-usage-⚡)
   - [Configuring the client](#configuring-the-client)
   - [Reconnecting](#reconnecting)
-  - [Managing context managers](#managing-context-managers)
+  - [Sharing the connection](#sharing-the-connection)
   - [Topic filters](#topic-filters)
   - [TLS](#tls)
   - [Proxying](#proxying)
@@ -68,7 +68,7 @@ import asyncio_mqtt as aiomqtt
 import paho.mqtt as mqtt
 
 aiomqtt.Client(
-    hostname="test.mosquitto.org",
+    hostname="test.mosquitto.org",  # the only non-optional parameter
     port=1883,
     username=None,
     password=None,
@@ -149,7 +149,7 @@ async def cancel_tasks(tasks):
 
 async def main():
     # we 💛 context managers. Let's create a stack to help us manage them.
-    async with AsyncExitStack() as stack:
+    async with contextlib.AsyncExitStack() as stack:
         # keep track of the asyncio tasks that we create, so that
         # we can cancel them on exit
         tasks = set()
@@ -191,11 +191,37 @@ async def main():
 asyncio.run(main())
 ```
 
-### Managing context managers
+### Sharing the connection
 
+In many cases you'll want to send and receive messages in different locations in your code. You could create a new client each time, but firstly this not very performant, and secondly you'll use a lot more network bandwith.
+
+You can share the connection by passing the `Client` instance to all functions that need it:
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+
+
+async def publish_humidity(client):
+    await client.publish("measurements/humidity", payload=0.38)
+
+
+async def publish_temperature(client):
+    await client.publish("measurements/temperature", payload=28.3)
+
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        await publish_humidity(client)
+        await publish_temperature(client)
+
+
+asyncio.run(main())
 ```
-TODO
-```
+
+**Caveats:**
+
+Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client`. With e.g. FastAPI you can share a connection via its dependency injection.
 
 ### TLS
 
