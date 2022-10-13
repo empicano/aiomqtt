@@ -1,18 +1,18 @@
 import asyncio
 import logging
-from asyncio_mqtt import Client, MqttError
 
+from asyncio_mqtt import Client, MqttError
 
 logger = logging.getLogger(__name__)
 
 
-async def tick():
+async def tick() -> None:
     while True:
         logger.info("Tick")
         await asyncio.sleep(1)
 
 
-async def test():
+async def test() -> None:
     while True:
         try:
             logger.info("Connecting to MQTT")
@@ -32,7 +32,7 @@ async def test():
         await asyncio.sleep(3)
 
 
-def main():
+def main() -> None:
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s %(levelname)s %(message)s",

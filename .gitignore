@@ -3,5 +3,5 @@ build
 dist
 *.egg-info
 local_test.py
-
+.venv
 .idea/
