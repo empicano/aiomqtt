@@ -41,6 +41,7 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
   - [Configuring the client](#configuring-the-client)
   - [Reconnecting](#reconnecting)
   - [Sharing the connection](#sharing-the-connection)
+  - [Side by side with async web frameworks](#side-by-side-with-async-web-frameworks)
   - [Topic filters](#topic-filters)
   - [TLS](#tls)
   - [Proxying](#proxying)
@@ -171,12 +172,12 @@ async def main():
             manager = client.filtered_messages(topic_filter)
             messages = await stack.enter_async_context(manager)
             template = f'[topic_filter="{topic_filter}"] {{}}'
-            task = asyncio.create_task(log_messages(messages, template))
+            task = asyncio.create_task(print_messages(messages, template))
             tasks.add(task)
 
         # handle messages that don't match a filter
         messages = await stack.enter_async_context(client.unfiltered_messages())
-        task = asyncio.create_task(log_messages(messages, "[unfiltered] {}"))
+        task = asyncio.create_task(print_messages(messages, "[unfiltered] {}"))
         tasks.add(task)
 
         # subscribe to topic(s)
@@ -222,6 +223,47 @@ asyncio.run(main())
 **Caveats:**
 
 Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client`. With e.g. FastAPI you can share a connection via its dependency injection.
+
+### Side by side with async web frameworks
+
+If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. If you want to use asyncio-mqtt side by side with a web framework you don't want the whole program to block after starting your listener. You can use asyncio's `create_task` for this. This is similar to starting a new thread without `join`ing it in a multithreaded application.
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+import starlette.applications
+import starlette.responses
+import starlette.routing
+
+
+async def startup():
+    async def listen():
+        async with aiomqtt.Client("test.mosquitto.org") as client:
+            async with client.unfiltered_messages() as messages:
+                await client.subscribe("measurements/#")
+                async for message in messages:
+                    print(message.payload)
+
+    # wait for messages in (unawaited) asyncio task
+    loop = asyncio.get_event_loop()
+    loop.create_task(listen())
+
+    # this will still run!
+    print("Magic!")
+
+
+async def index(request):
+    # and thus requests can be handled
+    return starlette.responses.JSONResponse({"hello": "world"})
+
+
+app = starlette.applications.Starlette(
+    routes=[starlette.routing.Route(path="/", endpoint=index, methods=["GET"])],
+    on_startup=[startup],
+)
+```
+
+Starlette is only used as an example here. This works similarly with other frameworks.
 
 ### TLS
 
