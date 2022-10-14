@@ -15,6 +15,7 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Callable,
+    Coroutine,
     Dict,
     Generator,
     Iterable,
@@ -140,7 +141,9 @@ SocketOption = Union[
 # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
-def _outgoing_call(method: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+def _outgoing_call(
+    method: Callable[..., Coroutine[Any, Any, T]]
+) -> Callable[..., Coroutine[Any, Any, T]]:
     @functools.wraps(method)
     async def decorated(self: Client, *args: Any, **kwargs: Any) -> T:
         if not self._outgoing_calls_sem:
