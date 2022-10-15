@@ -41,7 +41,7 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
   - [Configuring the client](#configuring-the-client)
   - [Reconnecting](#reconnecting)
   - [Sharing the connection](#sharing-the-connection)
-  - [Side by side with async web frameworks](#side-by-side-with-async-web-frameworks)
+  - [Listening without blocking](#listening-without-blocking)
   - [Topic filters](#topic-filters)
   - [TLS](#tls)
   - [Proxying](#proxying)
@@ -124,7 +124,7 @@ asyncio.run(main())
 
 ### Topic filters
 
-Let's take the example from the beginning again, but this time with messages in both `measurements/humidity` and `measurements/temperature`. You want to receive both types of measurements, but handle them differently. asyncio-mqtt has topic filters to make this easy:
+Let's take the example from the beginning again, but this time with messages in both `measurements/humidity` and `measurements/temperature`. You want to receive both types of measurements but handle them differently. asyncio-mqtt has topic filters to make this easy:
 
 ```python
 import asyncio
@@ -194,7 +194,10 @@ asyncio.run(main())
 
 ### Sharing the connection
 
-In many cases you'll want to send and receive messages in different locations in your code. You could create a new client each time, but firstly this not very performant, and secondly you'll use a lot more network bandwith.
+In many cases, you'll want to send and receive messages in different locations in your code. You could create a new client each time, but
+
+1. this is not very performant, and
+2. you'll use a lot more network bandwidth.
 
 You can share the connection by passing the `Client` instance to all functions that need it:
 
@@ -222,48 +225,68 @@ asyncio.run(main())
 
 **Caveats:**
 
-Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client`. With e.g. FastAPI you can share a connection via its dependency injection.
+Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client`.
 
-### Side by side with async web frameworks
-
-If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. If you want to use asyncio-mqtt side by side with a web framework you don't want the whole program to block after starting your listener. You can use asyncio's `create_task` for this. This is similar to starting a new thread without `join`ing it in a multithreaded application.
+Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance:
 
 ```python
 import asyncio
 import asyncio_mqtt as aiomqtt
 import starlette.applications
-import starlette.responses
-import starlette.routing
 
 
-async def startup():
-    async def listen():
-        async with aiomqtt.Client("test.mosquitto.org") as client:
-            async with client.unfiltered_messages() as messages:
-                await client.subscribe("measurements/#")
-                async for message in messages:
-                    print(message.payload)
-
-    # wait for messages in (unawaited) asyncio task
-    loop = asyncio.get_event_loop()
-    loop.create_task(listen())
-
-    # this will still run!
-    print("Magic!")
+client = None
 
 
-async def index(request):
-    # and thus requests can be handled
-    return starlette.responses.JSONResponse({"hello": "world"})
+@contextlib.asynccontextmanager
+async def lifespan():
+    global client
+    async with aiomqtt.Client("test.mosquitto.org") as c:
+        client = c
+        yield
 
 
 app = starlette.applications.Starlette(
-    routes=[starlette.routing.Route(path="/", endpoint=index, methods=["GET"])],
-    on_startup=[startup],
+    routes=[],
+    lifespan=lifespan,
 )
 ```
 
-Starlette is only used as an example here. This works similarly with other frameworks.
+FastAPI, which is built upon Starlette, doesn't expose that API yet, but there's [an open PR](tiangolo/fastapi#2944) to add it. In the meantime, you can share a connection via FastAPI's dependency injection.
+
+### Listening without blocking
+
+If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. If you want to run other code after starting your listener (e.g. handling HTTP requests) you don't want the execution to block.
+
+You can use asyncio's `create_task` for this. The concept is similar to starting a new thread without `join`ing it in a multithreaded application.
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+
+
+async def listen():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        async with client.unfiltered_messages() as messages:
+            await client.subscribe("measurements/#")
+            async for message in messages:
+                print(message.payload)
+
+
+async def main():
+    # wait for messages in (unawaited) asyncio task
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(listen())
+    # this will still run!
+    print("Magic!")
+    # if you don't await the task here the program will simply finish.
+    # however, if you're using an async web framework you usually don't have to await
+    # the task, as the framework runs in an endless loop.
+    await task
+
+
+asyncio.run(main())
+```
 
 ### TLS
 
