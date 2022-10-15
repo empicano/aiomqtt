@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("asyncio_mqtt/version.py", "r") as f:
     exec(f.read())
@@ -21,7 +21,7 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     license="BSD 3-clause License",
-    license_files = ('LICENSE',),
+    license_files=("LICENSE",),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -37,6 +37,6 @@ setup(
     install_requires=[
         "paho-mqtt>=1.6.0",
         "async_generator;python_version<'3.7'",
-        "typing_extensions;python_version<'3.7'"
+        "typing_extensions;python_version<'3.10'",
     ],
 )
