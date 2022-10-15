@@ -41,6 +41,8 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
   - [Configuring the client](#configuring-the-client)
   - [Reconnecting](#reconnecting)
   - [Sharing the connection](#sharing-the-connection)
+    - [Side by side with web frameworks](#side-by-side-with-web-frameworks)
+    - [Why can't I `connect`/`disconnect` manually?](#why-cant-i-connectdisconnect-manually)
   - [Listening without blocking](#listening-without-blocking)
   - [Topic filters](#topic-filters)
   - [TLS](#tls)
@@ -223,11 +225,11 @@ async def main():
 asyncio.run(main())
 ```
 
-**Caveats:**
+#### Side by side with web frameworks
 
-Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client`.
+Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client` and how to share the connection.
 
-Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance:
+Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance that you can than pass to functions that need it, just like before:
 
 ```python
 import asyncio
@@ -252,11 +254,19 @@ app = starlette.applications.Starlette(
 )
 ```
 
-FastAPI, which is built upon Starlette, doesn't expose that API yet, but there's [an open PR](tiangolo/fastapi#2944) to add it. In the meantime, you can share a connection via FastAPI's dependency injection.
+FastAPI (which is built upon Starlette) doesn't expose that API yet, but there's [an open PR](tiangolo/fastapi#2944) to add it. In the meantime, you can work around it via FastAPI's dependency injection.
+
+#### Why can't I `connect`/`disconnect` manually?
+
+Managing a connection by calling `connect` and `disconnect` directly is a bit tricky. For example, when you're disconnecting the client, you'd have to make sure that there's no other task that still relies on the connection. There are many similar situations where something can easily go wrong.
+
+Context managers take care of all connection and disconnection logic for you, in a way that makes it very difficult to shoot yourself in the foot. They are a lot easier and less error-prone to use than `connect`/`disconnect`.
+
+Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to asyncio-mqtt. To keep maintainer burden manageable, we (the asyncio-mqtt maintainers) decided to focus only on the better option: context managers.
 
 ### Listening without blocking
 
-If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. If you want to run other code after starting your listener (e.g. handling HTTP requests) you don't want the execution to block.
+If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. If you want to run other code after starting your listener (e.g. handling HTTP requests in a web framework) you don't want the execution to block.
 
 You can use asyncio's `create_task` for this. The concept is similar to starting a new thread without `join`ing it in a multithreaded application.
 
