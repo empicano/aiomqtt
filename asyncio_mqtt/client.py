@@ -29,11 +29,15 @@ from typing import (
     cast,
 )
 
+if sys.version_info >= (3, 10):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
+
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
 else:
     from async_generator import asynccontextmanager as _asynccontextmanager
-    from typing_extensions import ParamSpec
 
     _P = ParamSpec("_P")
     _T = TypeVar("_T")
@@ -137,20 +141,22 @@ SocketOption = Union[
     Tuple[int, int, None, int],
 ]
 
+P = ParamSpec("P")
 
 # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
-    method: Callable[..., Coroutine[Any, Any, T]]
-) -> Callable[..., Coroutine[Any, Any, T]]:
+    method: Callable[P, Coroutine[Any, Any, T]]
+) -> Callable[P, Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(self: Client, *args: Any, **kwargs: Any) -> T:
-        if not self._outgoing_calls_sem:
-            return await method(self, *args, **kwargs)
+    async def decorated(*args: Any, **kwargs: Any) -> T:
+        # `args[0]` is `self` from the methods of `Client`
+        if not args[0]._outgoing_calls_sem:
+            return await method(*args, **kwargs)
 
-        async with self._outgoing_calls_sem:
-            return await method(self, *args, **kwargs)
+        async with args[0]._outgoing_calls_sem:
+            return await method(*args, **kwargs)
 
     return decorated
 
