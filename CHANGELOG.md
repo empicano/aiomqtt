@@ -6,9 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0]
+
+### Additions
+
+- Add `proxy` and `tls_params` examples to `README.md`. Contributed by [Muhammad Sohaib Arshid (@Sohaib90)](https://github.com/Sohaib90) in [#128](https://github.com/sbtinstruments/asyncio-mqtt/pull/128)
+- Add `proxy` option. Contributed by [Muhammad Sohaib Arshid (@Sohaib90)](https://github.com/Sohaib90) in [#127](https://github.com/sbtinstruments/asyncio-mqtt/pull/127)
+- Add `tls_params` option. Contributed by [Muhammad Sohaib Arshid (@Sohaib90)](https://github.com/Sohaib90) in [#126](https://github.com/sbtinstruments/asyncio-mqtt/pull/126)
+- Add WebSocket connection options. Contributed by [Dustin C. Hatch (@AdmiralNemo)](https://github.com/AdmiralNemo) in [#115](https://github.com/sbtinstruments/asyncio-mqtt/pull/115)
+- Add LICENSE to tarballs produced during build. Contributed by [Stewart Haines (@stewarthaines)](https://github.com/stewarthaines) in [#107](https://github.com/sbtinstruments/asyncio-mqtt/pull/107)
+
+### Changed
+
+- Rework type hints of the entire project to make it compliant with mypy in strict mode. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#133](https://github.com/sbtinstruments/asyncio-mqtt/pull/133)
+- Rework related projects in `README.md`. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#132](https://github.com/sbtinstruments/asyncio-mqtt/pull/132)
+- Increase LoC count from 600 to 700 in `README.md`.
+
 ### Fixed
 
-- Fix race conditions that may cause `InvalidStateError`. 
+- Fix autocomplete for `_outgoing_call` decorator. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#134](https://github.com/sbtinstruments/asyncio-mqtt/pull/134)
+- Fix missing ProtocolVersion import in `README.md` and format the entire `README.md`. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#130](https://github.com/sbtinstruments/asyncio-mqtt/pull/130)
+- Fix 'asyncio_mqtt' has no attribute 'TLSParameters' error. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#129](https://github.com/sbtinstruments/asyncio-mqtt/pull/129)
+- Fix formatting in `README.md`. Contributed by [Marcelo Trylesinski (@Kludex)](https://github.com/Kludex) in [#128](https://github.com/sbtinstruments/asyncio-mqtt/pull/128)
+- Fix race conditions that may cause `InvalidStateError`. Contributed by [Andreas Hangauer (@aha79)](https://github.com/aha79) in [#123](https://github.com/sbtinstruments/asyncio-mqtt/pull/123)
+- Fix thread safety in socket close callback. Contributed by [Dustin C. Hatch (@AdmiralNemo)](https://github.com/AdmiralNemo) in [#114](https://github.com/sbtinstruments/asyncio-mqtt/pull/114)
 
 ## [0.12.1] - 2022-01-19
 
@@ -20,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add backpressure mechanism to limit the number of concurrent outgoing calls. Contributed by [Aaron Bach (@bachya)](https://github.com/bachya) in [#72](https://github.com/sbtinstruments/asyncio-mqtt/pull/101)
+- Add backpressure mechanism to limit the number of concurrent outgoing calls. Contributed by [Aaron Bach (@bachya)](https://github.com/bachya) in [#101](https://github.com/sbtinstruments/asyncio-mqtt/pull/101)
 
 ## [0.11.1] - 2022-01-10
 
