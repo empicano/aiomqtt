@@ -241,7 +241,7 @@ client = None
 
 
 @contextlib.asynccontextmanager
-async def lifespan():
+async def lifespan(app):
     global client
     async with aiomqtt.Client("test.mosquitto.org") as c:
         client = c
