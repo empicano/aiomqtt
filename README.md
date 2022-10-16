@@ -36,8 +36,8 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
 
 ## Contents
 
-- [Installation](#installation-📚)
-- [Advanced usage](#advanced-usage-⚡)
+- [Installation](#installation-)
+- [Advanced usage](#advanced-usage-)
   - [Configuring the client](#configuring-the-client)
   - [Reconnecting](#reconnecting)
   - [Sharing the connection](#sharing-the-connection)
@@ -227,7 +227,7 @@ asyncio.run(main())
 
 #### Side by side with web frameworks
 
-Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect to the `Client` and how to share the connection.
+Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect the `Client` and how to share this connection.
 
 Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance that you can than pass to functions that need it, just like before:
 
@@ -235,6 +235,7 @@ Some frameworks like [Starlette](https://github.com/encode/starlette) directly s
 import asyncio
 import asyncio_mqtt as aiomqtt
 import starlette.applications
+import contextlib
 
 
 client = None
