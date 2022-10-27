@@ -1,8 +1,10 @@
-![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
-![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
-[![PyPI](https://img.shields.io/pypi/v/asyncio-mqtt)](https://pypi.org/project/asyncio-mqtt/)
-
-# Idiomatic asyncio MQTT client 🙌
+<h1 align="center">Idiomatic asyncio MQTT Client 🙌</h1>
+<p align="center">
+    <a href="https://github.com/sbtinstruments/asyncio-mqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt"></a>
+    <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/asyncio-mqtt"></a>
+    <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/asyncio-mqtt"></a>
+    <a href="https://github.com/sbtinstruments/asyncio-mqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a>
+</p>
 
 Write code like this:
 
@@ -23,7 +25,7 @@ async with Client("test.mosquitto.org") as client:
     await client.publish("measurements/humidity", payload=0.38)
 ```
 
-asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
+_asyncio-mqtt_ combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
 
 - No more callbacks! 👍
 - No more return codes (welcome to the `MqttError`)
@@ -34,9 +36,10 @@ asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://githu
 
 The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
 
-## Contents
+## Contents 🔍
 
 - [Installation](#installation-)
+  - [Note for Windows users](#note-for-windows-users)
 - [Advanced usage](#advanced-usage-)
   - [Configuring the client](#configuring-the-client)
   - [Reconnecting](#reconnecting)
@@ -47,16 +50,29 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
   - [Topic filters](#topic-filters)
   - [TLS](#tls)
   - [Proxying](#proxying)
-- [Related projects](#related-projects)
-- [Requirements](#requirements)
-- [Note for Windows users](#note-for-windows-users)
-- [Changelog](#changelog)
-- [Versioning](#versioning)
-- [License](#license)
+- [License](#license-)
+- [Versioning](#versioning-)
+- [Changelog](#changelog-)
+- [Related projects](#related-projects-)
 
 ## Installation 📚
 
-`pip install asyncio-mqtt`
+_asyncio-mqtt_ can be installed via `pip install asyncio-mqtt`. It requires Python 3.7+ to run. The only dependency is [_paho-mqtt_](https://github.com/eclipse/paho.mqtt.python).
+
+If you can't wait for the latest version and want to install directly from GitHub, use:
+
+`pip install git+https://github.com/sbtinstruments/asyncio-mqtt`
+
+### Note for Windows users
+
+Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by _asyncio-mqtt_. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
+
+```python
+# Change to the "Selector" event loop
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+# Run your async application as usual
+asyncio.run(main())
+```
 
 ## Advanced usage ⚡
 
@@ -71,7 +87,7 @@ import asyncio_mqtt as aiomqtt
 import paho.mqtt as mqtt
 
 aiomqtt.Client(
-    hostname="test.mosquitto.org",  # the only non-optional parameter
+    hostname="test.mosquitto.org",  # The only non-optional parameter
     port=1883,
     username=None,
     password=None,
@@ -107,7 +123,7 @@ import asyncio_mqtt as aiomqtt
 
 
 async def main():
-    reconnect_interval = 5  # in seconds
+    reconnect_interval = 5  # In seconds
     while True:
         try:
             async with aiomqtt.Client("test.mosquitto.org") as client:
@@ -126,7 +142,7 @@ asyncio.run(main())
 
 ### Topic filters
 
-Let's take the example from the beginning again, but this time with messages in both `measurements/humidity` and `measurements/temperature`. You want to receive both types of measurements but handle them differently. asyncio-mqtt has topic filters to make this easy:
+Let's take the example from the beginning again, but this time with messages in both `measurements/humidity` and `measurements/temperature`. You want to receive both types of measurements but handle them differently. _asyncio-mqtt_ has topic filters to make this easy:
 
 ```python
 import asyncio
@@ -151,43 +167,43 @@ async def cancel_tasks(tasks):
 
 
 async def main():
-    # we 💛 context managers. Let's create a stack to help us manage them.
+    # We 💛 context managers. Let's create a stack to help us manage them.
     async with contextlib.AsyncExitStack() as stack:
-        # keep track of the asyncio tasks that we create, so that
+        # Keep track of the asyncio tasks that we create, so that
         # we can cancel them on exit
         tasks = set()
         stack.push_async_callback(cancel_tasks, tasks)
 
-        # connect to MQTT broker
+        # Connect to MQTT broker
         client = aiomqtt.Client("test.mosquitto.org")
         await stack.enter_async_context(client)
 
-        # you can create any number of topic filters
+        # You can create any number of topic filters
         topic_filters = (
             "measurements/humidity",
             "measurements/temperature"
-            # 👉 try to add more complex filters!
+            # 👉 Try to add more complex filters!
         )
 
         for topic_filter in topic_filters:
-            # print all messages that match the filter
+            # Print all messages that match the filter
             manager = client.filtered_messages(topic_filter)
             messages = await stack.enter_async_context(manager)
             template = f'[topic_filter="{topic_filter}"] {{}}'
             task = asyncio.create_task(print_messages(messages, template))
             tasks.add(task)
 
-        # handle messages that don't match a filter
+        # Handle messages that don't match a filter
         messages = await stack.enter_async_context(client.unfiltered_messages())
         task = asyncio.create_task(print_messages(messages, "[unfiltered] {}"))
         tasks.add(task)
 
-        # subscribe to topic(s)
-        # 🤔 note that we subscribe *after* starting the message
+        # Subscribe to topic(s)
+        # 🤔 Note that we subscribe *after* starting the message
         # loggers. Otherwise, we may miss retained messages.
         await client.subscribe("measurements/#")
 
-        # wait for everything to complete (or fail due to, e.g., network errors)
+        # Wait for everything to complete (or fail due to, e.g., network errors)
         await asyncio.gather(*tasks)
 
 
@@ -255,7 +271,7 @@ app = starlette.applications.Starlette(
 )
 ```
 
-FastAPI (which is built upon Starlette) doesn't expose that API yet, but there's [an open PR](tiangolo/fastapi#2944) to add it. In the meantime, you can work around it via FastAPI's dependency injection.
+FastAPI (which is built upon Starlette) doesn't expose that API yet, but there are [multiple](https://github.com/tiangolo/fastapi/pull/5503) [open PRs](https://github.com/tiangolo/fastapi/pull/2944) to add it. In the meantime, you can work around it via FastAPI's dependency injection.
 
 #### Why can't I `connect`/`disconnect` manually?
 
@@ -263,7 +279,7 @@ Managing a connection by calling `connect` and `disconnect` directly is a bit tr
 
 Context managers take care of all connection and disconnection logic for you, in a way that makes it very difficult to shoot yourself in the foot. They are a lot easier and less error-prone to use than `connect`/`disconnect`.
 
-Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to asyncio-mqtt. To keep maintainer burden manageable, we (the asyncio-mqtt maintainers) decided to focus only on the better option: context managers.
+Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to _asyncio-mqtt_. To keep maintainer burden manageable, we (the _asyncio-mqtt_ maintainers) decided to focus only on the better option: context managers.
 
 ### Listening without blocking
 
@@ -285,13 +301,13 @@ async def listen():
 
 
 async def main():
-    # wait for messages in (unawaited) asyncio task
+    # Wait for messages in (unawaited) asyncio task
     loop = asyncio.get_event_loop()
     task = loop.create_task(listen())
-    # this will still run!
+    # This will still run!
     print("Magic!")
-    # if you don't await the task here the program will simply finish.
-    # however, if you're using an async web framework you usually don't have to await
+    # If you don't await the task here the program will simply finish.
+    # However, if you're using an async web framework you usually don't have to await
     # the task, as the framework runs in an endless loop.
     await task
 
@@ -353,49 +369,34 @@ async def main():
 asyncio.run(main())
 ```
 
-## Related projects
+## License 📋
 
-Is asyncio-mqtt not what you are looking for? Try another client:
+<a href="https://github.com/sbtinstruments/asyncio-mqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt"></a>
+
+Note that the underlying paho-mqtt library is dual-licensed. One of the licenses is the so-called [Eclipse Distribution License v1.0](https://www.eclipse.org/org/documents/edl-v10.php). It is almost word-for-word identical to the [BSD 3-clause License](https://opensource.org/licenses/BSD-3-Clause). The only differences are:
+
+- One use of "COPYRIGHT OWNER" (EDL) instead of "COPYRIGHT HOLDER" (BSD)
+- One use of "Eclipse Foundation, Inc." (EDL) instead of "copyright holder" (BSD)
+
+## Versioning 🎯
+
+<a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI" src="https://img.shields.io/pypi/v/asyncio-mqtt"></a>
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Expect API changes until we reach version `1.0.0`. After `1.0.0`, breaking changes will only occur in major release (e.g., `2.0.0`, `3.0.0`, etc.).
+
+## Changelog 🚧
+
+Please refer to the [CHANGELOG](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/CHANGELOG.md) document. It adheres to the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## Related projects 🌟
+
+Is _asyncio-mqtt_ not what you are looking for? Try another client:
 
 - [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) — Own protocol implementation. Synchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
 - [gmqtt](https://github.com/wialon/gmqtt) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt) ![license](https://img.shields.io/github/license/wialon/gmqtt)
 - [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt) — Asynchronous wrapper around gmqtt. Simplifies integration in your FastAPI application.<br>![GitHub stars](https://img.shields.io/github/stars/sabuhish/fastapi-mqtt) ![license](https://img.shields.io/github/license/sabuhish/fastapi-mqtt)
 - [amqtt](https://github.com/Yakifo/amqtt) — Own protocol implementation. Asynchronous. Includes a broker.<br>![GitHub stars](https://img.shields.io/github/stars/Yakifo/amqtt) ![license](https://img.shields.io/github/license/Yakifo/amqtt)
 - [mqttools](https://github.com/eerimoq/mqttools) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eerimoq/mqttools) ![license](https://img.shields.io/github/license/eerimoq/mqttools)
-- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) — Asynchronous wrapper around paho-mqtt (similar to asyncio-mqtt). Based on trio instead of asyncio.<br>![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt) ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
-
-## Requirements
-
-Python 3.7 or later. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
-
-## Note for Windows users
-
-Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by asyncio-mqtt. To use asyncio-mqtt, please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`. E.g:
-
-```python
-# Change to the "Selector" event loop
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-# Run your async application as usual
-asyncio.run(main())
-```
-
-## Changelog
-
-Please refer to the [CHANGELOG](https://github.com/sbtinstruments/asyncio-mqtt/blob/master/CHANGELOG.md) document. It adheres to the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
-## Versioning
-
-![semver](https://img.shields.io/github/v/tag/sbtinstruments/asyncio-mqtt?sort=semver)
-
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-Expect API changes until we reach version `1.0.0`. After `1.0.0`, breaking changes will only occur in major release (e.g., `2.0.0`, `3.0.0`, etc.).
-
-## License
-
-![license](https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt)
-
-Note that the underlying paho-mqtt library is dual-licensed. One of the licenses is the so-called [Eclipse Distribution License v1.0](https://www.eclipse.org/org/documents/edl-v10.php). It is almost word-for-word identical to the [BSD 3-clause License](https://opensource.org/licenses/BSD-3-Clause). The only differences are:
-
-- One use of "COPYRIGHT OWNER" (EDL) instead of "COPYRIGHT HOLDER" (BSD)
-- One use of "Eclipse Foundation, Inc." (EDL) instead of "copyright holder" (BSD)
+- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) — Asynchronous wrapper around paho-mqtt (similar to _asyncio-mqtt_). Based on trio instead of asyncio.<br>![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt) ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
