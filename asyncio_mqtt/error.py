@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 
-
-from typing import Any, Dict, Union
+from typing import Any
 
 import paho.mqtt.client as mqtt
 
@@ -13,7 +13,7 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc: Union[int, mqtt.ReasonCodes, None], *args: Any):
+    def __init__(self, rc: int | mqtt.ReasonCodes | None, *args: Any):
         super().__init__(*args)
         self.rc = rc
 
@@ -27,7 +27,7 @@ class MqttCodeError(MqttError):
 
 
 class MqttConnectError(MqttCodeError):
-    def __init__(self, rc: Union[int, mqtt.ReasonCodes]):
+    def __init__(self, rc: int | mqtt.ReasonCodes):
         if isinstance(rc, mqtt.ReasonCodes):
             return super().__init__(rc)
         msg = "Connection refused"
@@ -38,7 +38,7 @@ class MqttConnectError(MqttCodeError):
         super().__init__(rc, msg)
 
 
-_CONNECT_RC_STRINGS: Dict[int, str] = {
+_CONNECT_RC_STRINGS: dict[int, str] = {
     # Reference: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1898
     # 0: Connection successful
     # 1: Connection refused - incorrect protocol version
