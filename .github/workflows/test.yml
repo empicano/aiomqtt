@@ -39,5 +39,4 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
-          file: ./coverage.xml
           name: ${{ matrix.os }} Python ${{ matrix.python-version }}
