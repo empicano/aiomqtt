@@ -33,7 +33,7 @@ jobs:
           path: ~/.cache/pip
           key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
       - name: Install dependencies
-        run: pip install .[tests]
+        run: pip install -e .[tests]
       - name: Test with pytest
         run: pytest --cov=asyncio_mqtt --cov=tests --cov-report=xml
       - name: Upload coverage
