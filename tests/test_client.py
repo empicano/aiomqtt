@@ -8,8 +8,8 @@ from asyncio_mqtt.client import ProtocolVersion, Will
 pytestmark = pytest.mark.anyio
 
 
-async def test_client_filtered_messages() -> None:
-    topic_header = "tests/asyncio_mqtt/filtered_messages/"
+async def test_client_filtered_messages(os_and_version: str) -> None:
+    topic_header = os_and_version + "/tests/asyncio_mqtt/filtered_messages/"
     good_topic = topic_header + "good"
     bad_topic = topic_header + "bad"
 
@@ -23,12 +23,12 @@ async def test_client_filtered_messages() -> None:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_messages, tg)
-            await client.publish(bad_topic)
-            await client.publish(good_topic)
+            await client.publish(bad_topic, 2)
+            await client.publish(good_topic, 2)
 
 
-async def test_client_unfiltered_messages() -> None:
-    topic_header = "tests/asyncio_mqtt/unfiltered_messages/"
+async def test_client_unfiltered_messages(os_and_version: str) -> None:
+    topic_header = os_and_version + "/tests/asyncio_mqtt/unfiltered_messages/"
     topic_filtered = topic_header + "filtered"
     topic_unfiltered = topic_header + "unfiltered"
 
@@ -48,17 +48,19 @@ async def test_client_unfiltered_messages() -> None:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_filtered_messages)
             tg.start_soon(handle_unfiltered_messages, tg)
-            await client.publish(topic_filtered)
-            await client.publish(topic_unfiltered)
+            await client.publish(topic_filtered, 2)
+            await client.publish(topic_unfiltered, 2)
 
 
-async def test_client_unsubscribe() -> None:
-    topic_header = "tests/asyncio_mqtt/unsubscribe/"
+async def test_client_unsubscribe(os_and_version: str) -> None:
+    topic_header = os_and_version + "/tests/asyncio_mqtt/unsubscribe/"
     topic1 = topic_header + "1"
     topic2 = topic_header + "2"
+    event = anyio.Event()
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
         async with client.unfiltered_messages() as messages:
+            event.set()
             i = 0
             async for message in messages:
                 if i == 0:
@@ -73,10 +75,11 @@ async def test_client_unsubscribe() -> None:
             await client.subscribe(topic1)
             await client.subscribe(topic2)
             tg.start_soon(handle_messages, tg)
-            await client.publish(topic1)
+
+            await client.publish(topic1, 2)
             await client.unsubscribe(topic1)
-            await client.publish(topic1)
-            await client.publish(topic2)
+            await client.publish(topic1, 2)
+            await client.publish(topic2, 2)
 
 
 @pytest.mark.parametrize(
