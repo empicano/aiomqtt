@@ -42,5 +42,6 @@ setup(
     extras_require={
         "lint": ["mypy>=0.982", "flake8>=5.0.4", "types-paho-mqtt>=1.6.0.1"],
         "format": ["black>=22.10.0", "isort>=5.10.1"],
+        "tests": ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"],
     },
 )

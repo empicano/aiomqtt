@@ -29,14 +29,14 @@ from typing import (
     cast,
 )
 
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 10):  # pragma: no cover
     from typing import ParamSpec
-else:
+else:  # pragma: no cover
     from typing_extensions import ParamSpec
 
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
-else:
+else:  # pragma: no cover
     from async_generator import asynccontextmanager as _asynccontextmanager
 
     _P = ParamSpec("_P")
@@ -415,7 +415,7 @@ class Client:
     @asynccontextmanager
     async def filtered_messages(
         self, topic_filter: str, *, queue_maxsize: int = 0
-    ) -> AsyncIterator[AsyncGenerator[mqtt.MQTTMessage, None]]:
+    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
         """Return async generator of messages that match the given filter.
 
         Use queue_maxsize to restrict the queue size. If the queue is full,
@@ -441,7 +441,7 @@ class Client:
     @asynccontextmanager
     async def unfiltered_messages(
         self, *, queue_maxsize: int = 0
-    ) -> AsyncIterator[AsyncGenerator[mqtt.MQTTMessage, None]]:
+    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
         """Return async generator of all messages that are not caught in filters."""
         # Early out
         if self._client.on_message is not None:
