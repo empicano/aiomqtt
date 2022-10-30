@@ -2,6 +2,7 @@
 <p align="center">
     <a href="https://github.com/sbtinstruments/asyncio-mqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt"></a>
     <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/asyncio-mqtt"></a>
+    <a href="https://pypi.org/project/asyncio-mqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/asyncio-mqtt.svg"></a>
     <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/asyncio-mqtt"></a>
     <a href="https://github.com/sbtinstruments/asyncio-mqtt/actions/workflows/test.yml"><img alt="Coverage" src="https://github.com/sbtinstruments/asyncio-mqtt/actions/workflows/test.yml/badge.svg"></a>
     <a href="https://codecov.io/gh/sbtinstruments/asyncio-mqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/asyncio-mqtt"></a>
