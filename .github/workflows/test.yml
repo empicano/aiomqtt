@@ -34,8 +34,6 @@ jobs:
           key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
       - name: Install dependencies
         run: pip install .[tests]
-      - name: Start Mosquitto MQTT Broker
-        uses: Namoshek/mosquitto-github-action@v1
       - name: Test with pytest
         run: pytest --cov=asyncio_mqtt --cov-report=xml
       - name: Upload coverage

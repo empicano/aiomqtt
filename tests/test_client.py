@@ -19,7 +19,7 @@ async def test_client_filtered_messages() -> None:
                 assert message.topic == good_topic
                 tg.cancel_scope.cancel()
 
-    async with Client("localhost") as client:
+    async with Client("test.mosquitto.org") as client:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_messages, tg)
@@ -43,7 +43,7 @@ async def test_client_unfiltered_messages() -> None:
             async for message in messages:
                 assert message.topic == topic_filtered
 
-    async with Client("localhost") as client:
+    async with Client("test.mosquitto.org") as client:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_filtered_messages)
@@ -68,7 +68,7 @@ async def test_client_unsubscribe() -> None:
                     tg.cancel_scope.cancel()
                 i += 1
 
-    async with Client("localhost") as client:
+    async with Client("test.mosquitto.org") as client:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic1)
             await client.subscribe(topic2)
@@ -84,7 +84,7 @@ async def test_client_unsubscribe() -> None:
     ((ProtocolVersion.V31, 22), (ProtocolVersion.V311, 0), (ProtocolVersion.V5, 0)),
 )
 async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
-    client = Client("localhost", protocol=protocol)
+    client = Client("test.mosquitto.org", protocol=protocol)
     assert len(client.id) == length
 
 
@@ -94,7 +94,7 @@ async def test_client_will() -> None:
 
     async def launch_client() -> None:
         with anyio.CancelScope(shield=True) as cs:
-            async with Client("localhost") as client:
+            async with Client("test.mosquitto.org") as client:
                 await client.subscribe(topic)
                 event.set()
                 async with client.filtered_messages(topic) as messages:
@@ -105,5 +105,5 @@ async def test_client_will() -> None:
     async with anyio.create_task_group() as tg:
         tg.start_soon(launch_client)
         await event.wait()
-        async with Client("localhost", will=Will(topic)) as client:
+        async with Client("test.mosquitto.org", will=Will(topic)) as client:
             client._client._sock_close()  # type: ignore[attr-defined]
