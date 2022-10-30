@@ -1,0 +1,43 @@
+name: test suite
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version:
+          ["3.7", "3.8", "3.9", "3.10", "3.11", pypy-3.8, pypy-3.9]
+        include:
+          - os: macos-latest
+            python-version: "3.7"
+          - os: macos-latest
+            python-version: "3.11"
+          - os: windows-latest
+            python-version: "3.7"
+          - os: windows-latest
+            python-version: "3.11"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
+      - name: Install dependencies
+        run: pip install .[tests]
+      - name: Test with pytest
+        run: pytest --cov=asyncio_mqtt --cov-report=xml
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          name: ${{ matrix.os }} Python ${{ matrix.python-version }}

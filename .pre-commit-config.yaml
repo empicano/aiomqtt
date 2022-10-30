@@ -25,6 +25,8 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies:
+          - anyio
+          - pytest
           - types-paho-mqtt == 1.6.0.1
 
   - repo: https://github.com/pre-commit/mirrors-prettier
