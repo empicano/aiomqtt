@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from setuptools import find_packages, setup
 
-with open("asyncio_mqtt/version.py", "r") as f:
+with open("asyncio_mqtt/version.py") as f:
     exec(f.read())
 
-with open("README.md", "r", encoding="utf-8") as readme_file:
+with open("README.md", encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
 setup(
     name="asyncio_mqtt",
-    version=__version__,
+    version=__version__,  # type: ignore[name-defined]
     packages=find_packages(),
     package_data={
         "asyncio_mqtt": ["py.typed"],
@@ -39,4 +39,8 @@ setup(
         "async_generator;python_version<'3.7'",
         "typing_extensions;python_version<'3.10'",
     ],
+    extras_require={
+        "lint": ["mypy>=0.982", "flake8>=5.0.4", "types-paho-mqtt>=1.6.0.1"],
+        "format": ["black>=22.10.0", "isort>=5.10.1"],
+    },
 )

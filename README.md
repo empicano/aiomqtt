@@ -3,7 +3,9 @@
     <a href="https://github.com/sbtinstruments/asyncio-mqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt"></a>
     <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/asyncio-mqtt"></a>
     <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/asyncio-mqtt"></a>
+    <a href="https://results.pre-commit.ci/latest/github/sbtinstruments/asyncio-mqtt/master"><img alt="pre-commit.ci status" src="https://results.pre-commit.ci/badge/github/sbtinstruments/asyncio-mqtt/master.svg"></a>
     <a href="https://github.com/sbtinstruments/asyncio-mqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a>
+    <a href="https://github.com/sbtinstruments/asyncio-mqtt"><img alt="Code Style: Black" src="https://img.shields.io/badge/code%20style-black-black"></a>
 </p>
 
 Write code like this:
