@@ -4,3 +4,4 @@ profile = "black"
 [tool.mypy]
 strict = true
 show_error_codes = true
+no_strict_concatenate = true # TODO: remove when dropping python 3.7
