@@ -262,11 +262,7 @@ class Client:
 
     async def connect(self, *, timeout: int = 10) -> None:
         try:
-            # get_running_loop is preferred, but only available in python>=3.7
-            try:
-                loop = asyncio.get_running_loop()
-            except AttributeError:
-                loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
 
             # [3] Run connect() within an executor thread, since it blocks on socket
             # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
