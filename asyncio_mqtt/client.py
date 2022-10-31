@@ -362,55 +362,32 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @asynccontextmanager
-    async def filtered_messages(
-        self, topic_filter: str, *, queue_maxsize: int = 0
+    async def messages(
+        self, *, queue_maxsize: int = 0
     ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
-        """Return async generator of messages that match the given filter.
+        """Return async generator of incoming messages.
 
         Use queue_maxsize to restrict the queue size. If the queue is full,
         incoming messages will be discarded (and a warning is logged).
         If queue_maxsize is less than or equal to zero, the queue size is infinite.
-
-        Example use:
-            async with client.filtered_messages('floors/+/humidity') as messages:
-                async for message in messages:
-                    print(f'Humidity reading: {message.payload.decode()}')
         """
-        cb, generator = self._cb_and_generator(
-            log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
-        )
-        try:
-            self._client.message_callback_add(topic_filter, cb)
-            # Back to the caller (run whatever is inside the with statement)
-            yield generator
-        finally:
-            # We are exitting the with statement. Remove the topic filter.
-            self._client.message_callback_remove(topic_filter)
-
-    @asynccontextmanager
-    async def unfiltered_messages(
-        self, *, queue_maxsize: int = 0
-    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
-        """Return async generator of all messages that are not caught in filters."""
         # Early out
         if self._client.on_message is not None:
             # TODO: This restriction can easily be removed.
             raise RuntimeError(
-                "Only a single unfiltered_messages generator can be used at a time."
+                "Only a single messages generator can be used at a time."
             )
-        cb, generator = self._cb_and_generator(
-            log_context="unfiltered", queue_maxsize=queue_maxsize
-        )
+        cb, generator = self._callback_and_generator(queue_maxsize=queue_maxsize)
         try:
             self._client.on_message = cb
             # Back to the caller (run whatever is inside the with statement)
             yield generator
         finally:
-            # We are exitting the with statement. Unset the callback.
+            # We are exiting the with statement. Unset the callback.
             self._client.on_message = None
 
-    def _cb_and_generator(
-        self, *, log_context: str, queue_maxsize: int = 0
+    def _callback_and_generator(
+        self, *, queue_maxsize: int = 0
     ) -> tuple[
         Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
         AsyncGenerator[mqtt.MQTTMessage, None],
@@ -424,9 +401,7 @@ class Client:
             try:
                 messages.put_nowait(msg)
             except asyncio.QueueFull:
-                MQTT_LOGGER.warning(
-                    f"[{log_context}] Message queue is full. Discarding message."
-                )
+                MQTT_LOGGER.warning(f"Message queue is full. Discarding message.")
 
         # The generator that we give to the caller
         async def _message_generator() -> AsyncGenerator[mqtt.MQTTMessage, None]:
@@ -597,8 +572,8 @@ class Client:
 
         self._loop.add_reader(sock.fileno(), cb)
         # paho-mqtt calls this function from the executor thread on which we've called
-        # `self._client.connect()` (see [3]), so we create a callback function to schedule
-        # `_misc_loop()` and run it on the loop thread-safely.
+        # `self._client.connect()` (see [3]), so we create a callback function to
+        # schedule `_misc_loop()` and run it on the loop thread-safely.
         def create_task_cb() -> None:
             self._misc_task = self._loop.create_task(self._misc_loop())
 
@@ -664,7 +639,8 @@ class Client:
         except MqttError as error:
             # We tried to be graceful. Now there is no mercy.
             MQTT_LOGGER.warning(
-                f'Could not gracefully disconnect due to "{error}". Forcing disconnection.'
+                f'Could not gracefully disconnect due to "{error}". Forcing'
+                " disconnection."
             )
             await self.force_disconnect()
 
