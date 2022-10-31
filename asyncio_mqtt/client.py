@@ -27,9 +27,9 @@ from typing import (
 )
 
 if sys.version_info >= (3, 10):
-    from typing import ParamSpec
+    from typing import Concatenate, ParamSpec
 else:
-    from typing_extensions import ParamSpec
+    from typing_extensions import Concatenate, ParamSpec
 
 from contextlib import asynccontextmanager
 
@@ -113,16 +113,15 @@ P = ParamSpec("P")
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
-    method: Callable[P, Coroutine[Any, Any, T]]
-) -> Callable[P, Coroutine[Any, Any, T]]:
+    method: Callable[Concatenate[Client, P], Coroutine[Any, Any, T]]
+) -> Callable[Concatenate[Client, P], Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(*args: P.args, **kwargs: P.kwargs) -> T:
-        assert isinstance(args[0], Client)
-        if not args[0]._outgoing_calls_sem:
-            return await method(*args, **kwargs)
+    async def decorated(self: Client, /, *args: P.args, **kwargs: P.kwargs) -> T:
+        if not self._outgoing_calls_sem:
+            return await method(self, *args, **kwargs)
 
-        async with args[0]._outgoing_calls_sem:
-            return await method(*args, **kwargs)
+        async with self._outgoing_calls_sem:
+            return await method(self, *args, **kwargs)
 
     return decorated
 
@@ -301,6 +300,7 @@ class Client:
     @_outgoing_call
     async def subscribe(
         self,
+        /,
         topic: (
             str
             | tuple[str, mqtt.SubscribeOptions]
@@ -331,6 +331,7 @@ class Client:
     @_outgoing_call
     async def unsubscribe(
         self,
+        /,
         topic: str | list[str],
         properties: Properties | None = None,
         *args: Any,
@@ -350,6 +351,7 @@ class Client:
     @_outgoing_call
     async def publish(
         self,
+        /,
         topic: str,
         payload: PayloadType = None,
         qos: int = 0,
