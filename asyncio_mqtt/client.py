@@ -119,6 +119,30 @@ def _outgoing_call(
     return decorated
 
 
+class MqttMessage(mqtt.MQTTMessage):
+    def matches(self, topic: str) -> bool:
+        """Check if the message matches a given topic."""
+        message_topic_parts = self.topic.split("/")
+        matches_topic_parts = topic.split("/")
+        if message_topic_parts[0].startswith("$"):
+            message_topic_parts = message_topic_parts[1:]
+
+        def rec(x: list[str], y: list[str]) -> bool:
+            if not x:
+                if not y:
+                    return True
+                return False
+            if not y:
+                return False
+            if y[0] == "#":
+                return True
+            if x[0] == y[0] or y[0] == "+":
+                return recurse(x[1:], y[1:])
+            return False
+
+        return rec(message_topic_parts, matches_topic_parts)
+
+
 class Client:
     def __init__(  # noqa: C901
         self,
