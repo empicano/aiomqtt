@@ -116,8 +116,8 @@ def _outgoing_call(
     method: Callable[P, Coroutine[Any, Any, T]]
 ) -> Callable[P, Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(*args: Any, **kwargs: Any) -> T:
-        # `args[0]` is `self` from the methods of `Client`
+    async def decorated(*args: P.args, **kwargs: P.kwargs) -> T:
+        assert isinstance(args[0], Client)
         if not args[0]._outgoing_calls_sem:
             return await method(*args, **kwargs)
 
