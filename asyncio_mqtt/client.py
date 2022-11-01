@@ -21,6 +21,7 @@ from typing import (
     Generator,
     Iterable,
     Iterator,
+    List,
     Tuple,
     Union,
     cast,
@@ -45,8 +46,8 @@ MQTT_LOGGER.setLevel(logging.WARNING)
 _PahoSocket = Union[socket.socket, ssl.SSLSocket, mqtt.WebsocketWrapper, Any]
 
 WebSocketHeaders = Union[
-    Dict[str, Any],
-    Callable[[Dict[str, Any]], Dict[str, Any]],
+    Dict[str, str],
+    Callable[[Dict[str, str]], Dict[str, str]],
 ]
 
 
@@ -105,6 +106,13 @@ class ProxySettings:
 SocketOption = Union[
     Tuple[int, int, Union[int, bytes]],
     Tuple[int, int, None, int],
+]
+
+SubscribeTopic = Union[
+    str,
+    Tuple[str, mqtt.SubscribeOptions],
+    List[Tuple[str, mqtt.SubscribeOptions]],
+    List[Tuple[str, int]],
 ]
 
 P = ParamSpec("P")
@@ -238,7 +246,7 @@ class Client:
         self._client.message_retry_set(message_retry_set)
         if socket_options is None:
             socket_options = ()
-        self._socket_options: tuple[SocketOption, ...] = tuple(socket_options)
+        self._socket_options = tuple(socket_options)
 
     @property
     def id(self) -> str:
@@ -300,12 +308,7 @@ class Client:
     @_outgoing_call
     async def subscribe(
         self,
-        topic: (
-            str
-            | tuple[str, mqtt.SubscribeOptions]
-            | list[tuple[str, mqtt.SubscribeOptions]]
-            | list[tuple[str, int]]
-        ),
+        topic: SubscribeTopic,
         qos: int = 0,
         options: mqtt.SubscribeOptions | None = None,
         properties: Properties | None = None,

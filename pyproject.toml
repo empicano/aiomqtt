@@ -5,3 +5,12 @@ profile = "black"
 strict = true
 show_error_codes = true
 no_strict_concatenate = true # TODO: remove when dropping python 3.7
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    "ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning",
+]
+
+[tool.coverage.run]
+branch = true
