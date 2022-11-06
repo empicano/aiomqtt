@@ -1,0 +1,8 @@
+coverage:
+  precision: 1
+  # PRs can result in small changes of e.g. 0.04 percent; don't let these
+  # prevent a passing check
+  status:
+    project:
+      default:
+        threshold: 0.2%
