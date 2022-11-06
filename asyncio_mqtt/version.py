@@ -1,2 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
-__version__ = "0.13.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("asyncio-mqtt")
+except PackageNotFoundError:
+    pass

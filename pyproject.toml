@@ -1,3 +1,49 @@
+[build-system]
+requires = ["setuptools >= 65", "setuptools-scm >= 7"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asyncio_mqtt"
+description = "Idomatic asyncio wrapper around paho-mqtt"
+readme = "README.md"
+authors = [{ name = "Frederik Aalund", email = "fpa@sbtinstruments.com" }]
+maintainers = [
+    { name = "Jonathan Plasse", email = "jonathan.plasse+pypi@live.fr" },
+    { name = "Felix Böhm", email = "felix@felixboehm.dev" },
+]
+keywords = ["mqtt", "async", "asyncio", "paho-mqtt", "wrapper"]
+license = { text = "BSD 3-Clause License" }
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+requires-python = ">= 3.7"
+dependencies = ["paho-mqtt>=1.6.0", "typing_extensions; python_version<'3.10'"]
+dynamic = ["version"]
+
+[project.urls]
+"Source code" = "https://github.com/sbtinstruments/asyncio-mqtt"
+"Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
+
+[project.optional-dependencies]
+lint = ["mypy>=0.982", "flake8>=5.0.4", "types-paho-mqtt>=1.6.0.1"]
+format = ["black>=22.10.0", "isort>=5.10.1"]
+tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
+
+[tool.setuptools_scm]
+
 [tool.isort]
 profile = "black"
 
