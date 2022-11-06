@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Additions
+
+- Add [pre-commit](https://pre-commit.com/) for continuous integration. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#144](https://github.com/sbtinstruments/asyncio-mqtt/pull/144)
+- Add tests and coverage for continuous integration. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#145](https://github.com/sbtinstruments/asyncio-mqtt/pull/145) and [#149](https://github.com/sbtinstruments/asyncio-mqtt/pull/149)
+- Add continous deployment to PyPI. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#151](https://github.com/sbtinstruments/asyncio-mqtt/pull/151)
+
+### Changed
+
+- Reorder `README.md` sections in order of importance. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#140](https://github.com/sbtinstruments/asyncio-mqtt/pull/140)
+- Change from `setup.py` to `pyproject.toml`. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#151](https://github.com/sbtinstruments/asyncio-mqtt/pull/151)
+
+### Removed
+
+- Drop Python 3.6 support. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#146](https://github.com/sbtinstruments/asyncio-mqtt/pull/146)
+
+### Fixed
+
+- Fix lifespan example in `README.md`. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) and [Felix Böhm (@empicano)](https://github.com/empicano) in [#135](https://github.com/sbtinstruments/asyncio-mqtt/pull/135)
+
 ## [0.13.0]
 
 ### Additions
