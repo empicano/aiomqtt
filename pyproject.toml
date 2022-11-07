@@ -8,7 +8,7 @@ description = "Idomatic asyncio wrapper around paho-mqtt"
 readme = "README.md"
 authors = [{ name = "Frederik Aalund", email = "fpa@sbtinstruments.com" }]
 maintainers = [
-    { name = "Jonathan Plasse", email = "jonathan.plasse+pypi@live.fr" },
+    { name = "Jonathan Plasse", email = "jonathan.plasse@live.fr" },
     { name = "Felix Böhm", email = "felix@felixboehm.dev" },
 ]
 keywords = ["mqtt", "async", "asyncio", "paho-mqtt", "wrapper"]
