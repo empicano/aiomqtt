@@ -7,7 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Additions
+## [0.14.0]
+
+### Added
 
 - Add [pre-commit](https://pre-commit.com/) for continuous integration. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#144](https://github.com/sbtinstruments/asyncio-mqtt/pull/144)
 - Add tests and coverage for continuous integration. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#145](https://github.com/sbtinstruments/asyncio-mqtt/pull/145) and [#149](https://github.com/sbtinstruments/asyncio-mqtt/pull/149)
@@ -17,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reorder `README.md` sections in order of importance. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#140](https://github.com/sbtinstruments/asyncio-mqtt/pull/140)
 - Change from `setup.py` to `pyproject.toml`. Contributed by [Jonathan plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#151](https://github.com/sbtinstruments/asyncio-mqtt/pull/151)
+
+### Deprecated
+
+- Deprecate `master` branch in favor of `main` branch.
 
 ### Removed
 
@@ -28,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.13.0]
 
-### Additions
+### Added
 
 - Add `proxy` and `tls_params` examples to `README.md`. Contributed by [Muhammad Sohaib Arshid (@Sohaib90)](https://github.com/Sohaib90) in [#128](https://github.com/sbtinstruments/asyncio-mqtt/pull/128)
 - Add `proxy` option. Contributed by [Muhammad Sohaib Arshid (@Sohaib90)](https://github.com/Sohaib90) in [#127](https://github.com/sbtinstruments/asyncio-mqtt/pull/127)
