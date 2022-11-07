@@ -79,3 +79,9 @@ The check can be passed, skipped or failed.
 If the check failed, it is possible it auto-fixed the code, so you will only need to stage and commit again for it to pass.
 If it did not auto-fixed the code, you will need to do it manually.
 `pre-commit` will only check the code that is staged, the unstaged code will be stashed during the checks.
+
+## Making a Pull Request
+
+The branch to contribute is `master`.
+You should create a draft pull request if you still need to work on it.
+You should update `CHANGELOG.md` to reflect the change done in your pull request.
