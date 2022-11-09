@@ -62,7 +62,7 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
 
 ## Installation 📚
 
-_asyncio-mqtt_ can be installed via `pip install asyncio-mqtt`. It requires Python 3.7+ to run. The only dependency is [_paho-mqtt_](https://github.com/eclipse/paho.mqtt.python).
+_asyncio-mqtt_ can be installed via `pip install asyncio-mqtt`. It requires Python 3.7+ to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
 If you can't wait for the latest version and want to install directly from GitHub, use:
 
@@ -250,7 +250,7 @@ asyncio.run(main())
 
 Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect the `Client` and how to share this connection.
 
-Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance that you can than pass to functions that need it, just like before:
+Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance that you can then pass to functions that need it, just like before:
 
 ```python
 import asyncio
@@ -284,13 +284,13 @@ Managing a connection by calling `connect` and `disconnect` directly is a bit tr
 
 Context managers take care of all connection and disconnection logic for you, in a way that makes it very difficult to shoot yourself in the foot. They are a lot easier and less error-prone to use than `connect`/`disconnect`.
 
-Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to _asyncio-mqtt_. To keep maintainer burden manageable, we (the _asyncio-mqtt_ maintainers) decided to focus only on the better option: context managers.
+Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to _asyncio-mqtt_. To keep maintainer burden manageable, we focus only on the preferred option: context managers.
 
 ### Listening without blocking
 
-If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. If you want to run other code after starting your listener (e.g. handling HTTP requests in a web framework) you don't want the execution to block.
+If you run the basic example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. Waiting for messages blocks the execution of everything that comes afterwards. If you want to run other code after starting your listener (e.g. handling HTTP requests in a web framework) you don't want this.
 
-You can use asyncio's `create_task` for this. The concept is similar to starting a new thread without `join`ing it in a multithreaded application.
+To solve this, you can use asyncio's `create_task` without `await`ing the created task. The concept is similar to starting a new thread without `join`ing it in a multithreaded application.
 
 ```python
 import asyncio
