@@ -289,7 +289,7 @@ class Client:
             # paho.mqtt.Client.connect may raise one of several exceptions.
             # We convert all of them to the common MqttError for user convenience.
             # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
-            except (socket.error, OSError, mqtt.WebsocketConnectionError) as error:
+            except (OSError, mqtt.WebsocketConnectionError) as error:
                 raise MqttError(str(error))
             self._start_loops()
             # Wait for acknowledgement
@@ -435,7 +435,7 @@ class Client:
 
     async def _cb_and_generator(
         self, stack: AsyncExitStack, *, log_context: str, max_buffer_size: int = 0
-    ) -> Tuple[
+    ) -> tuple[
         Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
         AsyncGenerator[mqtt.MQTTMessage, None],
     ]:
