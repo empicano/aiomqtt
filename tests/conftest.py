@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Any, cast
+from typing import Any, Dict, Tuple, cast
 
 import pytest
 
@@ -18,4 +18,4 @@ else:
 
 @pytest.fixture(params=params)
 def anyio_backend(request: pytest.FixtureRequest) -> tuple[str, dict[str, Any]]:
-    return cast(tuple[str, dict[str, Any]], request.param)
+    return cast(Tuple[str, Dict[str, Any]], request.param)
