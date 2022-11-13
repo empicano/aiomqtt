@@ -61,7 +61,8 @@ no_strict_concatenate = true # TODO: remove when dropping python 3.7
 filterwarnings = [
     "error",
     "ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning",
-    "ignore:trio.MultiError is deprecated since Trio 0.22.0; use BaseExceptionGroup:trio.TrioDeprecationWarning",
+    # TODO: Remove when using trio >= 22.0
+    "ignore:You seem to already have a custom sys.excepthook handler installed.:RuntimeWarning",
 ]
 
 [tool.coverage.run]
