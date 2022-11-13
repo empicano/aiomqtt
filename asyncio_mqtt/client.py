@@ -29,6 +29,7 @@ from typing import (
 
 import anyio
 import anyio.abc
+import sniffio
 
 if sys.version_info >= (3, 10):
     from typing import Concatenate, ParamSpec
@@ -587,7 +588,11 @@ class Client:
     def _on_socket_unregister_write(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
     ) -> None:
-        self._event_write = anyio.Event()
+        # Will run out of the event loop if the task group is cancelled
+        try:
+            self._event_write = anyio.Event()
+        except sniffio._impl.AsyncLibraryNotFoundError:
+            pass
 
     def _start_loops(self) -> None:
         assert not self._cancel_scopes, "Loops already started"
