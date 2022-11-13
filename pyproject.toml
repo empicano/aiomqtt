@@ -44,7 +44,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 lint = ["mypy>=0.982", "flake8>=5.0.4", "types-paho-mqtt>=1.6.0.1"]
 format = ["black>=22.10.0", "isort>=5.10.1"]
-tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0"]
+tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio[trio]>=3.6.2"]
 
 [tool.setuptools_scm]
 write_to = "asyncio_mqtt/_version.py"
