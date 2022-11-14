@@ -119,30 +119,6 @@ def _outgoing_call(
     return decorated
 
 
-class MqttMessage(mqtt.MQTTMessage):
-    def matches(self, topic: str) -> bool:
-        """Check if the message matches a given topic."""
-        message_topic_parts = self.topic.split("/")
-        matches_topic_parts = topic.split("/")
-        if message_topic_parts[0].startswith("$"):
-            message_topic_parts = message_topic_parts[1:]
-
-        def rec(x: list[str], y: list[str]) -> bool:
-            if not x:
-                if not y:
-                    return True
-                return False
-            if not y:
-                return False
-            if y[0] == "#":
-                return True
-            if x[0] == y[0] or y[0] == "+":
-                return recurse(x[1:], y[1:])
-            return False
-
-        return rec(message_topic_parts, matches_topic_parts)
-
-
 class Client:
     def __init__(  # noqa: C901
         self,
@@ -332,12 +308,12 @@ class Client:
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(result, "Could not subscribe to topic")
         # Create future for when the on_subscribe callback is called
-        cb_result: asyncio.Future[
+        callback_result: asyncio.Future[
             tuple[int] | list[mqtt.ReasonCodes]
         ] = asyncio.Future()
-        with self._pending_call(mid, cb_result, self._pending_subscribes):
-            # Wait for cb_result
-            return await self._wait_for(cb_result, timeout=timeout)
+        with self._pending_call(mid, callback_result, self._pending_subscribes):
+            # Wait for callback_result
+            return await self._wait_for(callback_result, timeout=timeout)
 
     @_outgoing_call
     async def unsubscribe(
@@ -386,6 +362,52 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @asynccontextmanager
+    async def filtered_messages(
+        self, topic_filter: str, *, queue_maxsize: int = 0
+    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
+        """Return async generator of messages that match the given filter."""
+        MQTT_LOGGER.warning(
+            "filtered_messages() is deprecated and will be removed in a future version."
+            " Use messages() instead."
+        )
+        callback, generator = self._callback_and_generator(
+            log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
+        )
+        try:
+            self._client.message_callback_add(topic_filter, callback)
+            # Back to the caller (run whatever is inside the with statement)
+            yield generator
+        finally:
+            # We are exiting the with statement. Remove the topic filter.
+            self._client.message_callback_remove(topic_filter)
+
+    @asynccontextmanager
+    async def unfiltered_messages(
+        self, *, queue_maxsize: int = 0
+    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
+        """Return async generator of all messages that are not caught in filters."""
+        MQTT_LOGGER.warning(
+            "unfiltered_messages() is deprecated and will be removed in a future"
+            " version. Use messages() instead."
+        )
+        # Early out
+        if self._client.on_message is not None:
+            # TODO: This restriction can easily be removed.
+            raise RuntimeError(
+                "Only a single unfiltered_messages generator can be used at a time."
+            )
+        callback, generator = self._callback_and_generator(
+            log_context="unfiltered", queue_maxsize=queue_maxsize
+        )
+        try:
+            self._client.on_message = callback
+            # Back to the caller (run whatever is inside the with statement)
+            yield generator
+        finally:
+            # We are exiting the with statement. Unset the callback.
+            self._client.on_message = None
+
+    @asynccontextmanager
     async def messages(
         self, *, queue_maxsize: int = 0
     ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
@@ -401,9 +423,9 @@ class Client:
             raise RuntimeError(
                 "Only a single messages generator can be used at a time."
             )
-        cb, generator = self._callback_and_generator(queue_maxsize=queue_maxsize)
+        callback, generator = self._callback_and_generator(queue_maxsize=queue_maxsize)
         try:
-            self._client.on_message = cb
+            self._client.on_message = callback
             # Back to the caller (run whatever is inside the with statement)
             yield generator
         finally:
@@ -411,7 +433,7 @@ class Client:
             self._client.on_message = None
 
     def _callback_and_generator(
-        self, *, queue_maxsize: int = 0
+        self, *, log_context: str | None = None, queue_maxsize: int = 0
     ) -> tuple[
         Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
         AsyncGenerator[mqtt.MQTTMessage, None],
@@ -425,7 +447,11 @@ class Client:
             try:
                 messages.put_nowait(msg)
             except asyncio.QueueFull:
-                MQTT_LOGGER.warning(f"Message queue is full. Discarding message.")
+                MQTT_LOGGER.warning(
+                    f"[{log_context}] Message queue is full. Discarding message."
+                    if log_context
+                    else "Message queue is full. Discarding message."
+                )
 
         # The generator that we give to the caller
         async def _message_generator() -> AsyncGenerator[mqtt.MQTTMessage, None]:
@@ -584,7 +610,7 @@ class Client:
     def _on_socket_open(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
     ) -> None:
-        def cb() -> None:
+        def callback() -> None:
             # client.loop_read() may raise an exception, such as BadPipe. It's
             # usually a sign that the underlaying connection broke, therefore we
             # disconnect straight away
@@ -594,19 +620,18 @@ class Client:
                 if not self._disconnected.done():
                     self._disconnected.set_exception(exc)
 
-        self._loop.add_reader(sock.fileno(), cb)
+        self._loop.add_reader(sock.fileno(), callback)
         # paho-mqtt calls this function from the executor thread on which we've called
         # `self._client.connect()` (see [3]), so we create a callback function to
         # schedule `_misc_loop()` and run it on the loop thread-safely.
-        def create_task_cb() -> None:
+        def create_task_callback() -> None:
             self._misc_task = self._loop.create_task(self._misc_loop())
 
-        self._loop.call_soon_threadsafe(create_task_cb)
+        self._loop.call_soon_threadsafe(create_task_callback)
 
     def _on_socket_close(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
     ) -> None:
-
         fileno = sock.fileno()
         if fileno > -1:
             self._loop.remove_reader(fileno)
@@ -616,7 +641,7 @@ class Client:
     def _on_socket_register_write(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
     ) -> None:
-        def cb() -> None:
+        def callback() -> None:
             # client.loop_write() may raise an exception, such as BadPipe. It's
             # usually a sign that the underlaying connection broke, therefore we
             # disconnect straight away
@@ -626,7 +651,7 @@ class Client:
                 if not self._disconnected.done():
                     self._disconnected.set_exception(exc)
 
-        self._loop.add_writer(sock, cb)
+        self._loop.add_writer(sock, callback)
 
     def _on_socket_unregister_write(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
