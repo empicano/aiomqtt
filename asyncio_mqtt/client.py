@@ -128,8 +128,27 @@ class Topic:
             return NotImplemented
         return self.topic == other.topic
 
+    @staticmethod
+    def _validate_topic(topic: str) -> None:
+        if not isinstance(topic, str):
+            raise TypeError("topic must be a string")
+        # More or less copied from paho.mqtt's Client._filter_wildcard_len_check()
+        if (
+            len(topic) == 0
+            or len(topic) > 65535
+            or "#/" in topic
+            or any(
+                "+" in level or "#" in level
+                for level in topic.split("/")
+                if len(level) > 1
+            )
+        ):
+            raise ValueError(f"Invalid topic filter: {topic}")
+
     def matches(self, topic: str) -> bool:
-        """Check if the message topic matches a given (wildcard) topic."""
+        """Check if the topic matches a given (wildcard) subscription topic."""
+        self._validate_topic(topic)
+        # Split topics into levels to compare them one by one
         topic_levels = self.topic.split("/")
         match_levels = topic.split("/")
         if topic_levels[0].startswith("$share"):
