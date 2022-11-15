@@ -119,6 +119,70 @@ def _outgoing_call(
     return decorated
 
 
+class Topic:
+    def __init__(self, topic: str):
+        self.topic = topic
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Topic):
+            return NotImplemented
+        return self.topic == other.topic
+
+    def matches(self, topic: str) -> bool:
+        """Check if the message topic matches a given (wildcard) topic."""
+        topic_levels = self.topic.split("/")
+        match_levels = topic.split("/")
+        if topic_levels[0].startswith("$share"):
+            # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
+            topic_levels = topic_levels[2:]
+
+        def recurse(x: list[str], y: list[str]) -> bool:
+            if not x:
+                if not y:
+                    return True
+                return False
+            if not y:
+                return False
+            if y[0] == "#":
+                return True
+            if x[0] == y[0] or y[0] == "+":
+                return recurse(x[1:], y[1:])
+            return False
+
+        return recurse(topic_levels, match_levels)
+
+
+class Message:
+    """Custom message class that allows to use our own Topic class."""
+
+    def __init__(
+        self,
+        topic: str,
+        payload: PayloadType,
+        qos: int,
+        retain: bool,
+        mid: int,
+        properties: mqtt.Properties | None,
+    ):
+        self.topic = Topic(topic)
+        self.payload = payload
+        self.qos = qos
+        self.retain = retain
+        self.mid = mid
+        self.properties = properties
+
+    @classmethod
+    def _from_paho_message(cls, message: mqtt.MQTTMessage) -> Message:
+        return cls(
+            topic=message.topic,
+            payload=message.payload,
+            qos=message.qos,
+            retain=message.retain,
+            mid=message.mid,
+            properties=message.properties,
+        )
+
+
 class Client:
     def __init__(  # noqa: C901
         self,
@@ -370,7 +434,7 @@ class Client:
             "filtered_messages() is deprecated and will be removed in a future version."
             " Use messages() instead."
         )
-        callback, generator = self._callback_and_generator(
+        callback, generator = self._deprecated_callback_and_generator(
             log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
         )
         try:
@@ -396,7 +460,7 @@ class Client:
             raise RuntimeError(
                 "Only a single unfiltered_messages generator can be used at a time."
             )
-        callback, generator = self._callback_and_generator(
+        callback, generator = self._deprecated_callback_and_generator(
             log_context="unfiltered", queue_maxsize=queue_maxsize
         )
         try:
@@ -410,7 +474,7 @@ class Client:
     @asynccontextmanager
     async def messages(
         self, *, queue_maxsize: int = 0
-    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
+    ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Return async generator of incoming messages.
 
         Use queue_maxsize to restrict the queue size. If the queue is full,
@@ -432,8 +496,8 @@ class Client:
             # We are exiting the with statement. Unset the callback.
             self._client.on_message = None
 
-    def _callback_and_generator(
-        self, *, log_context: str | None = None, queue_maxsize: int = 0
+    def _deprecated_callback_and_generator(
+        self, *, log_context: str, queue_maxsize: int = 0
     ) -> tuple[
         Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
         AsyncGenerator[mqtt.MQTTMessage, None],
@@ -442,15 +506,13 @@ class Client:
         messages: asyncio.Queue[mqtt.MQTTMessage] = asyncio.Queue(maxsize=queue_maxsize)
         # Callback for the underlying API
         def _put_in_queue(
-            client: mqtt.Client, userdata: Any, msg: mqtt.MQTTMessage
+            client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
         ) -> None:
             try:
-                messages.put_nowait(msg)
+                messages.put_nowait(message)
             except asyncio.QueueFull:
                 MQTT_LOGGER.warning(
                     f"[{log_context}] Message queue is full. Discarding message."
-                    if log_context
-                    else "Message queue is full. Discarding message."
                 )
 
         # The generator that we give to the caller
@@ -463,6 +525,52 @@ class Client:
                 get: asyncio.Task[mqtt.MQTTMessage] = self._loop.create_task(
                     messages.get()
                 )
+                try:
+                    done, _ = await asyncio.wait(
+                        (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
+                    )
+                except asyncio.CancelledError:
+                    # If the asyncio.wait is cancelled, we must make sure
+                    # to also cancel the underlying tasks.
+                    get.cancel()
+                    raise
+                if get in done:
+                    # We received a message. Return the result.
+                    yield get.result()
+                else:
+                    # We got disconnected from the broker. Cancel the "get" task.
+                    get.cancel()
+                    # Stop the generator with the following exception
+                    raise MqttError("Disconnected during message iteration")
+
+        return _put_in_queue, _message_generator()
+
+    def _callback_and_generator(
+        self, *, queue_maxsize: int = 0
+    ) -> tuple[
+        Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
+        AsyncGenerator[Message, None],
+    ]:
+        # Queue to hold the incoming messages
+        messages: asyncio.Queue[Message] = asyncio.Queue(maxsize=queue_maxsize)
+        # Callback for the underlying API
+        def _put_in_queue(
+            client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
+        ) -> None:
+            try:
+                # Convert the paho.mqtt message into our own Message class
+                messages.put_nowait(Message._from_paho_message(message))
+            except asyncio.QueueFull:
+                MQTT_LOGGER.warning("Message queue is full. Discarding message.")
+
+        # The generator that we give to the caller
+        async def _message_generator() -> AsyncGenerator[Message, None]:
+            # Forward all messages from the queue
+            while True:
+                # Wait until we either:
+                #  1. Receive a message
+                #  2. Disconnect from the broker
+                get: asyncio.Task[Message] = self._loop.create_task(messages.get())
                 try:
                     done, _ = await asyncio.wait(
                         (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
