@@ -1,5 +1,11 @@
-from typing import Optional, TypeVar, Union
+import sys
+from typing import TypeVar
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 T = TypeVar("T")
 
-PayloadType = Optional[Union[str, bytes, bytearray, int, float]]
+PayloadType: TypeAlias = "str | bytes | bytearray | int | float | None"
