@@ -30,7 +30,10 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 requires-python = ">= 3.7"
-dependencies = ["paho-mqtt>=1.6.0", "typing_extensions; python_version<'3.10'"]
+dependencies = [
+    "paho-mqtt>=1.6.0",
+    "typing_extensions>=4.4.0; python_version<'3.10'",
+]
 dynamic = ["version"]
 
 [project.urls]
