@@ -172,7 +172,9 @@ async def test_client_username_password() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(HOSTNAME, username="asyncio-mqtt", password="012") as client:
+    async with Client(
+        HOSTNAME, username="asyncio-mqtt", password="012"  # noqa: S106
+    ) as client:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)

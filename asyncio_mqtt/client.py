@@ -17,20 +17,16 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
-    Dict,
     Generator,
     Iterable,
     Iterator,
-    List,
-    Tuple,
-    Union,
     cast,
 )
 
 if sys.version_info >= (3, 10):
-    from typing import Concatenate, ParamSpec
+    from typing import Concatenate, ParamSpec, TypeAlias
 else:
-    from typing_extensions import Concatenate, ParamSpec
+    from typing_extensions import Concatenate, ParamSpec, TypeAlias
 
 from contextlib import asynccontextmanager
 
@@ -43,18 +39,15 @@ from .types import PayloadType, T
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
-_PahoSocket = Union[socket.socket, ssl.SSLSocket, mqtt.WebsocketWrapper, Any]
+_PahoSocket: TypeAlias = "socket.socket | ssl.SSLSocket | mqtt.WebsocketWrapper | Any"
 
-WebSocketHeaders = Union[
-    Dict[str, str],
-    Callable[[Dict[str, str]], Dict[str, str]],
-]
+WebSocketHeaders: TypeAlias = (
+    "dict[str, str] | Callable[[dict[str, str]], dict[str, str]]"
+)
 
 
 class ProtocolVersion(IntEnum):
-    """
-    A mapping of Paho MQTT protocol version constants to an Enum for use in type hints.
-    """
+    """A mapping of Paho MQTT protocol version constants to an Enum for use in type hints."""
 
     V31 = mqtt.MQTTv31
     V311 = mqtt.MQTTv311
@@ -103,17 +96,9 @@ class ProxySettings:
 
 
 # See the overloads of `socket.setsockopt` for details.
-SocketOption = Union[
-    Tuple[int, int, Union[int, bytes]],
-    Tuple[int, int, None, int],
-]
+SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
 
-SubscribeTopic = Union[
-    str,
-    Tuple[str, mqtt.SubscribeOptions],
-    List[Tuple[str, mqtt.SubscribeOptions]],
-    List[Tuple[str, int]],
-]
+SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
 
 P = ParamSpec("P")
 
@@ -135,7 +120,7 @@ def _outgoing_call(
 
 
 class Client:
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         hostname: str,
         port: int = 1883,
@@ -249,7 +234,9 @@ class Client:
         self._socket_options = tuple(socket_options)
 
     @property
-    def id(self) -> str:
+    def id(  # noqa: A003 # TODO: When doing BREAKING CHANGES rename to avoid shadowing builtin id
+        self,
+    ) -> str:
         """Return the client ID.
 
         Note that paho-mqtt stores the client ID as `bytes` internally.
@@ -260,9 +247,7 @@ class Client:
 
     @property
     def _pending_calls(self) -> Generator[int, None, None]:
-        """
-        Yield all message IDs with pending calls.
-        """
+        """Yield all message IDs with pending calls."""
         yield from self._pending_subscribes.keys()
         yield from self._pending_unsubscribes.keys()
         yield from self._pending_publishes.keys()
@@ -290,7 +275,7 @@ class Client:
         # We convert all of them to the common MqttError for user convenience.
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
         except (OSError, mqtt.WebsocketConnectionError) as error:
-            raise MqttError(str(error))
+            raise MqttError(str(error)) from None
         await self._wait_for(self._connected, timeout=timeout)
 
     async def disconnect(self, *, timeout: int = 10) -> None:
@@ -479,7 +464,7 @@ class Client:
         try:
             return await asyncio.wait_for(fut, timeout=timeout, **kwargs)
         except asyncio.TimeoutError:
-            raise MqttError("Operation timed out")
+            raise MqttError("Operation timed out") from None
 
     @contextmanager
     def _pending_call(
@@ -579,7 +564,7 @@ class Client:
         userdata: Any,
         mid: int,
         properties: mqtt.Properties | None = None,
-        reasonCodes: list[mqtt.ReasonCodes] | mqtt.ReasonCodes | None = None,
+        reason_codes: list[mqtt.ReasonCodes] | mqtt.ReasonCodes | None = None,
     ) -> None:
         try:
             self._pending_unsubscribes.pop(mid).set()

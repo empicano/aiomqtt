@@ -33,15 +33,15 @@ def test_mqtt_code_error_int(rc: int) -> None:
 
 
 @pytest.mark.parametrize(
-    "packetType, aName",
+    "packet_type, a_name",
     (
         (PacketTypes.CONNACK, "Success"),
         (PacketTypes.PUBACK, "Success"),
         (PacketTypes.SUBACK, "Granted QoS 1"),
     ),
 )
-def test_mqtt_code_error_reason_codes(packetType: int, aName: str) -> None:
-    rc = mqtt.ReasonCodes(packetType, aName)
+def test_mqtt_code_error_reason_codes(packet_type: int, a_name: str) -> None:
+    rc = mqtt.ReasonCodes(packet_type, a_name)
     assert str(MqttCodeError(rc)) == f"[code:{rc.value}] {str(rc)}"
 
 
@@ -60,13 +60,13 @@ def test_mqtt_connect_error_int(rc: int, message: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "packetType, aName",
+    "packet_type, a_name",
     (
         (PacketTypes.CONNACK, "Success"),
         (PacketTypes.PUBACK, "Success"),
         (PacketTypes.SUBACK, "Granted QoS 1"),
     ),
 )
-def test_mqtt_connect_error_reason_codes(packetType: int, aName: str) -> None:
-    rc = mqtt.ReasonCodes(packetType, aName)
+def test_mqtt_connect_error_reason_codes(packet_type: int, a_name: str) -> None:
+    rc = mqtt.ReasonCodes(packet_type, a_name)
     assert str(MqttConnectError(rc)) == f"[code:{rc.value}] {str(rc)}"
