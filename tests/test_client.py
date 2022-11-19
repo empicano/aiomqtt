@@ -10,7 +10,7 @@ import anyio.abc
 import paho.mqtt.client as mqtt
 import pytest
 
-from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Will
+from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Will
 from asyncio_mqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
@@ -18,6 +18,45 @@ pytestmark = pytest.mark.anyio
 HOSTNAME = "test.mosquitto.org"
 OS_PY_VERSION = sys.platform + "_" + ".".join(map(str, sys.version_info[:2]))
 TOPIC_HEADER = OS_PY_VERSION + "/tests/asyncio_mqtt/"
+
+
+async def test_message_topic_matches() -> None:
+    topic = Topic("a/b/c")
+    assert topic.matches("a/b/c")
+    assert topic.matches("a/+/c")
+    assert topic.matches("+/+/+")
+    assert topic.matches("+/#")
+    assert topic.matches("#")
+    assert topic.matches("$share/group/a/b/c")
+    assert topic.matches("$share/group/a/b/+")
+    assert not topic.matches("abc")
+    assert not topic.matches("a/b")
+    assert not topic.matches("a/b/c/d")
+    assert not topic.matches("a/b/z")
+    assert not topic.matches("$share/a/b/c")
+    assert not topic.matches("$test/group/a/b/c")
+
+
+async def test_message_topic_matches_validation() -> None:
+    topic = Topic("a/b/c")
+    with pytest.raises(TypeError):
+        topic.matches(True)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        topic.matches(1.0)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        topic.matches(None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        topic.matches([])  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        topic.matches("a/#/c")
+    with pytest.raises(ValueError):
+        topic.matches("a/b+/c")
+    with pytest.raises(ValueError):
+        topic.matches("a/b/#c")
+    with pytest.raises(ValueError):
+        topic.matches("")
+    with pytest.raises(ValueError):
+        topic.matches("a" * 65536)
 
 
 async def test_client_filtered_messages() -> None:

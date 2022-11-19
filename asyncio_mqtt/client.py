@@ -151,9 +151,9 @@ class Topic:
         # Split topics into levels to compare them one by one
         topic_levels = self.topic.split("/")
         match_levels = topic.split("/")
-        if topic_levels[0].startswith("$share"):
+        if match_levels[0] == "$share":
             # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
-            topic_levels = topic_levels[2:]
+            match_levels = match_levels[2:]
 
         def recurse(x: list[str], y: list[str]) -> bool:
             if not x:
@@ -164,6 +164,7 @@ class Topic:
                 return False
             if y[0] == "#":
                 return True
+            print(x, y)
             if x[0] == y[0] or y[0] == "+":
                 return recurse(x[1:], y[1:])
             return False
