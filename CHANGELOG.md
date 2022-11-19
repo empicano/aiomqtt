@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Allow multiple message generators at the same time. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#147](https://github.com/sbtinstruments/asyncio-mqtt/pull/147)
+
+### Changed
+
+- Simplify message filtering. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#147](https://github.com/sbtinstruments/asyncio-mqtt/pull/147)
+
 ## [0.14.0]
 
 ### Added
