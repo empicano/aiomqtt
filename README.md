@@ -17,8 +17,8 @@ Write code like this:
 
 ```python
 async with Client("test.mosquitto.org") as client:
-    async with client.unfiltered_messages() as messages:
-        await client.subscribe("measurements/#")
+    async with client.messages() as messages:
+        await client.subscribe("humidity/#")
         async for message in messages:
             print(message.payload)
 ```
@@ -27,7 +27,7 @@ async with Client("test.mosquitto.org") as client:
 
 ```python
 async with Client("test.mosquitto.org") as client:
-    await client.publish("measurements/humidity", payload=0.38)
+    await client.publish("humidity/outside", payload=0.38)
 ```
 
 _asyncio-mqtt_ combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
@@ -47,12 +47,12 @@ The whole thing is less than [700 lines of code](asyncio-mqtt/client.py).
   - [Note for Windows users](#note-for-windows-users)
 - [Advanced usage](#advanced-usage-)
   - [Configuring the client](#configuring-the-client)
-  - [Reconnecting](#reconnecting)
+  - [Filtering messages](#filtering-messages)
   - [Sharing the connection](#sharing-the-connection)
     - [Side by side with web frameworks](#side-by-side-with-web-frameworks)
     - [Why can't I `connect`/`disconnect` manually?](#why-cant-i-connectdisconnect-manually)
   - [Listening without blocking](#listening-without-blocking)
-  - [Topic filters](#topic-filters)
+  - [Reconnecting](#reconnecting)
   - [TLS](#tls)
   - [Proxying](#proxying)
 - [License](#license-)
@@ -91,6 +91,7 @@ You can configure quite a few things when initializing the client. These are all
 import asyncio_mqtt as aiomqtt
 import paho.mqtt as mqtt
 
+
 aiomqtt.Client(
     hostname="test.mosquitto.org",  # The only non-optional parameter
     port=1883,
@@ -118,9 +119,9 @@ aiomqtt.Client(
 )
 ```
 
-### Reconnecting
+### Filtering messages
 
-You can reconnect when the connection to the broker is lost by wrapping your code in a `try/except`-block and listening for `MqttError`s.
+Imagine you're measuring temperature and humidity on the outside and inside, and our topics look like this: `temperature/outside`. You want to receive all types of measurements but handle them differently. _asyncio-mqtt_ provides `Topic.matches()` to make this easy:
 
 ```python
 import asyncio
@@ -128,92 +129,22 @@ import asyncio_mqtt as aiomqtt
 
 
 async def main():
-    reconnect_interval = 5  # In seconds
-    while True:
-        try:
-            async with aiomqtt.Client("test.mosquitto.org") as client:
-                async with client.filtered_messages('/measurements/humidity') as messages:
-                    await client.subscribe("measurements/#")
-                    async for message in messages:
-                        print(message.payload.decode())
-        except aiomqtt.MqttError as error:
-            print(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
-            await asyncio.sleep(reconnect_interval)
-
-
-
-asyncio.run(main())
-```
-
-### Topic filters
-
-Let's take the example from the beginning again, but this time with messages in both `measurements/humidity` and `measurements/temperature`. You want to receive both types of measurements but handle them differently. _asyncio-mqtt_ has topic filters to make this easy:
-
-```python
-import asyncio
-import asyncio_mqtt as aiomqtt
-import contextlib
-
-
-async def print_messages(messages, template):
-    async for message in messages:
-        print(template.format(message.payload))
-
-
-async def cancel_tasks(tasks):
-    for task in tasks:
-        if task.done():
-            continue
-        try:
-            task.cancel()
-            await task
-        except asyncio.CancelledError:
-            pass
-
-
-async def main():
-    # We 💛 context managers. Let's create a stack to help us manage them.
-    async with contextlib.AsyncExitStack() as stack:
-        # Keep track of the asyncio tasks that we create, so that
-        # we can cancel them on exit
-        tasks = set()
-        stack.push_async_callback(cancel_tasks, tasks)
-
-        # Connect to MQTT broker
-        client = aiomqtt.Client("test.mosquitto.org")
-        await stack.enter_async_context(client)
-
-        # You can create any number of topic filters
-        topic_filters = (
-            "measurements/humidity",
-            "measurements/temperature"
-            # 👉 Try to add more complex filters!
-        )
-
-        for topic_filter in topic_filters:
-            # Print all messages that match the filter
-            manager = client.filtered_messages(topic_filter)
-            messages = await stack.enter_async_context(manager)
-            template = f'[topic_filter="{topic_filter}"] {{}}'
-            task = asyncio.create_task(print_messages(messages, template))
-            tasks.add(task)
-
-        # Handle messages that don't match a filter
-        messages = await stack.enter_async_context(client.unfiltered_messages())
-        task = asyncio.create_task(print_messages(messages, "[unfiltered] {}"))
-        tasks.add(task)
-
-        # Subscribe to topic(s)
-        # 🤔 Note that we subscribe *after* starting the message
-        # loggers. Otherwise, we may miss retained messages.
-        await client.subscribe("measurements/#")
-
-        # Wait for everything to complete (or fail due to, e.g., network errors)
-        await asyncio.gather(*tasks)
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        async with client.messages() as messages:
+            await client.subscribe("#")
+            async for message in messages:
+                if message.topic.matches("humidity/outside"):
+                    print(f"[humidity/outside] {message.payload}")
+                if message.topic.matches("+/inside"):
+                    print(f"[+/inside] {message.payload}")
+                if message.topic.matches("temperature/#"):
+                    print(f"[temperature/#] {message.payload}")
 
 
 asyncio.run(main())
 ```
+
+Note that in our example, messages to `temperature/inside` are handled twice!
 
 ### Sharing the connection
 
@@ -230,11 +161,11 @@ import asyncio_mqtt as aiomqtt
 
 
 async def publish_humidity(client):
-    await client.publish("measurements/humidity", payload=0.38)
+    await client.publish("humidity/outside", payload=0.38)
 
 
 async def publish_temperature(client):
-    await client.publish("measurements/temperature", payload=28.3)
+    await client.publish("temperature/outside", payload=28.3)
 
 
 async def main():
@@ -299,8 +230,8 @@ import asyncio_mqtt as aiomqtt
 
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.unfiltered_messages() as messages:
-            await client.subscribe("measurements/#")
+        async with client.messages() as messages:
+            await client.subscribe("humidity/#")
             async for message in messages:
                 print(message.payload)
 
@@ -315,6 +246,33 @@ async def main():
     # However, if you're using an async web framework you usually don't have to await
     # the task, as the framework runs in an endless loop.
     await task
+
+
+asyncio.run(main())
+```
+
+### Reconnecting
+
+You can reconnect when the connection to the broker is lost by wrapping your code in a `try/except`-block and listening for `MqttError`s.
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+
+
+async def main():
+    reconnect_interval = 5  # In seconds
+    while True:
+        try:
+            async with aiomqtt.Client("test.mosquitto.org") as client:
+                async with client.messages() as messages:
+                    await client.subscribe("humidity/#")
+                    async for message in messages:
+                        print(message.payload.decode())
+        except aiomqtt.MqttError as error:
+            print(f'Error "{error}". Reconnecting in {reconnect_interval} seconds.')
+            await asyncio.sleep(reconnect_interval)
+
 
 
 asyncio.run(main())
@@ -342,7 +300,7 @@ tls_params = aiomqtt.TLSParameters(
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org", tls_params=tls_params) as client:
-        await client.publish("measurements/humidity", payload=0.38)
+        await client.publish("humidity/outside", payload=0.38)
 
 
 asyncio.run(main())
@@ -368,7 +326,7 @@ proxy_params = aiomqtt.ProxySettings(
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org", proxy=proxy_params) as client:
-        await client.publish("measurements/humidity", payload=0.38)
+        await client.publish("humidity/outside", payload=0.38)
 
 
 asyncio.run(main())
