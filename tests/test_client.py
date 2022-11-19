@@ -21,6 +21,7 @@ TOPIC_HEADER = OS_PY_VERSION + "/tests/asyncio_mqtt/"
 
 
 async def test_message_topic_matches() -> None:
+    """Test that Topic.matches() does and doesn't match some test wildcard topics."""
     topic = Topic("a/b/c")
     assert topic.matches("a/b/c")
     assert topic.matches("a/+/c")
@@ -38,6 +39,7 @@ async def test_message_topic_matches() -> None:
 
 
 async def test_message_topic_matches_validation() -> None:
+    """Test that Topic.matches() raises Exceptions for invalid wildcard topics."""
     topic = Topic("a/b/c")
     with pytest.raises(TypeError):
         topic.matches(True)  # type: ignore[arg-type]
@@ -57,6 +59,24 @@ async def test_message_topic_matches_validation() -> None:
         topic.matches("")
     with pytest.raises(ValueError):
         topic.matches("a" * 65536)
+
+
+async def test_multiple_messages_generators() -> None:
+    """Test that multiple Client.messages() generators can be used at the same time."""
+    topic = TOPIC_HEADER + "multiple_messages_generators"
+
+    async def handler(tg: anyio.abc.TaskGroup) -> None:
+        async with client.messages() as messages:
+            async for message in messages:
+                assert str(message.topic) == topic
+                tg.cancel_scope.cancel()
+
+    async with Client(HOSTNAME) as client:
+        async with anyio.create_task_group() as tg:
+            await client.subscribe(topic)
+            tg.start_soon(handler, tg)
+            tg.start_soon(handler, tg)
+            await client.publish(topic)
 
 
 async def test_client_filtered_messages() -> None:
