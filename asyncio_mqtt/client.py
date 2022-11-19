@@ -128,6 +128,9 @@ class Topic:
             return NotImplemented
         return self.topic == other.topic
 
+    def __str__(self) -> str:
+        return self.topic
+
     @staticmethod
     def _validate_topic(topic: str) -> None:
         if not isinstance(topic, str):
@@ -164,7 +167,6 @@ class Topic:
                 return False
             if y[0] == "#":
                 return True
-            print(x, y)
             if x[0] == y[0] or y[0] == "+":
                 return recurse(x[1:], y[1:])
             return False
@@ -455,7 +457,7 @@ class Client:
         """Return async generator of messages that match the given filter."""
         MQTT_LOGGER.warning(
             "filtered_messages() is deprecated and will be removed in a future version."
-            " Use messages() together with Topic.match() instead."
+            " Use messages() together with Topic.matches() instead."
         )
         callback, generator = self._deprecated_callback_and_generator(
             log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
