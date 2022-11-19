@@ -181,14 +181,12 @@ class Message:
         qos: int,
         retain: bool,
         mid: int,
-        properties: mqtt.Properties | None,
     ):
         self.topic = Topic(topic)
         self.payload = payload
         self.qos = qos
         self.retain = retain
         self.mid = mid
-        self.properties = properties
 
     @classmethod
     def _from_paho_message(cls, message: mqtt.MQTTMessage) -> Message:
@@ -198,7 +196,6 @@ class Message:
             qos=message.qos,
             retain=message.retain,
             mid=message.mid,
-            properties=message.properties,
         )
 
 
@@ -251,6 +248,12 @@ class Client:
         self._pending_calls_threshold: int = 10
         self._misc_task: asyncio.Task[None] | None = None
 
+        # List of all callbacks to call when a message is received
+        self._on_message_callbacks: list[Callable[[Message], None]] = []
+        self._unfiltered_messages_callback: Callable[
+            [mqtt.Client, Any, mqtt.MQTTMessage], None
+        ] | None = None
+
         self._outgoing_calls_sem: asyncio.Semaphore | None
         if max_concurrent_outgoing_calls is not None:
             self._outgoing_calls_sem = asyncio.Semaphore(max_concurrent_outgoing_calls)
@@ -271,7 +274,7 @@ class Client:
         self._client.on_disconnect = self._on_disconnect
         self._client.on_subscribe = self._on_subscribe
         self._client.on_unsubscribe = self._on_unsubscribe
-        self._client.on_message = None
+        self._client.on_message = self._on_message
         self._client.on_publish = self._on_publish
         # Callbacks for custom event loop
         self._client.on_socket_open = self._on_socket_open
@@ -451,7 +454,7 @@ class Client:
         """Return async generator of messages that match the given filter."""
         MQTT_LOGGER.warning(
             "filtered_messages() is deprecated and will be removed in a future version."
-            " Use messages() instead."
+            " Use messages() together with Topic.match() instead."
         )
         callback, generator = self._deprecated_callback_and_generator(
             log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
@@ -474,8 +477,7 @@ class Client:
             " version. Use messages() instead."
         )
         # Early out
-        if self._client.on_message is not None:
-            # TODO: This restriction can easily be removed.
+        if self._unfiltered_messages_callback is not None:
             raise RuntimeError(
                 "Only a single unfiltered_messages generator can be used at a time."
             )
@@ -483,12 +485,12 @@ class Client:
             log_context="unfiltered", queue_maxsize=queue_maxsize
         )
         try:
-            self._client.on_message = callback
+            self._unfiltered_messages_callback = callback
             # Back to the caller (run whatever is inside the with statement)
             yield generator
         finally:
             # We are exiting the with statement. Unset the callback.
-            self._client.on_message = None
+            self._unfiltered_messages_callback = None
 
     @asynccontextmanager
     async def messages(
@@ -500,20 +502,15 @@ class Client:
         incoming messages will be discarded (and a warning is logged).
         If queue_maxsize is less than or equal to zero, the queue size is infinite.
         """
-        # Early out
-        if self._client.on_message is not None:
-            # TODO: This restriction can easily be removed.
-            raise RuntimeError(
-                "Only a single messages generator can be used at a time."
-            )
         callback, generator = self._callback_and_generator(queue_maxsize=queue_maxsize)
         try:
-            self._client.on_message = callback
+            # Add to the list of callbacks to call when a message is received
+            self._on_message_callbacks.append(callback)
             # Back to the caller (run whatever is inside the with statement)
             yield generator
         finally:
-            # We are exiting the with statement. Unset the callback.
-            self._client.on_message = None
+            # We are exiting the with statement. Remove the callback from the list.
+            self._on_message_callbacks.remove(callback)
 
     def _deprecated_callback_and_generator(
         self, *, log_context: str, queue_maxsize: int = 0
@@ -566,25 +563,19 @@ class Client:
 
     def _callback_and_generator(
         self, *, queue_maxsize: int = 0
-    ) -> tuple[
-        Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
-        AsyncGenerator[Message, None],
-    ]:
+    ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
         # Queue to hold the incoming messages
         messages: asyncio.Queue[Message] = asyncio.Queue(maxsize=queue_maxsize)
-        # Callback for the underlying API
-        def _put_in_queue(
-            client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
-        ) -> None:
+
+        def _callback(message: Message) -> None:
+            """Put the new message in the queue."""
             try:
-                # Convert the paho.mqtt message into our own Message class
-                messages.put_nowait(Message._from_paho_message(message))
+                messages.put_nowait(message)
             except asyncio.QueueFull:
                 MQTT_LOGGER.warning("Message queue is full. Discarding message.")
 
-        # The generator that we give to the caller
-        async def _message_generator() -> AsyncGenerator[Message, None]:
-            # Forward all messages from the queue
+        async def _generator() -> AsyncGenerator[Message, None]:
+            """Forward all messages from the message queue."""
             while True:
                 # Wait until we either:
                 #  1. Receive a message
@@ -608,7 +599,7 @@ class Client:
                     # Stop the generator with the following exception
                     raise MqttError("Disconnected during message iteration")
 
-        return _put_in_queue, _message_generator()
+        return _callback, _generator()
 
     async def _wait_for(
         self, fut: Awaitable[T], timeout: float | None, **kwargs: Any
@@ -724,6 +715,17 @@ class Client:
             MQTT_LOGGER.error(
                 f'Unexpected message ID "{mid}" in on_unsubscribe callback'
             )
+
+    def _on_message(
+        self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
+    ) -> None:
+        # Call the deprecated unfiltered_messages callback
+        if self._unfiltered_messages_callback is not None:
+            self._unfiltered_messages_callback(client, userdata, message)
+        # Convert the paho.mqtt message into our own Message type
+        m = Message._from_paho_message(message)
+        for callback in self._on_message_callbacks:
+            callback(m)
 
     def _on_publish(self, client: mqtt.Client, userdata: Any, mid: int) -> None:
         try:
