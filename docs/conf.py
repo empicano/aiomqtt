@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "asyncio-mqtt"
-copyright = "2022, Felix Böhm"
+copyright = "2022, Felix Böhm"  # noqa: A001
 author = "Felix Böhm"
 
 # -- General configuration ---------------------------------------------------
@@ -22,5 +22,5 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
+html_theme = "furo"
 html_static_path = ["_static"]

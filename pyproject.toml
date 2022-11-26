@@ -44,6 +44,7 @@ dynamic = ["version"]
 lint = ["mypy>=0.991", "ruff>=0.0.158", "types-paho-mqtt>=1.6.0.1"]
 format = ["black>=22.10.0"]
 tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
+docs = ["sphinx>=5.3.0", "furo>=2022.9.29"]
 
 [tool.setuptools]
 packages = ["asyncio_mqtt"]
