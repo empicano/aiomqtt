@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+# Change into the project's directory
+cd "$(dirname "$0")/.."
+
+sphinx-build -b html docs docs/_build
