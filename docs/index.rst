@@ -1,20 +1,17 @@
-.. asyncio-mqtt documentation master file, created by
-   sphinx-quickstart on Sat Nov 26 18:48:31 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+The idiomatic asyncio MQTT Client 🙌
+====================================
 
-Welcome to asyncio-mqtt's documentation!
-========================================
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   configuring-the-client
+   reconnecting
+   topic-filters
+   sharing-the-connection
+   listening-without-blocking
+   tls
+   proxying
