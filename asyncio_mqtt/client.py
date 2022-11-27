@@ -145,7 +145,7 @@ class Wildcard:
             raise ValueError(f"Invalid wildcard: {self.value}")
 
 
-WildcardLike = str | Wildcard
+WildcardLike = Union[str, Wildcard]
 
 
 @dataclass(frozen=True)
@@ -191,7 +191,7 @@ class Topic(Wildcard):
         return recurse(topic_levels, wildcard_levels)
 
 
-TopicLike = str | Topic
+TopicLike = Union[str, Topic]
 
 
 class Message:
