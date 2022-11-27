@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0]
+
 ### Added
 
 - Allow multiple message generators at the same time. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#147](https://github.com/sbtinstruments/asyncio-mqtt/pull/147)
@@ -14,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Simplify message filtering. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#147](https://github.com/sbtinstruments/asyncio-mqtt/pull/147)
+- Switch from `flake8` to `ruff` for linting. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#155](https://github.com/sbtinstruments/asyncio-mqtt/pull/155)
 
 ## [0.14.0]
 
