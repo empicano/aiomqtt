@@ -7,6 +7,7 @@ from .client import (
     ProxySettings,
     TLSParameters,
     Topic,
+    Wildcard,
     Will,
 )
 from .error import MqttCodeError, MqttError
@@ -20,6 +21,7 @@ __all__ = [
     "ProxySettings",
     "TLSParameters",
     "Topic",
+    "Wildcard",
     "Will",
     "MqttCodeError",
     "MqttError",

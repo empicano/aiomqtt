@@ -10,7 +10,7 @@ import anyio.abc
 import paho.mqtt.client as mqtt
 import pytest
 
-from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Will
+from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
 from asyncio_mqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
@@ -20,8 +20,52 @@ OS_PY_VERSION = sys.platform + "_" + ".".join(map(str, sys.version_info[:2]))
 TOPIC_HEADER = OS_PY_VERSION + "/tests/asyncio_mqtt/"
 
 
-async def test_message_topic_matches() -> None:
-    """Test that Topic.matches() does and doesn't match some test wildcard topics."""
+async def test_topic_validation() -> None:
+    """Test that Topic raises Exceptions for invalid topics."""
+    with pytest.raises(TypeError):
+        Topic(True)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        Topic(1.0)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        Topic(None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        Topic([])  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        Topic("a/b/#")
+    with pytest.raises(ValueError):
+        Topic("a/+/c")
+    with pytest.raises(ValueError):
+        Topic("#")
+    with pytest.raises(ValueError):
+        Topic("")
+    with pytest.raises(ValueError):
+        Topic("a" * 65536)
+
+
+async def test_wildcard_validation() -> None:
+    """Test that Wildcard raises Exceptions for invalid wildcards."""
+    with pytest.raises(TypeError):
+        Wildcard(True)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        Wildcard(1.0)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        Wildcard(None)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        Wildcard([])  # type: ignore[arg-type]
+    with pytest.raises(ValueError):
+        Wildcard("a/#/c")
+    with pytest.raises(ValueError):
+        Wildcard("a/b+/c")
+    with pytest.raises(ValueError):
+        Wildcard("a/b/#c")
+    with pytest.raises(ValueError):
+        Wildcard("")
+    with pytest.raises(ValueError):
+        Wildcard("a" * 65536)
+
+
+async def test_topic_matches() -> None:
+    """Test that Topic.matches() does and doesn't match some test wildcards."""
     topic = Topic("a/b/c")
     assert topic.matches("a/b/c")
     assert topic.matches("a/+/c")
@@ -36,29 +80,6 @@ async def test_message_topic_matches() -> None:
     assert not topic.matches("a/b/z")
     assert not topic.matches("$share/a/b/c")
     assert not topic.matches("$test/group/a/b/c")
-
-
-async def test_message_topic_matches_validation() -> None:
-    """Test that Topic.matches() raises Exceptions for invalid wildcard topics."""
-    topic = Topic("a/b/c")
-    with pytest.raises(TypeError):
-        topic.matches(True)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        topic.matches(1.0)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        topic.matches(None)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        topic.matches([])  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
-        topic.matches("a/#/c")
-    with pytest.raises(ValueError):
-        topic.matches("a/b+/c")
-    with pytest.raises(ValueError):
-        topic.matches("a/b/#c")
-    with pytest.raises(ValueError):
-        topic.matches("")
-    with pytest.raises(ValueError):
-        topic.matches("a" * 65536)
 
 
 async def test_multiple_messages_generators() -> None:
