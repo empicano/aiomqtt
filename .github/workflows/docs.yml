@@ -1,0 +1,42 @@
+name: docs
+
+on:
+  push:
+    paths:
+      - "docs/**"
+      - .github/workflows/docs.yml
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Load cached dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: docs-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[docs]
+      - name: Build documentation
+        run: scripts/docs
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/add-sphinx'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_build
+          publish_branch: documentation
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
