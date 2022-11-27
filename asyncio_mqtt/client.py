@@ -47,7 +47,7 @@ WebSocketHeaders: TypeAlias = (
 
 
 class ProtocolVersion(IntEnum):
-    """A mapping of Paho MQTT protocol version constants to an Enum for use in type hints."""
+    """A mapping of paho-mqtt protocol versions to an Enum for use in type hints."""
 
     V31 = mqtt.MQTTv31
     V311 = mqtt.MQTTv311
@@ -98,7 +98,10 @@ class ProxySettings:
 # See the overloads of `socket.setsockopt` for details.
 SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
 
-SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
+SubscribeTopic: TypeAlias = (
+    "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]]"
+    " | list[tuple[str, int]]"
+)
 
 P = ParamSpec("P")
 
@@ -145,7 +148,7 @@ class Wildcard:
             raise ValueError(f"Invalid wildcard: {self.value}")
 
 
-WildcardLike = Union[str, Wildcard]
+WildcardLike: TypeAlias = "str | Wildcard"
 
 
 @dataclass(frozen=True)
@@ -191,7 +194,7 @@ class Topic(Wildcard):
         return recurse(topic_levels, wildcard_levels)
 
 
-TopicLike = Union[str, Topic]
+TopicLike: TypeAlias = "str | Topic"
 
 
 class Message:
