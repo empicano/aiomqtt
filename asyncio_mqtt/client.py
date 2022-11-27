@@ -119,44 +119,61 @@ def _outgoing_call(
     return decorated
 
 
-class Topic:
-    def __init__(self, topic: str):
-        self.topic = topic
+@dataclass(frozen=True)
+class Wildcard:
+    """A topic, optionally with wildcards (+ and #). Can only be subscribed to."""
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Topic):
-            return NotImplemented
-        return self.topic == other.topic
+    value: str
 
     def __str__(self) -> str:
-        return self.topic
+        return self.value
 
-    @staticmethod
-    def _validate_topic(topic: str) -> None:
-        if not isinstance(topic, str):
-            raise TypeError("topic must be a string")
-        # More or less copied from paho.mqtt's Client._filter_wildcard_len_check()
+    def __post_init__(self) -> None:
+        """Validate the wildcard."""
+        if not isinstance(self.value, str):
+            raise TypeError("wildcard must be a string")
         if (
-            len(topic) == 0
-            or len(topic) > 65535
-            or "#/" in topic
+            len(self.value) == 0
+            or len(self.value) > 65535
+            or "#/" in self.value
             or any(
                 "+" in level or "#" in level
-                for level in topic.split("/")
+                for level in self.value.split("/")
                 if len(level) > 1
             )
         ):
-            raise ValueError(f"Invalid topic filter: {topic}")
+            raise ValueError(f"Invalid wildcard: {self.value}")
 
-    def matches(self, topic: str) -> bool:
-        """Check if the topic matches a given (wildcard) subscription topic."""
-        self._validate_topic(topic)
+
+WildcardLike = str | Wildcard
+
+
+@dataclass(frozen=True)
+class Topic(Wildcard):
+    """A topic that can be published and subscribed to."""
+
+    def __post_init__(self) -> None:
+        """Validate the topic."""
+        if not isinstance(self.value, str):
+            raise TypeError("topic must be a string")
+        if (
+            len(self.value) == 0
+            or len(self.value) > 65535
+            or "+" in self.value
+            or "#" in self.value
+        ):
+            raise ValueError(f"Invalid topic: {self.value}")
+
+    def matches(self, wildcard: WildcardLike) -> bool:
+        """Check if the topic is matched by a given wildcard."""
+        if not isinstance(wildcard, Wildcard):
+            wildcard = Wildcard(wildcard)
         # Split topics into levels to compare them one by one
-        topic_levels = self.topic.split("/")
-        match_levels = topic.split("/")
-        if match_levels[0] == "$share":
+        topic_levels = self.value.split("/")
+        wildcard_levels = str(wildcard).split("/")
+        if wildcard_levels[0] == "$share":
             # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
-            match_levels = match_levels[2:]
+            wildcard_levels = wildcard_levels[2:]
 
         def recurse(x: list[str], y: list[str]) -> bool:
             if not x:
@@ -171,21 +188,24 @@ class Topic:
                 return recurse(x[1:], y[1:])
             return False
 
-        return recurse(topic_levels, match_levels)
+        return recurse(topic_levels, wildcard_levels)
+
+
+TopicLike = str | Topic
 
 
 class Message:
-    """Custom message class that allows to use our own Topic class."""
+    """Custom message class that allows us to use our own Topic class."""
 
     def __init__(
         self,
-        topic: str,
+        topic: TopicLike,
         payload: PayloadType,
         qos: int,
         retain: bool,
         mid: int,
     ):
-        self.topic = Topic(topic)
+        self.topic = Topic(topic) if not isinstance(topic, Topic) else topic
         self.payload = payload
         self.qos = qos
         self.retain = retain
