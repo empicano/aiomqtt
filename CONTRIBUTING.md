@@ -25,7 +25,7 @@ pip install --upgrade pip
 Install the development dependencies.
 
 ```bash
-pip install -e .[tests,lint,format]
+pip install -e .[tests,lint,format,docs]
 ```
 
 Install [pre-commit](https://pre-commit.com/) so that your code is formatted and checked when you are doing a commit.
@@ -71,6 +71,10 @@ pytest --cov=src --cov=tests --cov-report=html
 ```
 
 To view the coverage open `htmlcov/index.html`.
+
+## Building the documentation
+
+The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The source files are located in the `docs` folder. You can build it by running `./scripts/docs`.
 
 ## Committing
 
