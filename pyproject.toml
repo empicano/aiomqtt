@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "asyncio_mqtt"
-description = "Idomatic asyncio wrapper around paho-mqtt"
+description = "Idiomatic asyncio wrapper around paho-mqtt"
 readme = "README.md"
 authors = [{ name = "Frederik Aalund", email = "fpa@sbtinstruments.com" }]
 maintainers = [
