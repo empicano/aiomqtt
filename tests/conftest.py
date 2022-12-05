@@ -12,5 +12,4 @@ def anyio_backend() -> tuple[str, dict[str, Any]]:
         from asyncio.windows_events import WindowsSelectorEventLoopPolicy
 
         return ("asyncio", {"policy": WindowsSelectorEventLoopPolicy()})
-    else:
-        return ("asyncio", {})
+    return ("asyncio", {})

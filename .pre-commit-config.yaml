@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.139
+    rev: v0.0.158
     hooks:
       - id: ruff
         args:
@@ -50,4 +50,4 @@ repos:
     rev: v1.9.0
     hooks:
       - id: python-check-blanket-type-ignore
-      - id: python-no-eval
+      - id: python-check-blanket-noqa
