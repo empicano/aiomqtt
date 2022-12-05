@@ -20,10 +20,9 @@ class MqttCodeError(MqttError):
     def __str__(self) -> str:
         if isinstance(self.rc, mqtt.ReasonCodes):
             return f"[code:{self.rc.value}] {str(self.rc)}"
-        elif isinstance(self.rc, int):
+        if isinstance(self.rc, int):
             return f"[code:{self.rc}] {mqtt.error_string(self.rc)}"
-        else:
-            return f"[code:{self.rc}] {super().__str__()}"
+        return f"[code:{self.rc}] {super().__str__()}"
 
 
 class MqttConnectError(MqttCodeError):
@@ -36,6 +35,7 @@ class MqttConnectError(MqttCodeError):
         except KeyError:
             pass
         super().__init__(rc, msg)
+        return None
 
 
 _CONNECT_RC_STRINGS: dict[int, str] = {

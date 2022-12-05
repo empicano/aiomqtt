@@ -39,9 +39,9 @@ pre-commit install
 
 If you are using VSCode, here are the settings to activate on save,
 
-- `black` and `isort` to format.
+- `black` to format.
 - `mypy` to lint.
-- Install [charliermarsh.ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) extension to lint (`ruff` is a fast equivalent to `flake8`)
+- Install [charliermarsh.ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) extension to lint, sort imports, and auto-fix lint errors (`ruff` is a fast equivalent to `flake8`)
 
 ```json
 {

@@ -41,8 +41,8 @@ dynamic = ["version"]
 "Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
 
 [project.optional-dependencies]
-lint = ["mypy>=0.982", "ruff>=0.0.124", "types-paho-mqtt>=1.6.0.1"]
-format = ["black>=22.10.0", "isort>=5.10.1"]
+lint = ["mypy>=0.991", "ruff>=0.0.158", "types-paho-mqtt>=1.6.0.1"]
+format = ["black>=22.10.0"]
 tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
 
 [tool.setuptools]
@@ -50,9 +50,6 @@ packages = ["asyncio_mqtt"]
 
 [tool.setuptools_scm]
 write_to = "asyncio_mqtt/_version.py"
-
-[tool.isort]
-profile = "black"
 
 [tool.ruff]
 select = [
@@ -64,13 +61,19 @@ select = [
     "E",   # style errors
     "F",   # flakes
     "I",   # import sorting
-    "M",   # meta
     "N",   # naming
+    "PGH", # pygrep-hooks
+    "PLC", # pylint convention
+    "PLE", # pylint error
+    "PLR", # pylint refactor
+    "PLW", # pylint warning
     "Q",   # quotes
+    "RET", # return
     "RUF", # ruff
     "S",   # bandit
-    "T",   # print
-    "U",   # upgrade
+    "T10", # debugger
+    "T20", # print
+    "UP",  # upgrade
     "W",   # style warnings
     "YTT", # sys.version
 ]
