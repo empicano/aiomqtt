@@ -98,10 +98,7 @@ class ProxySettings:
 # See the overloads of `socket.setsockopt` for details.
 SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
 
-SubscribeTopic: TypeAlias = (
-    "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]]"
-    " | list[tuple[str, int]]"
-)
+SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
 
 P = ParamSpec("P")
 
@@ -207,12 +204,14 @@ class Message:
         qos: int,
         retain: bool,
         mid: int,
+        properties: Properties | None,
     ):
         self.topic = Topic(topic) if not isinstance(topic, Topic) else topic
         self.payload = payload
         self.qos = qos
         self.retain = retain
         self.mid = mid
+        self.properties = properties
 
     @classmethod
     def _from_paho_message(cls, message: mqtt.MQTTMessage) -> Message:
@@ -222,6 +221,7 @@ class Message:
             qos=message.qos,
             retain=message.retain,
             mid=message.mid,
+            properties=message.properties if hasattr(message, "properties") else None,
         )
 
 

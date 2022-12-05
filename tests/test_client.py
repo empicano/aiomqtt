@@ -97,6 +97,7 @@ async def test_multiple_messages_generators() -> None:
             await client.subscribe(topic)
             tg.start_soon(handler, tg)
             tg.start_soon(handler, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic)
 
 
@@ -115,6 +116,7 @@ async def test_client_filtered_messages() -> None:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(bad_topic, 2)
             await client.publish(good_topic, 2)
 
@@ -140,6 +142,7 @@ async def test_client_unfiltered_messages() -> None:
             await client.subscribe(topic_header + "#")
             tg.start_soon(handle_filtered_messages)
             tg.start_soon(handle_unfiltered_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic_filtered, 2)
             await client.publish(topic_unfiltered, 2)
 
@@ -165,6 +168,7 @@ async def test_client_unsubscribe() -> None:
             await client.subscribe(topic1)
             await client.subscribe(topic2)
             tg.start_soon(handle_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic1, 2)
             await client.unsubscribe(topic1)
             await client.publish(topic1, 2)
@@ -218,6 +222,7 @@ async def test_client_tls_context() -> None:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic)
 
 
@@ -240,6 +245,7 @@ async def test_client_tls_params() -> None:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic)
 
 
@@ -258,6 +264,7 @@ async def test_client_username_password() -> None:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic)
 
 
@@ -333,6 +340,7 @@ async def test_client_websockets() -> None:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
+            await anyio.wait_all_tasks_blocked()
             await client.publish(topic)
 
 
