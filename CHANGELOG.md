@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0]
+
+### Added
+
+- Add properties in Message. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#166](https://github.com/sbtinstruments/asyncio-mqtt/pull/166)
+
+### Changed
+
+- Update Ruff and fix new lint errors. Contributed by [pre-commit-ci](https://github.com/apps/pre-commit-ci) and [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#161](https://github.com/sbtinstruments/asyncio-mqtt/pull/161)
+
+### Fixed
+
+- Fix typo in description metadata. Contributed by [(@pi-slh)](https://github.com/pi-slh) in [#162](https://github.com/sbtinstruments/asyncio-mqtt/pull/162)
+
 ## [0.15.0]
 
 ### Added
