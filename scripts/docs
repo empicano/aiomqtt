@@ -1,9 +1,39 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o pipefail
+# Safety first
+set -o errexit -o pipefail -o nounset
 # Change into the project's directory
 cd "$(dirname "$0")/.."
 
-sphinx-build -b html docs docs/_build
+# Positional argument array
+POSITIONALS=()
+# Define our default argument values
+RELOAD=1
+
+# Extract options and their arguments into variables
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -n|--no-reload)
+            RELOAD=0
+            shift
+            ;;
+        -*|--*=)
+            echo "Unknown option $1" >&2
+            exit 1
+            ;;
+        *)
+            POSITIONALS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Restore positional arguments
+if [ ${#POSITIONALS[@]} -gt 0 ]; then set -- "${POSITIONALS[@]}"; fi
+
+# Main script
+if [[ $RELOAD -eq 1 ]]; then
+    sphinx-autobuild --port 8145 docs docs/_build
+else
+    sphinx-build -b html docs docs/_build
+fi
