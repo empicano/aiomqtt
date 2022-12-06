@@ -7,7 +7,7 @@ Clone the `asyncio-mqtt`.
 Inside the repository, create a virtual environment.
 
 ```bash
-python3 -m venv env
+python3 -m venv .venv
 ```
 
 Activate the virtual environment.
