@@ -2,6 +2,11 @@ name: docs
 
 on:
   push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - .github/workflows/docs.yml
+  pull_request:
     paths:
       - "docs/**"
       - .github/workflows/docs.yml
@@ -33,7 +38,7 @@ jobs:
         run: scripts/docs
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/add-sphinx'
+        if: github.ref == 'refs/heads/main'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/_build
