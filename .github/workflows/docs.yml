@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - README.md
       - .github/workflows/docs.yml
   pull_request:
     paths:
       - "docs/**"
+      - README.md
       - .github/workflows/docs.yml
 
 jobs:
