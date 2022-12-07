@@ -1,6 +1,6 @@
 # Configuring the client
 
-You can configure quite a few things when initializing the client. These are all the possible parameters together with their default values. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python>) for more information about the individual parameters.
+You can configure quite a few things when initializing the client. These are all the possible parameters together with their default values. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python) for more information about the individual parameters.
 
 ```python
 import asyncio_mqtt as aiomqtt
