@@ -79,11 +79,17 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 - One use of "COPYRIGHT OWNER" (EDL) instead of "COPYRIGHT HOLDER" (BSD)
 - One use of "Eclipse Foundation, Inc." (EDL) instead of "copyright holder" (BSD)
 
+## Contributing
+
+We're happy about your contributions to the project!
+
+You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstruments/asyncio-mqtt/blob/main/CHANGELOG.md).
+
 ## Versioning
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Expect API changes until we reach version `1.0.0`. After `1.0.0`, breaking changes will only occur in major release (e.g., `2.0.0`, `3.0.0`, etc.).
+Expect API changes until we reach version `1.0.0`. After `1.0.0`, breaking changes will only occur in a major release (e.g., `2.0.0`, `3.0.0`, etc.).
 
 ## Changelog
 
