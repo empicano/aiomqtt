@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Renamed `master` branch to `main`. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse)
 
+### Added
+
+- Move documentation from `README` to Sphinx. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#159](https://github.com/sbtinstruments/asyncio-mqtt/pull/159)
+- Add CI workflow to deploy documentation to GitHub Pages. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#159](https://github.com/sbtinstruments/asyncio-mqtt/pull/159)
+
 ## [0.16.1]
 
 ### Fixed
@@ -54,10 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reorder `README.md` sections in order of importance. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#140](https://github.com/sbtinstruments/asyncio-mqtt/pull/140)
 - Change from `setup.py` to `pyproject.toml`. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#151](https://github.com/sbtinstruments/asyncio-mqtt/pull/151)
-
-### Deprecated
-
-- Deprecate `master` branch in favor of `main` branch.
 
 ### Removed
 
