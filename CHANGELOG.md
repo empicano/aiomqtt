@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Renamed `master` branch to `main`. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse)
+
 ## [0.16.1]
 
 ### Fixed
