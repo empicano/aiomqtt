@@ -38,8 +38,8 @@ Some frameworks like [Starlette](https://github.com/encode/starlette) directly s
 ```python
 import asyncio
 import asyncio_mqtt as aiomqtt
-import starlette.applications
 import contextlib
+import starlette.applications
 
 
 client = None
