@@ -15,6 +15,13 @@
 
 Write code like this:
 
+**Publisher**
+
+```python
+async with Client("test.mosquitto.org") as client:
+    await client.publish("humidity/outside", payload=0.38)
+```
+
 **Subscriber**
 
 ```python
@@ -25,14 +32,7 @@ async with Client("test.mosquitto.org") as client:
             print(message.payload)
 ```
 
-**Publisher**
-
-```python
-async with Client("test.mosquitto.org") as client:
-    await client.publish("humidity/outside", payload=0.38)
-```
-
-_asyncio-mqtt_ combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
+asyncio-mqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
 
 - No more callbacks! 👍
 - No more return codes (welcome to the `MqttError`)
@@ -40,6 +40,8 @@ _asyncio-mqtt_ combines the stability of the time-proven [paho-mqtt](https://git
 - Compatible with `async` code
 - Fully type-hinted
 - Did we mention no more callbacks?
+
+The whole thing is less than [900 lines of code](https://github.com/sbtinstruments/asyncio-mqtt/blob/main/asyncio_mqtt/client.py).
 
 <!-- pitch end -->
 
@@ -53,7 +55,7 @@ _asyncio-mqtt_ combines the stability of the time-proven [paho-mqtt](https://git
 
 ## Installation
 
-_asyncio-mqtt_ can be installed via `pip install asyncio-mqtt`. It requires Python 3.7+ to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
+asyncio-mqtt can be installed via `pip install asyncio-mqtt`. It requires Python 3.7+ to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
 If you can't wait for the latest version and want to install directly from GitHub, use:
 
@@ -61,7 +63,7 @@ If you can't wait for the latest version and want to install directly from GitHu
 
 ### Note for Windows users
 
-Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by _asyncio-mqtt_. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
+Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by asyncio-mqtt. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
 
 ```python
 # Change to the "Selector" event loop
@@ -97,11 +99,11 @@ The changelog lives in the [CHANGELOG.md](https://github.com/sbtinstruments/asyn
 
 ## Related projects
 
-Is _asyncio-mqtt_ not what you're looking for? There are a few other clients you can try:
+Is asyncio-mqtt not what you're looking for? There are a few other clients you can try:
 
 - [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) — Own protocol implementation. Synchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
 - [gmqtt](https://github.com/wialon/gmqtt) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt) ![license](https://img.shields.io/github/license/wialon/gmqtt)
 - [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt) — Asynchronous wrapper around gmqtt. Simplifies integration in your FastAPI application.<br>![GitHub stars](https://img.shields.io/github/stars/sabuhish/fastapi-mqtt) ![license](https://img.shields.io/github/license/sabuhish/fastapi-mqtt)
 - [amqtt](https://github.com/Yakifo/amqtt) — Own protocol implementation. Asynchronous. Includes a broker.<br>![GitHub stars](https://img.shields.io/github/stars/Yakifo/amqtt) ![license](https://img.shields.io/github/license/Yakifo/amqtt)
 - [mqttools](https://github.com/eerimoq/mqttools) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eerimoq/mqttools) ![license](https://img.shields.io/github/license/eerimoq/mqttools)
-- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) — Asynchronous wrapper around paho-mqtt (similar to _asyncio-mqtt_). Based on trio instead of asyncio.<br>![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt) ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
+- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) — Asynchronous wrapper around paho-mqtt (similar to asyncio-mqtt). Based on trio instead of asyncio.<br>![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt) ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)

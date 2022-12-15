@@ -82,7 +82,7 @@ The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The sour
 
 After running `git commit`, `pre-commit` will check the committed code. This check can be passed, skipped or failed.
 
-If the check failed, it is possible that `pre-commit` auto-fixed the code, so you only need to re-stage and re-commit. If it did not auto-fie the code, you will need to do so manually.
+If the check failed, it is possible that `pre-commit` auto-fixed the code, so you only need to re-stage and re-commit. If it did not auto-fix the code, you will need to do so manually.
 
 `pre-commit` will only check the code that is staged, the unstaged code will be stashed during the checks.
 

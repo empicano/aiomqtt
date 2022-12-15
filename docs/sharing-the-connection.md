@@ -67,4 +67,4 @@ Managing a connection by calling `connect` and `disconnect` directly is a bit tr
 
 Context managers take care of all connection and disconnection logic for you, in a way that makes it very difficult to shoot yourself in the foot. They are a lot easier and less error-prone to use than `connect`/`disconnect`.
 
-Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to _asyncio-mqtt_. To keep maintainer burden manageable, we focus only on the preferred option: context managers.
+Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to asyncio-mqtt. To keep maintainer burden manageable, we focus only on the preferred option: context managers.

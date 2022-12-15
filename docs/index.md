@@ -15,7 +15,7 @@
 :maxdepth: 2
 
 configuring-the-client
-filtering-messages
+publishing-and-subscribing
 sharing-the-connection
 listening-without-blocking
 reconnecting
