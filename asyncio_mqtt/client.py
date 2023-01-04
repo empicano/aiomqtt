@@ -777,14 +777,12 @@ class Client:
 
         # paho-mqtt calls this function from the executor thread on which we've called
         # `self._client.connect()` (see [3]), so we can't do most operations on
-        # self._loop directly. Instead, wrap them in a coroutine and run that
-        # thread-safely.
-        async def on_loop_coroutine() -> None:
-            self._loop.add_reader(sock.fileno(), callback)
+        # self._loop directly.
+        def create_misc_task() -> None:
             self._misc_task = self._loop.create_task(self._misc_loop())
 
-        fut = asyncio.run_coroutine_threadsafe(on_loop_coroutine(), self._loop)
-        fut.result()
+        self._loop.call_soon_threadsafe(self._loop.add_reader, sock.fileno(), callback)
+        self._loop.call_soon_threadsafe(create_misc_task)
 
     def _on_socket_close(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
@@ -808,15 +806,10 @@ class Client:
                 if not self._disconnected.done():
                     self._disconnected.set_exception(exc)
 
-        # paho-mqtt calls this function from the executor thread on which we've called
+        # paho-mqtt may call this function from the executor thread on which we've called
         # `self._client.connect()` (see [3]), so we can't do most operations on
-        # self._loop directly. Instead, we wrap them in a coroutine and run that
-        # thread-safely.
-        async def on_loop_coroutine() -> None:
-            self._loop.add_writer(sock, callback)
-
-        fut = asyncio.run_coroutine_threadsafe(on_loop_coroutine(), self._loop)
-        fut.result()
+        # self._loop directly.
+        self._loop.call_soon_threadsafe(self._loop.add_writer, sock, callback)
 
     def _on_socket_unregister_write(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
