@@ -317,6 +317,7 @@ class Client:
 
         if logger is None:
             logger = MQTT_LOGGER
+        self._logger = logger
         self._client.enable_logger(logger)
 
         if username is not None:
@@ -485,7 +486,7 @@ class Client:
         self, topic_filter: str, *, queue_maxsize: int = 0
     ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
         """Return async generator of messages that match the given filter."""
-        MQTT_LOGGER.warning(
+        self._logger.warning(
             "filtered_messages() is deprecated and will be removed in a future version."
             " Use messages() together with Topic.matches() instead."
         )
@@ -505,7 +506,7 @@ class Client:
         self, *, queue_maxsize: int = 0
     ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
         """Return async generator of all messages that are not caught in filters."""
-        MQTT_LOGGER.warning(
+        self._logger.warning(
             "unfiltered_messages() is deprecated and will be removed in a future"
             " version. Use messages() instead."
         )
@@ -560,7 +561,7 @@ class Client:
             try:
                 messages.put_nowait(message)
             except asyncio.QueueFull:
-                MQTT_LOGGER.warning(
+                self._logger.warning(
                     f"[{log_context}] Message queue is full. Discarding message."
                 )
 
@@ -605,7 +606,7 @@ class Client:
             try:
                 messages.put_nowait(message)
             except asyncio.QueueFull:
-                MQTT_LOGGER.warning("Message queue is full. Discarding message.")
+                self._logger.warning("Message queue is full. Discarding message.")
 
         async def _generator() -> AsyncGenerator[Message, None]:
             """Forward all messages from the message queue."""
@@ -655,7 +656,7 @@ class Client:
             # Log a warning if there is a concerning number of pending calls
             pending = len(list(self._pending_calls))
             if pending > self.pending_calls_threshold:
-                MQTT_LOGGER.warning(f"There are {pending} pending publish calls.")
+                self._logger.warning(f"There are {pending} pending publish calls.")
             # Back to the caller (run whatever is inside the with statement)
             yield
         finally:
@@ -732,7 +733,9 @@ class Client:
             if not fut.done():
                 fut.set_result(granted_qos)
         except KeyError:
-            MQTT_LOGGER.error(f'Unexpected message ID "{mid}" in on_subscribe callback')
+            self._logger.error(
+                f'Unexpected message ID "{mid}" in on_subscribe callback'
+            )
 
     def _on_unsubscribe(
         self,
@@ -745,7 +748,7 @@ class Client:
         try:
             self._pending_unsubscribes.pop(mid).set()
         except KeyError:
-            MQTT_LOGGER.error(
+            self._logger.error(
                 f'Unexpected message ID "{mid}" in on_unsubscribe callback'
             )
 
@@ -852,7 +855,7 @@ class Client:
             await self.disconnect()
         except MqttError as error:
             # We tried to be graceful. Now there is no mercy.
-            MQTT_LOGGER.warning(
+            self._logger.warning(
                 f'Could not gracefully disconnect due to "{error}". Forcing'
                 " disconnection."
             )
