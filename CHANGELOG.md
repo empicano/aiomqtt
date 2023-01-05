@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Flow Control options to the Client-Constructor. Contributed by [Andreas Heine (@andreasheine)](https://github.com/andreasheine) in [#180](https://github.com/sbtinstruments/asyncio-mqtt/pull/180)
 - Make `Client.pending_calls_threshold` public. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#185](https://github.com/sbtinstruments/asyncio-mqtt/pull/185)
 
+### Fixed
+
+- Consistently use a user-provided logger. Contributed by [Roman Novatorov @rnovatorov](https://github.com/rnovatorov) in [#176](https://github.com/sbtinstruments/asyncio-mqtt/pull/176)
+
 ## [0.16.1]
 
 ### Fixed
