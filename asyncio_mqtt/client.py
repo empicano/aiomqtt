@@ -253,7 +253,7 @@ class Client:
         websocket_path: str | None = None,
         websocket_headers: WebSocketHeaders | None = None,
         max_inflight_messages: int | None = None,
-        max_queued_messages: int | None = None
+        max_queued_messages: int | None = None,
     ):
         self._hostname = hostname
         self._port = port
