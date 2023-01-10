@@ -252,6 +252,8 @@ class Client:
         max_concurrent_outgoing_calls: int | None = None,
         websocket_path: str | None = None,
         websocket_headers: WebSocketHeaders | None = None,
+        max_inflight_messages: int | None = None,
+        max_queued_messages: int | None = None,
     ):
         self._hostname = hostname
         self._port = port
@@ -307,6 +309,11 @@ class Client:
         self._client.on_socket_close = self._on_socket_close
         self._client.on_socket_register_write = self._on_socket_register_write
         self._client.on_socket_unregister_write = self._on_socket_unregister_write
+
+        if max_inflight_messages is not None:
+            self._client.max_inflight_messages_set(max_inflight_messages)
+        if max_queued_messages is not None:
+            self._client.max_queued_messages_set(max_queued_messages)
 
         if logger is None:
             logger = MQTT_LOGGER
