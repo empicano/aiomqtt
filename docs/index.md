@@ -19,6 +19,7 @@ publishing-and-subscribing
 sharing-the-connection
 listening-without-blocking
 reconnecting
+stop-listening
 tls
 proxying
 ```
