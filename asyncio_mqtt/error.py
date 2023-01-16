@@ -7,8 +7,6 @@ import paho.mqtt.client as mqtt
 
 
 class MqttError(Exception):
-    """Base exception for all asyncio-mqtt exceptions."""
-
     pass
 
 

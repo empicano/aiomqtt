@@ -39,24 +39,7 @@ pre-commit install
 
 ### Visual Studio Code
 
-If you are using VSCode, these are the settings to activate on save:
-
-- `black` to format.
-- `mypy` to lint.
-- Install the [charliermarsh.ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) extension to lint, sort imports, and auto-fix lint errors (`ruff` is a fast equivalent to `flake8`)
-
-```json
-{
-  "[python]": {
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": true
-    }
-  },
-  "python.formatting.provider": "black",
-  "python.linting.mypyEnabled": true
-}
-```
+If you are using VSCode, these are workspace settings and highly recommended extensions to improve developer experience.
 
 ## Testing
 

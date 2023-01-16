@@ -1,26 +1,17 @@
+fail_fast: true
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.215
+    rev: v0.0.229
     hooks:
       - id: ruff
         args:
           - --fix
-          - --target-version
-          - py37
+          - --force-exclude
 
   - repo: https://github.com/psf/black
     rev: 22.12.0
     hooks:
       - id: black
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.991
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - anyio
-          - pytest
-          - types-paho-mqtt == 1.6.0.1
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v3.0.0-alpha.4
@@ -46,8 +37,16 @@ repos:
         args: ["--fix=lf"]
       - id: trailing-whitespace
 
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.9.0
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.991
     hooks:
-      - id: python-check-blanket-type-ignore
-      - id: python-check-blanket-noqa
+      - id: mypy
+        additional_dependencies:
+          - anyio == 3.6.2
+          - pytest == 7.2.0
+          - types-paho-mqtt == 1.6.0.1
+
+ci:
+  skip:
+    - ruff
+    - mypy
