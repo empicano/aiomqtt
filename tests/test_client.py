@@ -30,15 +30,15 @@ async def test_topic_validation() -> None:
         Topic(None)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
         Topic([])  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid topic: "):
         Topic("a/b/#")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid topic: "):
         Topic("a/+/c")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid topic: "):
         Topic("#")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid topic: "):
         Topic("")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid topic: "):
         Topic("a" * 65536)
 
 
@@ -52,15 +52,15 @@ async def test_wildcard_validation() -> None:
         Wildcard(None)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
         Wildcard([])  # type: ignore[arg-type]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid wildcard: "):
         Wildcard("a/#/c")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid wildcard: "):
         Wildcard("a/b+/c")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid wildcard: "):
         Wildcard("a/b/#c")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid wildcard: "):
         Wildcard("")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid wildcard: "):
         Wildcard("a" * 65536)
 
 
@@ -177,7 +177,7 @@ async def test_client_unsubscribe() -> None:
 
 @pytest.mark.parametrize(
     "protocol, length",
-    ((ProtocolVersion.V31, 22), (ProtocolVersion.V311, 0), (ProtocolVersion.V5, 0)),
+    [(ProtocolVersion.V31, 22), (ProtocolVersion.V311, 0), (ProtocolVersion.V5, 0)],
 )
 async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
     client = Client(HOSTNAME, protocol=protocol)

@@ -47,7 +47,7 @@ WebSocketHeaders: TypeAlias = (
 
 
 class ProtocolVersion(IntEnum):
-    """A mapping of paho-mqtt protocol versions to an Enum for use in type hints."""
+    """Map paho-mqtt protocol versions to an Enum for use in type hints."""
 
     V31 = mqtt.MQTTv31
     V311 = mqtt.MQTTv311
@@ -119,9 +119,12 @@ def _outgoing_call(
     return decorated
 
 
+MAX_TOPIC_LENGTH = 65535
+
+
 @dataclass(frozen=True)
 class Wildcard:
-    """A topic, optionally with wildcards (+ and #). Can only be subscribed to."""
+    """Validate a topic, optionally with wildcards (+ and #). Can only be subscribed to."""
 
     value: str
 
@@ -131,10 +134,11 @@ class Wildcard:
     def __post_init__(self) -> None:
         """Validate the wildcard."""
         if not isinstance(self.value, str):
-            raise TypeError("wildcard must be a string")
+            msg = "wildcard must be a string"
+            raise TypeError(msg)
         if (
             len(self.value) == 0
-            or len(self.value) > 65535
+            or len(self.value) > MAX_TOPIC_LENGTH
             or "#/" in self.value
             or any(
                 "+" in level or "#" in level
@@ -142,7 +146,8 @@ class Wildcard:
                 if len(level) > 1
             )
         ):
-            raise ValueError(f"Invalid wildcard: {self.value}")
+            msg = f"Invalid wildcard: {self.value}"
+            raise ValueError(msg)
 
 
 WildcardLike: TypeAlias = "str | Wildcard"
@@ -150,19 +155,21 @@ WildcardLike: TypeAlias = "str | Wildcard"
 
 @dataclass(frozen=True)
 class Topic(Wildcard):
-    """A topic that can be published and subscribed to."""
+    """Validate a topic that can be published and subscribed to."""
 
     def __post_init__(self) -> None:
         """Validate the topic."""
         if not isinstance(self.value, str):
-            raise TypeError("topic must be a string")
+            msg = "topic must be a string"
+            raise TypeError(msg)
         if (
             len(self.value) == 0
-            or len(self.value) > 65535
+            or len(self.value) > MAX_TOPIC_LENGTH
             or "+" in self.value
             or "#" in self.value
         ):
-            raise ValueError(f"Invalid topic: {self.value}")
+            msg = f"Invalid topic: {self.value}"
+            raise ValueError(msg)
 
     def matches(self, wildcard: WildcardLike) -> bool:
         """Check if the topic is matched by a given wildcard."""
@@ -195,7 +202,7 @@ TopicLike: TypeAlias = "str | Topic"
 
 
 class Message:
-    """Custom message class that allows us to use our own Topic class."""
+    """Wrap paho-mqtt message class that allows us to use our own Topic class."""
 
     def __init__(
         self,
@@ -511,9 +518,8 @@ class Client:
         )
         # Early out
         if self._unfiltered_messages_callback is not None:
-            raise RuntimeError(
-                "Only a single unfiltered_messages generator can be used at a time."
-            )
+            msg = "Only a single unfiltered_messages generator can be used at a time."
+            raise RuntimeError(msg)
         callback, generator = self._deprecated_callback_and_generator(
             log_context="unfiltered", queue_maxsize=queue_maxsize
         )
@@ -590,7 +596,8 @@ class Client:
                     # We got disconnected from the broker. Cancel the "get" task.
                     get.cancel()
                     # Stop the generator with the following exception
-                    raise MqttError("Disconnected during message iteration")
+                    msg = "Disconnected during message iteration"
+                    raise MqttError(msg)
 
         return _put_in_queue, _message_generator()
 
@@ -630,7 +637,8 @@ class Client:
                     # We got disconnected from the broker. Cancel the "get" task.
                     get.cancel()
                     # Stop the generator with the following exception
-                    raise MqttError("Disconnected during message iteration")
+                    msg = "Disconnected during message iteration"
+                    raise MqttError(msg)
 
         return _callback, _generator()
 
@@ -640,16 +648,16 @@ class Client:
         try:
             return await asyncio.wait_for(fut, timeout=timeout, **kwargs)
         except asyncio.TimeoutError:
-            raise MqttError("Operation timed out") from None
+            msg = "Operation timed out"
+            raise MqttError(msg) from None
 
     @contextmanager
     def _pending_call(
         self, mid: int, value: T, pending_dict: dict[int, T]
     ) -> Iterator[None]:
         if mid in self._pending_calls:
-            raise RuntimeError(
-                f'There already exists a pending call for message ID "{mid}"'
-            )
+            msg = f'There already exists a pending call for message ID "{mid}"'
+            raise RuntimeError(msg)
         pending_dict[mid] = value  # [1]
         try:
             # Log a warning if there is a concerning number of pending calls
@@ -709,7 +717,7 @@ class Client:
         # fails). In turn, this avoids asyncio debug messages like the
         # following:
         #
-        #   "[asyncio] Future exception was never retrieved"
+        #   `[asyncio] Future exception was never retrieved`
         #
         # See also: https://docs.python.org/3/library/asyncio-dev.html#detect-never-retrieved-exceptions
         if not self._connected.done() or self._connected.exception() is not None:

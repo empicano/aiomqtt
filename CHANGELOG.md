@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update Ruff and fix new lint errors. Contributed by [pre-commit-ci](https://github.com/apps/pre-commit-ci) and [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#161](https://github.com/sbtinstruments/asyncio-mqtt/pull/161)
+- Update tooling. Contributed by [pre-commit-ci](https://github.com/apps/pre-commit-ci) and [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#184](https://github.com/sbtinstruments/asyncio-mqtt/pull/184)
 
 ### Fixed
 
