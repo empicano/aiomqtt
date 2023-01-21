@@ -258,9 +258,7 @@ async def test_client_username_password() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(
-        HOSTNAME, username="asyncio-mqtt", password="012"  # noqa: S106
-    ) as client:
+    async with Client(HOSTNAME, username="", password="") as client:  # noqa: S106
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
@@ -344,11 +342,15 @@ async def test_client_websockets() -> None:
             await client.publish(topic)
 
 
-async def test_client_pending_calls_threshold(caplog: pytest.LogCaptureFixture) -> None:
+@pytest.mark.parametrize("pending_calls_threshold", [10, 20])
+async def test_client_pending_calls_threshold(
+    pending_calls_threshold: int, caplog: pytest.LogCaptureFixture
+) -> None:
     topic = TOPIC_HEADER + "pending_calls_threshold"
 
     async with Client(HOSTNAME) as client:
-        nb_publish = client._pending_calls_threshold + 1
+        client.pending_calls_threshold = pending_calls_threshold
+        nb_publish = client.pending_calls_threshold + 1
 
         async with anyio.create_task_group() as tg:
             for _ in range(nb_publish):
@@ -363,7 +365,9 @@ async def test_client_pending_calls_threshold(caplog: pytest.LogCaptureFixture) 
         ]
 
 
+@pytest.mark.parametrize("pending_calls_threshold", [10, 20])
 async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_calls(
+    pending_calls_threshold: int,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     topic = (
@@ -371,7 +375,8 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
     )
 
     async with Client(HOSTNAME, max_concurrent_outgoing_calls=1) as client:
-        nb_publish = client._pending_calls_threshold + 1
+        client.pending_calls_threshold = pending_calls_threshold
+        nb_publish = client.pending_calls_threshold + 1
 
         async with anyio.create_task_group() as tg:
             for _ in range(nb_publish):
