@@ -10,6 +10,7 @@
     <a href="https://results.pre-commit.ci/latest/github/sbtinstruments/asyncio-mqtt/main"><img alt="pre-commit.ci status" src="https://results.pre-commit.ci/badge/github/sbtinstruments/asyncio-mqtt/main.svg"></a>
     <a href="https://github.com/sbtinstruments/asyncio-mqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a>
     <a href="https://github.com/sbtinstruments/asyncio-mqtt"><img alt="Code Style: Black" src="https://img.shields.io/badge/code%20style-black-black"></a>
+    <a href="https://github.com/charliermarsh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json"></a>
 </p>
 
 <!-- pitch start -->
