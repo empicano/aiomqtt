@@ -2,12 +2,8 @@ name: test suite
 
 on:
   push:
-    branches: [master]
-    paths:
-      - "**.py"
+    branches: [main]
   pull_request:
-    paths:
-      - "**.py"
 
 jobs:
   test:
