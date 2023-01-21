@@ -273,7 +273,7 @@ class Client:
         ] = {}
         self._pending_unsubscribes: dict[int, asyncio.Event] = {}
         self._pending_publishes: dict[int, asyncio.Event] = {}
-        self._pending_calls_threshold: int = 10
+        self.pending_calls_threshold: int = 10
         self._misc_task: asyncio.Task[None] | None = None
 
         # List of all callbacks to call when a message is received
@@ -654,7 +654,7 @@ class Client:
         try:
             # Log a warning if there is a concerning number of pending calls
             pending = len(list(self._pending_calls))
-            if pending > self._pending_calls_threshold:
+            if pending > self.pending_calls_threshold:
                 MQTT_LOGGER.warning(f"There are {pending} pending publish calls.")
             # Back to the caller (run whatever is inside the with statement)
             yield

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move documentation from `README` to Sphinx. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#159](https://github.com/sbtinstruments/asyncio-mqtt/pull/159)
 - Add CI workflow to deploy documentation to GitHub Pages. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#159](https://github.com/sbtinstruments/asyncio-mqtt/pull/159)
 - Add Flow Control options to the Client-Constructor. Contributed by [Andreas Heine (@andreasheine)](https://github.com/andreasheine) in [#180](https://github.com/sbtinstruments/asyncio-mqtt/pull/180)
+- Make `Client.pending_calls_threshold` public. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#185](https://github.com/sbtinstruments/asyncio-mqtt/pull/185)
 
 ## [0.16.1]
 
