@@ -11,7 +11,7 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc: int | mqtt.ReasonCodes | None, *args: Any):
+    def __init__(self, rc: int | mqtt.ReasonCodes | None, *args: Any) -> None:
         super().__init__(*args)
         self.rc = rc
 
@@ -24,7 +24,7 @@ class MqttCodeError(MqttError):
 
 
 class MqttConnectError(MqttCodeError):
-    def __init__(self, rc: int | mqtt.ReasonCodes):
+    def __init__(self, rc: int | mqtt.ReasonCodes) -> None:
         if isinstance(rc, mqtt.ReasonCodes):
             return super().__init__(rc)
         msg = "Connection refused"
