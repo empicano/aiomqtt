@@ -85,7 +85,7 @@ class ProxySettings:
         proxy_rdns: bool | None = True,
         proxy_username: str | None = None,
         proxy_password: str | None = None,
-    ):
+    ) -> None:
         self.proxy_args = {
             "proxy_type": proxy_type,
             "proxy_addr": proxy_addr,
@@ -212,7 +212,7 @@ class Message:
         retain: bool,
         mid: int,
         properties: Properties | None,
-    ):
+    ) -> None:
         self.topic = Topic(topic) if not isinstance(topic, Topic) else topic
         self.payload = payload
         self.qos = qos
@@ -261,7 +261,7 @@ class Client:
         websocket_headers: WebSocketHeaders | None = None,
         max_inflight_messages: int | None = None,
         max_queued_messages: int | None = None,
-    ):
+    ) -> None:
         self._hostname = hostname
         self._port = port
         self._keepalive = keepalive
@@ -741,7 +741,7 @@ class Client:
             if not fut.done():
                 fut.set_result(granted_qos)
         except KeyError:
-            self._logger.error(
+            self._logger.exception(
                 f'Unexpected message ID "{mid}" in on_subscribe callback'
             )
 
@@ -756,7 +756,7 @@ class Client:
         try:
             self._pending_unsubscribes.pop(mid).set()
         except KeyError:
-            self._logger.error(
+            self._logger.exception(
                 f'Unexpected message ID "{mid}" in on_unsubscribe callback'
             )
 

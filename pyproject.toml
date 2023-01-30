@@ -41,7 +41,7 @@ dynamic = ["version"]
 "Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
 
 [project.optional-dependencies]
-lint = ["mypy>=0.991", "ruff==0.0.229", "types-paho-mqtt>=1.6.0.1"]
+lint = ["mypy>=0.991", "ruff==0.0.237", "types-paho-mqtt>=1.6.0.1"]
 format = ["black>=22.10.0"]
 tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
 docs = [
@@ -66,57 +66,42 @@ color_output = true
 profile = "black"
 
 [tool.ruff]
-required-version = "0.0.229"
+required-version = "0.0.237"
 target-version = "py37"
-update-check = false
-select = [
-    "A",   # builtins
-    "B",   # bugbear
-    "C4",  # comprehensions
-    "C90", # mccabe
-    "D",   # docstring
-    "E",   # style errors
-    "EM",  # error messages
-    "ERA", # eradicate
-    "F",   # flakes
-    "I",   # import sorting
-    "ISC", # implicit str concat
-    "ICN", # import conventions
-    "N",   # naming
-    "PGH", # pygrep-hooks
-    "PIE", # pie
-    "PLC", # pylint convention
-    "PLE", # pylint error
-    "PLR", # pylint refactor
-    "PLW", # pylint warning
-    "PT",  # pytest style
-    "Q",   # quotes
-    "RET", # return
-    "RUF", # ruff
-    "S",   # bandit
-    "T10", # debugger
-    "T20", # print
-    "TID", # tidy-imports
-    "UP",  # upgrade
-    "W",   # style warnings
-    "YTT", # sys.version
-]
+select = ["ALL"]
 ignore = [
-    "D10",  # Missing docstring
-    "E501", # Line too long
-    "S101", # Use of `assert` detected
+    "ANN101", # missing-type-self
+    "ANN102", # missing-type-cls
+    "ANN401", # dynamically-typed-expression
+    "ARG001", # unused-function-argument
+    "ARG002", # unused-method-argument
+    "BLE001", # blind-except # TODO: remove when ruff supports our use-case
+    "COM",    # trailing-comma
+    "D10",    # missing-docstring
+    "E501",   # line-too-long
+    "FBT",    # boolean-trap
+    "G004",   # logging-f-string
+    "S101",   # assert-used
+    "SIM105", # use-contextlib-suppress
+    "TCH",    # type-checking
+]
+unfixable = [
+    "ERA001", # commented-out-code
+    "F401",   # unused-import
+    "F841",   # unused-variable
+    "T20",    # print-found
 ]
 task-tags = [
     "SPDX-License-Identifier", # TODO: remove when ruff fix https://github.com/charliermarsh/ruff/issues/2068
 ]
 
-[tool.ruff.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
-convention = "pep257"
-
 [tool.ruff.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
 fixture-parentheses = false
 mark-parentheses = false
 parametrize-names-type = "csv"
+
+[tool.ruff.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
+convention = "pep257"
 
 [tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
 python_version = "3.8"
