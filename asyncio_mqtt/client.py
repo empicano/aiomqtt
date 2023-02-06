@@ -102,6 +102,7 @@ SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tupl
 
 P = ParamSpec("P")
 
+
 # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
@@ -560,6 +561,7 @@ class Client:
     ]:
         # Queue to hold the incoming messages
         messages: asyncio.Queue[mqtt.MQTTMessage] = asyncio.Queue(maxsize=queue_maxsize)
+
         # Callback for the underlying API
         def _put_in_queue(
             client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
