@@ -406,7 +406,9 @@ class Client:
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
         except (OSError, mqtt.WebsocketConnectionError) as error:
             raise MqttError(str(error)) from None
-        await self._wait_for(self._connected, timeout=self.timeout if timeout is None else timeout)
+        await self._wait_for(
+            self._connected, timeout=self.timeout if timeout is None else timeout
+        )
 
     async def disconnect(self, *, timeout: int | float | None = None) -> None:
         rc = self._client.disconnect()
@@ -414,7 +416,9 @@ class Client:
         if rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(rc, "Could not disconnect")
         # Wait for acknowledgement
-        await self._wait_for(self._disconnected, timeout=self.timeout if timeout is None else timeout)
+        await self._wait_for(
+            self._disconnected, timeout=self.timeout if timeout is None else timeout
+        )
 
     async def force_disconnect(self) -> None:
         if not self._disconnected.done():
@@ -443,7 +447,9 @@ class Client:
         ] = asyncio.Future()
         with self._pending_call(mid, callback_result, self._pending_subscribes):
             # Wait for callback_result
-            return await self._wait_for(callback_result, timeout=self.timeout if timeout is None else timeout)
+            return await self._wait_for(
+                callback_result, timeout=self.timeout if timeout is None else timeout
+            )
 
     @_outgoing_call
     async def unsubscribe(
@@ -462,7 +468,10 @@ class Client:
         confirmation = asyncio.Event()
         with self._pending_call(mid, confirmation, self._pending_unsubscribes):
             # Wait for confirmation
-            await self._wait_for(confirmation.wait(), timeout=self.timeout if timeout is None else timeout)
+            await self._wait_for(
+                confirmation.wait(),
+                timeout=self.timeout if timeout is None else timeout,
+            )
 
     @_outgoing_call
     async def publish(
@@ -489,7 +498,10 @@ class Client:
         confirmation = asyncio.Event()
         with self._pending_call(info.mid, confirmation, self._pending_publishes):
             # Wait for confirmation
-            await self._wait_for(confirmation.wait(), timeout=self.timeout if timeout is None else timeout)
+            await self._wait_for(
+                confirmation.wait(),
+                timeout=self.timeout if timeout is None else timeout,
+            )
 
     @asynccontextmanager
     async def filtered_messages(
