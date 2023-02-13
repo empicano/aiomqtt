@@ -250,7 +250,7 @@ class Client:
         will: Will | None = None,
         clean_session: bool | None = None,
         transport: str = "tcp",
-        timeout: int | float = 10,
+        timeout: float | None = None,
         keepalive: int = 60,
         bind_address: str = "",
         bind_port: int = 0,
@@ -361,6 +361,9 @@ class Client:
         if socket_options is None:
             socket_options = ()
         self._socket_options = tuple(socket_options)
+
+        if timeout is None:
+            timeout = 10
         self.timeout = timeout
 
     @property
@@ -382,7 +385,7 @@ class Client:
         yield from self._pending_unsubscribes.keys()
         yield from self._pending_publishes.keys()
 
-    async def connect(self, *, timeout: int | float | None = None) -> None:
+    async def connect(self, *, timeout: float | None = None) -> None:
         try:
             loop = asyncio.get_running_loop()
 
@@ -406,19 +409,15 @@ class Client:
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
         except (OSError, mqtt.WebsocketConnectionError) as error:
             raise MqttError(str(error)) from None
-        await self._wait_for(
-            self._connected, timeout=self.timeout if timeout is None else timeout
-        )
+        await self._wait_for(self._connected, timeout=timeout)
 
-    async def disconnect(self, *, timeout: int | float | None = None) -> None:
+    async def disconnect(self, *, timeout: float | None = None) -> None:
         rc = self._client.disconnect()
         # Early out on error
         if rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(rc, "Could not disconnect")
         # Wait for acknowledgement
-        await self._wait_for(
-            self._disconnected, timeout=self.timeout if timeout is None else timeout
-        )
+        await self._wait_for(self._disconnected, timeout=timeout)
 
     async def force_disconnect(self) -> None:
         if not self._disconnected.done():
@@ -432,7 +431,7 @@ class Client:
         options: mqtt.SubscribeOptions | None = None,
         properties: Properties | None = None,
         *args: Any,
-        timeout: int | float | None = None,
+        timeout: float | None = None,
         **kwargs: Any,
     ) -> tuple[int] | list[mqtt.ReasonCodes]:
         result, mid = self._client.subscribe(
@@ -447,9 +446,7 @@ class Client:
         ] = asyncio.Future()
         with self._pending_call(mid, callback_result, self._pending_subscribes):
             # Wait for callback_result
-            return await self._wait_for(
-                callback_result, timeout=self.timeout if timeout is None else timeout
-            )
+            return await self._wait_for(callback_result, timeout=timeout)
 
     @_outgoing_call
     async def unsubscribe(
@@ -457,7 +454,7 @@ class Client:
         topic: str | list[str],
         properties: Properties | None = None,
         *args: Any,
-        timeout: int | float | None = None,
+        timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
         result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
@@ -468,10 +465,7 @@ class Client:
         confirmation = asyncio.Event()
         with self._pending_call(mid, confirmation, self._pending_unsubscribes):
             # Wait for confirmation
-            await self._wait_for(
-                confirmation.wait(),
-                timeout=self.timeout if timeout is None else timeout,
-            )
+            await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
     async def publish(
@@ -482,7 +476,7 @@ class Client:
         retain: bool = False,
         properties: Properties | None = None,
         *args: Any,
-        timeout: int | float | None = None,
+        timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
         info = self._client.publish(
@@ -498,10 +492,7 @@ class Client:
         confirmation = asyncio.Event()
         with self._pending_call(info.mid, confirmation, self._pending_publishes):
             # Wait for confirmation
-            await self._wait_for(
-                confirmation.wait(),
-                timeout=self.timeout if timeout is None else timeout,
-            )
+            await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @asynccontextmanager
     async def filtered_messages(
@@ -662,6 +653,8 @@ class Client:
     async def _wait_for(
         self, fut: Awaitable[T], timeout: float | None, **kwargs: Any
     ) -> T:
+        if timeout is None:
+            timeout = self.timeout
         try:
             return await asyncio.wait_for(fut, timeout=timeout, **kwargs)
         except asyncio.TimeoutError:
