@@ -41,7 +41,7 @@ dynamic = ["version"]
 "Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
 
 [project.optional-dependencies]
-lint = ["mypy>=0.991", "ruff==0.0.237", "types-paho-mqtt>=1.6.0.1"]
+lint = ["mypy>=0.991", "ruff==0.0.252", "types-paho-mqtt>=1.6.0.1"]
 format = ["black>=22.10.0"]
 tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
 docs = [
@@ -66,7 +66,7 @@ color_output = true
 profile = "black"
 
 [tool.ruff]
-required-version = "0.0.237"
+required-version = "0.0.252"
 target-version = "py37"
 select = ["ALL"]
 ignore = [
@@ -99,6 +99,11 @@ task-tags = [
 fixture-parentheses = false
 mark-parentheses = false
 parametrize-names-type = "csv"
+
+[tool.ruff.per-file-ignores]
+"tests/test_client.py" = [
+    "SLF001", # private-member-access
+]
 
 [tool.ruff.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
 convention = "pep257"

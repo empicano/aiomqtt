@@ -205,7 +205,7 @@ TopicLike: TypeAlias = "str | Topic"
 class Message:
     """Wrap paho-mqtt message class that allows us to use our own Topic class."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         topic: TopicLike,
         payload: PayloadType,
@@ -234,7 +234,7 @@ class Message:
 
 
 class Client:
-    def __init__(  # noqa: C901
+    def __init__(  # noqa: C901, PLR0912, PLR0915
         self,
         hostname: str,
         port: int = 1883,
@@ -371,7 +371,7 @@ class Client:
         We assume that the client ID is a UTF8-encoded string and decode
         it first.
         """
-        return cast(bytes, self._client._client_id).decode()  # type: ignore[attr-defined]
+        return cast(bytes, self._client._client_id).decode()  # type: ignore[attr-defined] # noqa: SLF001
 
     @property
     def _pending_calls(self) -> Generator[int, None, None]:
@@ -463,7 +463,7 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def publish(
+    async def publish(  # noqa: PLR0913
         self,
         topic: str,
         payload: PayloadType = None,
@@ -681,7 +681,7 @@ class Client:
             except KeyError:
                 pass
 
-    def _on_connect(
+    def _on_connect(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -730,7 +730,7 @@ class Client:
         else:
             self._disconnected.set_exception(MqttCodeError(rc, "Unexpected disconnect"))
 
-    def _on_subscribe(
+    def _on_subscribe(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -747,7 +747,7 @@ class Client:
                 f'Unexpected message ID "{mid}" in on_subscribe callback'
             )
 
-    def _on_unsubscribe(
+    def _on_unsubscribe(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -769,7 +769,7 @@ class Client:
         if self._unfiltered_messages_callback is not None:
             self._unfiltered_messages_callback(client, userdata, message)
         # Convert the paho.mqtt message into our own Message type
-        m = Message._from_paho_message(message)
+        m = Message._from_paho_message(message)  # noqa: SLF001
         for callback in self._on_message_callbacks:
             callback(m)
 
@@ -840,7 +840,7 @@ class Client:
         while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:
             await asyncio.sleep(1)
 
-    async def __aenter__(self) -> "Client":
+    async def __aenter__(self) -> Client:
         """Connect to the broker."""
         await self.connect()
         return self

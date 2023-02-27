@@ -26,14 +26,14 @@ class MqttCodeError(MqttError):
 class MqttConnectError(MqttCodeError):
     def __init__(self, rc: int | mqtt.ReasonCodes) -> None:
         if isinstance(rc, mqtt.ReasonCodes):
-            return super().__init__(rc)
+            super().__init__(rc)
+            return
         msg = "Connection refused"
         try:
             msg += f": {_CONNECT_RC_STRINGS[rc]}"
         except KeyError:
             pass
         super().__init__(rc, msg)
-        return None
 
 
 _CONNECT_RC_STRINGS: dict[int, str] = {

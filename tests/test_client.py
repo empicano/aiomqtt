@@ -258,7 +258,7 @@ async def test_client_username_password() -> None:
                 assert message.topic == topic
                 tg.cancel_scope.cancel()
 
-    async with Client(HOSTNAME, username="", password="") as client:  # noqa: S106
+    async with Client(HOSTNAME, username="", password="") as client:
         async with anyio.create_task_group() as tg:
             await client.subscribe(topic)
             tg.start_soon(handle_messages, tg)
@@ -299,7 +299,7 @@ async def test_client_max_concurrent_outgoing_calls(
             assert client._outgoing_calls_sem.locked()
             return super().unsubscribe(topic, properties)
 
-        def publish(
+        def publish(  # noqa: PLR0913
             self,
             topic: str,
             payload: PayloadType | None = None,
