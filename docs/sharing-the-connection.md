@@ -31,9 +31,9 @@ asyncio.run(main())
 
 ## Side by side with web frameworks
 
-Most web frameworks take control over the "main" function, which makes it difficult to figure out where to create and connect the `Client` and how to share this connection.
+Many web frameworks take control over the "main" function, which can make it tricky to figure out where to create and connect the `Client` and how to share this connection.
 
-Some frameworks like [Starlette](https://github.com/encode/starlette) directly support lifespan context managers, with which you can safely set up a global client instance that you can then pass to functions that need it, just like before:
+With [FastAPI](https://github.com/tiangolo/fastapi) (`0.93.0+`) and [Starlette](https://github.com/encode/starlette) you can use lifespan context managers to safely set up a global client instance that you can then pass to functions that need it, just like before:
 
 ```python
 import asyncio
@@ -59,12 +59,8 @@ app = starlette.applications.Starlette(
 )
 ```
 
-FastAPI (which is built upon Starlette) doesn't expose that API yet, but there are [multiple](https://github.com/tiangolo/fastapi/pull/5503) [open PRs](https://github.com/tiangolo/fastapi/pull/2944) to add it. In the meantime, you can work around it via FastAPI's dependency injection.
-
 ## Why can't I `connect`/`disconnect` manually?
 
-Managing a connection by calling `connect` and `disconnect` directly is a bit tricky. For example, when you're disconnecting the client, you'd have to make sure that there's no other task that still relies on the connection. There are many similar situations where something can easily go wrong.
+Managing connections directly by calling `connect` and `disconnect` can be a bit tricky. For instance, when disconnecting the client, you have to ensure that no other task depends on the connection. There are many other similar situations where it's easy to make mistakes. Context managers handle all connection and disconnection logic for you, making them easier and less error-prone than `connect`/`disconnect`.
 
-Context managers take care of all connection and disconnection logic for you, in a way that makes it very difficult to shoot yourself in the foot. They are a lot easier and less error-prone to use than `connect`/`disconnect`.
-
-Supporting both context managers and manual `connect`/`disconnect` would add a lot of complexity to asyncio-mqtt. To keep maintainer burden manageable, we focus only on the preferred option: context managers.
+Supporting both would add a lot of complexity to `asyncio-mqtt`. To keep the maintainer burden manageable, we only focus on context managers.

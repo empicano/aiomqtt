@@ -57,7 +57,7 @@ The whole thing is less than [900 lines of code](https://github.com/sbtinstrumen
 
 ## Installation
 
-asyncio-mqtt can be installed via `pip install asyncio-mqtt`. It requires Python 3.7+ to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
+asyncio-mqtt can be installed via `pip install asyncio-mqtt`. It requires Python `3.7+` to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
 If you can't wait for the latest version and want to install directly from GitHub, use:
 
