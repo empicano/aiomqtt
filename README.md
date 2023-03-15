@@ -75,7 +75,7 @@ if sys.platform.lower() == "win32" or os.name.lower() == "nt":
         set_event_loop_policy,
         WindowsSelectorEventLoopPolicy
     )
-    # set the eventloop
+    # set the event loop
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 # Run your async application as usual
 asyncio.run(main())
