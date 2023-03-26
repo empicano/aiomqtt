@@ -4,7 +4,7 @@ When you run the minimal example for subscribing and listening for messages, you
 
 In case you want to run other code after starting your listener, this is not practical.
 
-You can use `asyncio.TaskGroup` (or `asyncio.gather` for Python < 3.11) to safely run other tasks alongside the MQTT listener:
+You can use `asyncio.TaskGroup` (or `asyncio.gather` for Python `<3.11`) to safely run other tasks alongside the MQTT listener:
 
 ```python
 import asyncio
@@ -43,6 +43,12 @@ This is especially useful if you're using asyncio-mqtt alongside an async web fr
 
 The idea is to use asyncio's `create_task` without `await`ing the created task:
 
+```{caution}
+You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only if we `await` the task. In this case, we explicitly don't.
+
+This means that you need to handle all possible exceptions _inside_ the fire-and-forget task. If you don't, the exception will be silently ignored until the program exits.
+```
+
 ```python
 import asyncio
 import asyncio_mqtt as aiomqtt
@@ -75,8 +81,6 @@ async def main():
 asyncio.run(main())
 ```
 
-You need to be a bit careful with this approach, though. Exceptions raised in asyncio tasks are propagated only if you `await` the task. In this case, you explicitly don't.
-
-This means that you need to handle all possible exceptions _inside_ the fire-and-forget task. If you don't, the exception will be silently ignored until the program exits.
-
-Another thing to note is that you [need to keep a reference to the task](https://docs.python.org/3/library/asyncio-task.html#creating-tasks) so it doesn't get garbage collected mid-execution. That's what we're using the `background_tasks` set in our example for.
+```{important}
+You [need to keep a reference to the task](https://docs.python.org/3/library/asyncio-task.html#creating-tasks) so it doesn't get garbage collected mid-execution. That's what we're using the `background_tasks` set in our example for.
+```

@@ -16,8 +16,8 @@
 
 configuring-the-client
 publishing-and-subscribing
-sharing-the-connection
 listening-without-blocking
+sharing-the-connection
 reconnecting
 stop-listening
 tls

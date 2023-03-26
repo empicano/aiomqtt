@@ -37,7 +37,7 @@ asyncio.run(main())
 
 ## Stop listening after a certain amount of time
 
-For use cases where you only want to listen to messages for a certain amount of time, Python 3.11 introduced a neat feature [called timeouts](https://docs.python.org/3/library/asyncio-task.html#timeouts):
+For use cases where you only want to listen to messages for a certain amount of time, Python 3.11 introduced a neat feature called [timeouts](https://docs.python.org/3/library/asyncio-task.html#timeouts):
 
 ```python
 import asyncio

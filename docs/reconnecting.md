@@ -24,3 +24,9 @@ async def main():
 
 asyncio.run(main())
 ```
+
+## Why can't I `connect`/`disconnect` manually?
+
+Managing connections directly by calling `connect` and `disconnect` can be a bit tricky. For instance, when disconnecting the client, you have to ensure that no other task depends on the connection. There are many other similar situations where it's easy to make mistakes. Context managers handle all connection and disconnection logic for you, making them easier and less error-prone than `connect`/`disconnect`.
+
+Supporting both would add a lot of complexity to asyncio-mqtt. To keep the maintainer burden manageable, we only focus on context managers.

@@ -33,13 +33,24 @@ asyncio.run(main())
 
 Many web frameworks take control over the "main" function, which can make it tricky to figure out where to create and connect the `Client` and how to share this connection.
 
-With [FastAPI](https://github.com/tiangolo/fastapi) (`0.93.0+`) and [Starlette](https://github.com/encode/starlette) you can use lifespan context managers to safely set up a global client instance that you can then pass to functions that need it, just like before:
+With [FastAPI](https://github.com/tiangolo/fastapi) (`0.93+`) and [Starlette](https://github.com/encode/starlette) you can use lifespan context managers to safely set up a global client instance. Here's a minimal working example of FastAPI side by side with an asyncio-mqtt listener task and message publication on `GET /`:
+
+```{note}
+We don't immediately await the listener task in order to avoid blocking the server code, as explained in [](../listening-without-blocking).
+```
 
 ```python
 import asyncio
 import asyncio_mqtt as aiomqtt
 import contextlib
-import starlette.applications
+import fastapi
+
+
+async def listen(client):
+    async with client.messages() as messages:
+        await client.subscribe("humidity/#")
+        async for message in messages:
+            print(message.payload)
 
 
 client = None
@@ -49,18 +60,24 @@ client = None
 async def lifespan(app):
     global client
     async with aiomqtt.Client("test.mosquitto.org") as c:
+        # Make client globally available
         client = c
+        # Start MQTT listener in (unawaited) asyncio task
+        loop = asyncio.get_event_loop()
+        task = loop.create_task(listen(client))
         yield
+        task.cancel()
+        # Wait for the MQTT listener task to be cancelled
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
-app = starlette.applications.Starlette(
-    routes=[],
-    lifespan=lifespan,
-)
+app = fastapi.FastAPI(lifespan=lifespan)
+
+
+@app.get("/")
+async def publish():
+    await client.publish("humidity/outside", 0.38)
 ```
-
-## Why can't I `connect`/`disconnect` manually?
-
-Managing connections directly by calling `connect` and `disconnect` can be a bit tricky. For instance, when disconnecting the client, you have to ensure that no other task depends on the connection. There are many other similar situations where it's easy to make mistakes. Context managers handle all connection and disconnection logic for you, making them easier and less error-prone than `connect`/`disconnect`.
-
-Supporting both would add a lot of complexity to `asyncio-mqtt`. To keep the maintainer burden manageable, we only focus on context managers.

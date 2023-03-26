@@ -86,4 +86,6 @@ async def main():
 asyncio.run(main())
 ```
 
-Note that in our example, messages to `temperature/inside` are handled twice!
+```{note}
+In our example, messages to `temperature/inside` are handled twice!
+```
