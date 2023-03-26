@@ -1,6 +1,6 @@
 # Contributing
 
-Hi there! Thanks for your interest in contributing to _asyncio-mqtt_.
+Hi there! Thanks for your interest in contributing to asyncio-mqtt.
 
 ## Setting up an environment
 
@@ -39,7 +39,7 @@ pre-commit install
 
 ### Visual Studio Code
 
-If you are using VSCode, these are workspace settings and highly recommended extensions to improve developer experience.
+If you are using VSCode, these are workspace settings and highly recommended extensions to improve the developer experience.
 
 ## Testing
 

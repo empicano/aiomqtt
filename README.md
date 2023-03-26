@@ -95,7 +95,7 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 
 We're happy about your contributions to the project!
 
-You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstruments/asyncio-mqtt/blob/main/CHANGELOG.md).
+You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstruments/asyncio-mqtt/blob/main/CONTRIBUTING.md).
 
 ## Versioning
 
