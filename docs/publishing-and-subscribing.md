@@ -35,29 +35,17 @@ asyncio.run(main())
 
 ## Payload encoding
 
-Message payloads can be of types `int`, `float`, `str`, `bytes`, `bytearray`, and `None`.
+MQTT message payloads are transmitted as bytestreams.
 
-asyncio-mqtt (or more precisely, paho-mqtt) automatically converts `int` and `float` payloads to `str`. If you want to send a true `int` or `float`, you can use [`struct.pack()`](https://docs.python.org/3/library/struct.html) to encode it as a `bytes` object.
+asyncio-mqtt accepts payloads of types `int`, `float`, `str`, `bytes`, `bytearray`, and `None`. `int` and `float` payloads are automatically converted to `str` (which is then converted to `bytes`). If you want to send a true `int` or `float`, you can use [`struct.pack()`](https://docs.python.org/3/library/struct.html) to encode it as a `bytes` object. When no payload is specified or when it's set to `None`, a zero-length payload is sent.
 
-If no payload is given or if it's set to `None`, a zero-length payload will be sent.
-
-All other types you'll have to encode yourself. For example, if you want to send a `dict` as JSON, you can use `json.dumps()` (which returns a `str`):
-
-```python
-import asyncio
-import asyncio_mqtt as aiomqtt
-import json
-
-
-async def main():
-    async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.publish("humidity/outside", payload=json.dumps({"humidity": 0.38}))
-
-
-asyncio.run(main())
+```{important}
+If you want to send non-standard types, you have to implement the encoding yourself. For example, to send a `dict` as JSON, you can use `json.dumps()` (which returns a `str`). On the receiving end, you can then use `json.loads()` to decode the JSON string back into a `dict`.
 ```
 
-On the receiving end, you can then use `json.loads()` to decode the JSON string back into a `dict`.
+## Quality of service
+
+## Persistent sessions
 
 ## Filtering messages
 

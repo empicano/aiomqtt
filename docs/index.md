@@ -10,7 +10,6 @@
 ```
 
 ```{toctree}
-:caption: Contents
 :hidden:
 :maxdepth: 2
 

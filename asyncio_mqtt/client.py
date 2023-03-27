@@ -125,7 +125,10 @@ MAX_TOPIC_LENGTH = 65535
 
 @dataclass(frozen=True)
 class Wildcard:
-    """Validate a topic, optionally with wildcards (+ and #). Can only be subscribed to."""
+    """MQTT wildcard that can only be subscribed to.
+
+    A wildcard is similar to a topic, but can optionally contain + and # characters.
+    """
 
     value: str
 
@@ -156,7 +159,7 @@ WildcardLike: TypeAlias = "str | Wildcard"
 
 @dataclass(frozen=True)
 class Topic(Wildcard):
-    """Validate a topic that can be published and subscribed to."""
+    """MQTT topic that can be published and subscribed to."""
 
     def __post_init__(self) -> None:
         """Validate the topic."""
@@ -173,7 +176,7 @@ class Topic(Wildcard):
             raise ValueError(msg)
 
     def matches(self, wildcard: WildcardLike) -> bool:
-        """Check if the topic is matched by a given wildcard."""
+        """Check if the topic matches a given wildcard."""
         if not isinstance(wildcard, Wildcard):
             wildcard = Wildcard(wildcard)
         # Split topics into levels to compare them one by one
