@@ -35,7 +35,7 @@ asyncio.run(main())
 
 ## Payload encoding
 
-MQTT message payloads are transmitted as bytestreams.
+MQTT message payloads are transmitted as byte streams.
 
 asyncio-mqtt accepts payloads of types `int`, `float`, `str`, `bytes`, `bytearray`, and `None`. `int` and `float` payloads are automatically converted to `str` (which is then converted to `bytes`). If you want to send a true `int` or `float`, you can use [`struct.pack()`](https://docs.python.org/3/library/struct.html) to encode it as a `bytes` object. When no payload is specified or when it's set to `None`, a zero-length payload is sent.
 
@@ -58,6 +58,26 @@ The publisher's QoS level defines the reliability of the communication between t
 ```
 
 ## Persistent sessions
+
+Connections to the MQTT broker can be persistent or non-persistent. Persistent sessions are kept alive when the client is offline. This means that the broker stores the client's subscriptions and any messages of QoS 1 and 2 that the client misses or has not yet acknowledged. The broker will then retransmit the messages when the client reconnects.
+
+Session persistence is set when connecting to the broker. To create a persistent session, set the `clean_session` parameter to `False` when creating the client. For a non-persistent session, set `clean_session` to `True`.
+
+```{note}
+The amount of messages that can be queued is limited by the broker's memory. If a client with a persistent session does not come back online for a long time, the broker will eventually run out of memory and start discarding messages.
+```
+
+## Retained messages
+
+Messages can be published with the `retain` parameter set to `True`. The broker relays these messages to all subscribers as usual but also stores the most recent message for the topic. Each new subscriber receives the last retained message for a topic immediately after they subscribe. This can be useful for sending the last good value to a new subscriber without them needing to wait for the next published message.
+
+```{important}
+The broker stores only one retained message per topic. If you publish a new retained message on a topic, the previous retained message is overwritten.
+```
+
+```{note}
+To delete a retained message, simply send a message with zero payload to the topic. However, it’s usually not necessary to delete retained messages, as new retained messages overwrite the previous ones.
+```
 
 ## Filtering messages
 
