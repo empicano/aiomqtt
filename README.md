@@ -1,4 +1,4 @@
-<h1 align="center">The idiomatic asyncio MQTT Client 🙌</h1>
+<h1 align="center">The idiomatic asyncio MQTT client 🙌</h1>
 <p align="center">
     <a href="https://github.com/sbtinstruments/asyncio-mqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/asyncio-mqtt"></a>
     <a href="https://pypi.org/project/asyncio-mqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/asyncio-mqtt"></a>

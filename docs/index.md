@@ -1,4 +1,4 @@
-# The idiomatic asyncio MQTT Client 🙌
+# The idiomatic asyncio MQTT client 🙌
 
 ```{include} ../README.md
 :start-after: <!-- pitch start -->
@@ -11,22 +11,17 @@
 
 ```{toctree}
 :hidden:
-:maxdepth: 2
 
-configuring-the-client
-publishing-and-subscribing
-listening-without-blocking
-sharing-the-connection
-reconnecting
-stop-listening
-tls
-proxying
+connecting-to-the-broker
+publishing-a-message
+subscribing-to-a-topic
+reconnection
+side-by-side-with-web-frameworks
 ```
 
 ```{toctree}
 :caption: Project links
 :hidden:
-:maxdepth: 1
 
 GitHub <https://github.com/sbtinstruments/asyncio-mqtt>
 Issue tracker <https://github.com/sbtinstruments/asyncio-mqtt/issues>
