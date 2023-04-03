@@ -41,8 +41,8 @@ dynamic = ["version"]
 "Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
 
 [project.optional-dependencies]
-lint = ["mypy>=0.991", "ruff==0.0.257", "types-paho-mqtt>=1.6.0.1"]
-format = ["black>=22.10.0"]
+lint = ["mypy>=1.1.1", "ruff==0.0.260", "types-paho-mqtt>=1.6.0.1"]
+format = ["black>=23.3.0"]
 tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
 docs = [
     "sphinx>=5.3.0",
@@ -66,7 +66,7 @@ color_output = true
 profile = "black"
 
 [tool.ruff]
-required-version = "0.0.257"
+required-version = "0.0.260"
 target-version = "py37"
 select = ["ALL"]
 ignore = [
