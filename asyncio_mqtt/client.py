@@ -98,7 +98,10 @@ class ProxySettings:
 # See the overloads of `socket.setsockopt` for details.
 SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
 
-SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
+SubscribeTopic: TypeAlias = (
+    "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]]"
+    " | list[tuple[str, int]]"
+)
 
 P = ParamSpec("P")
 
@@ -234,6 +237,9 @@ class Message:
             mid=message.mid,
             properties=message.properties if hasattr(message, "properties") else None,
         )
+
+    def __lt__(self, other: Message) -> bool:
+        return self.mid < other.mid
 
 
 class Client:
@@ -538,7 +544,10 @@ class Client:
 
     @asynccontextmanager
     async def messages(
-        self, *, queue_maxsize: int = 0
+        self,
+        *,
+        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_maxsize: int = 0,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Return async generator of incoming messages.
 
@@ -546,7 +555,9 @@ class Client:
         incoming messages will be discarded (and a warning is logged).
         If queue_maxsize is less than or equal to zero, the queue size is infinite.
         """
-        callback, generator = self._callback_and_generator(queue_maxsize=queue_maxsize)
+        callback, generator = self._callback_and_generator(
+            queue_class=queue_class, queue_maxsize=queue_maxsize
+        )
         try:
             # Add to the list of callbacks to call when a message is received
             self._on_message_callbacks.append(callback)
@@ -608,10 +619,13 @@ class Client:
         return _put_in_queue, _message_generator()
 
     def _callback_and_generator(
-        self, *, queue_maxsize: int = 0
+        self,
+        *,
+        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_maxsize: int = 0,
     ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
         # Queue to hold the incoming messages
-        messages: asyncio.Queue[Message] = asyncio.Queue(maxsize=queue_maxsize)
+        messages: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
 
         def _callback(message: Message) -> None:
             """Put the new message in the queue."""
