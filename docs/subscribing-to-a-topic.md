@@ -10,7 +10,7 @@ import asyncio_mqtt as aiomqtt
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("humidity/#")
+            await client.subscribe("temperature/#")
             async for message in messages:
                 print(message.payload)
 
@@ -18,9 +18,7 @@ async def main():
 asyncio.run(main())
 ```
 
-```{tip}
-You can set the [Quality of Service](publishing-a-message.md#quality-of-service-qos) of the subscription by passing the `qos` parameter to `subscribe()`.
-```
+Now you can use the [minimal publisher example](publishing-a-message.md) to publish a test message to `temperature/outside` and see it appear in the console.
 
 ````{important}
 Messages are handled _one after another_. If a message takes a long time to handle, other messages are queued and handled only after the first one is done.
@@ -32,7 +30,7 @@ import asyncio
 import asyncio_mqtt as aiomqtt
 
 
-async def process(message):
+async def handle(message):
     await asyncio.sleep(5)  # Simulate some I/O-bound work
     print(message.payload)
 
@@ -40,7 +38,7 @@ async def process(message):
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("humidity/#")
+            await client.subscribe("temperature/#")
             async with asyncio.TaskGroup() as tg:
                 async for message in messages:
                     tg.create_task(process(message))
@@ -52,9 +50,13 @@ asyncio.run(main())
 Note that this only makes sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
 ````
 
+```{tip}
+You can set the [Quality of Service](publishing-a-message.md#quality-of-service-qos) of the subscription by passing the `qos` parameter to `subscribe()`.
+```
+
 ## Filtering messages
 
-Imagine you're measuring temperature and humidity on the outside and inside, and our topics look like this: `temperature/outside`. You want to receive all types of measurements but handle them differently.
+Imagine we measure temperature and humidity on the outside and inside, and our topics look like this: `temperature/outside`. We want to receive all types of measurements but handle them differently.
 
 asyncio-mqtt provides `Topic.matches()` to make this easy:
 
@@ -66,11 +68,12 @@ import asyncio_mqtt as aiomqtt
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("#")
+            await client.subscribe("temperature/#")
+            await client.subscribe("humidity/#")
             async for message in messages:
-                if message.topic.matches("humidity/outside"):
+                if message.topic.matches("humidity/inside"):
                     print(f"[humidity/outside] {message.payload}")
-                if message.topic.matches("+/inside"):
+                if message.topic.matches("+/outside"):
                     print(f"[+/inside] {message.payload}")
                 if message.topic.matches("temperature/#"):
                     print(f"[temperature/#] {message.payload}")
@@ -80,7 +83,7 @@ asyncio.run(main())
 ```
 
 ```{note}
-In our example, messages to `temperature/inside` are handled twice!
+In our example, messages to `temperature/outside` are handled twice!
 ```
 
 ## The message queue
@@ -89,15 +92,18 @@ Messages are buffered in a queue internally. The default queue is `asyncio.Queue
 
 If you want to queue based on priority, you can subclass `asyncio.PriorityQueue`. This queue returns messages in priority order (lowest priority first). In case of ties, messages with lower message identifiers are returned first.
 
+Let's say we measure temperature and humidity again, but we want to prioritize humidity messages:
+
 ```python
 import asyncio
 import asyncio_mqtt as aiomqtt
-import random
 
 
-class PriorityQueue(asyncio.PriorityQueue):
+class CustomPriorityQueue(asyncio.PriorityQueue):
     def _put(self, item):
-        priority = random.randint(0, 999)  # Assign random priorities as example
+        priority = 2
+        if item.topic.matches("humidity/#"):  # Assign priority
+            priority = 1
         super()._put((priority, item))
 
     def _get(self):
@@ -106,7 +112,8 @@ class PriorityQueue(asyncio.PriorityQueue):
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages(queue_class=PriorityQueue) as messages:
+        async with client.messages(queue_class=CustomPriorityQueue) as messages:
+            await client.subscribe("temperature/#")
             await client.subscribe("humidity/#")
             async for message in messages:
                 print(message.payload)
@@ -140,7 +147,7 @@ async def sleep(seconds):
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("humidity/#")
+            await client.subscribe("temperature/#")
             async for message in messages:
                 print(message.payload)
 
@@ -172,7 +179,7 @@ import asyncio_mqtt as aiomqtt
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("humidity/#")
+            await client.subscribe("temperature/#")
             async for message in messages:
                 print(message.payload)
 
@@ -190,7 +197,7 @@ async def main():
 
     # Infinitely do something else (e.g. handling HTTP requests)
     while True:
-        await asyncio.sleep(2)
+        await asyncio.sleep(1)
 
 
 asyncio.run(main())
@@ -212,7 +219,7 @@ import asyncio_mqtt as aiomqtt
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("humidity/#")
+            await client.subscribe("temperature/#")
             async for message in messages:
                 print(message.payload)
 
@@ -247,7 +254,7 @@ import asyncio_mqtt as aiomqtt
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         async with client.messages() as messages:
-            await client.subscribe("humidity/#")
+            await client.subscribe("temperature/#")
             async for message in messages:
                 print(message.payload)
 

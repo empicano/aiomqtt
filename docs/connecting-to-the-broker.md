@@ -1,6 +1,6 @@
 # Connecting to the broker
 
-To publish messages and subscribe to topics, we need to connect to a broker. A minimal working example that publishes a message to the `humidity/outside` topic looks like this:
+To publish messages and subscribe to topics, we need to connect to a broker. A minimal working example that publishes a message to the `temperature/outside` topic looks like this:
 
 ```python
 import asyncio
@@ -9,7 +9,7 @@ import asyncio_mqtt as aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.publish("humidity/outside", payload=0.38)
+        await client.publish("temperature/outside", payload=28.4)
 
 
 asyncio.run(main())
@@ -89,7 +89,7 @@ tls_params = aiomqtt.TLSParameters(
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org", tls_params=tls_params) as client:
-        await client.publish("humidity/outside", payload=0.38)
+        await client.publish("temperature/outside", payload=28.4)
 
 
 asyncio.run(main())
@@ -115,7 +115,7 @@ proxy_params = aiomqtt.ProxySettings(
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org", proxy=proxy_params) as client:
-        await client.publish("humidity/outside", payload=0.38)
+        await client.publish("temperature/outside", payload=28.4)
 
 
 asyncio.run(main())
@@ -126,7 +126,7 @@ asyncio.run(main())
 In many cases, you'll want to send and receive messages in different locations in your code. You could create a new client each time, but:
 
 1. this is not very performant, and
-2. you'll use a lot more network bandwidth.
+2. you'll use more network bandwidth.
 
 You can share the connection by passing the `Client` instance to all functions that need it:
 
@@ -135,18 +135,18 @@ import asyncio
 import asyncio_mqtt as aiomqtt
 
 
-async def publish_humidity(client):
-    await client.publish("humidity/outside", payload=0.38)
-
-
 async def publish_temperature(client):
-    await client.publish("temperature/outside", payload=28.3)
+    await client.publish("temperature/outside", payload=28.4)
+
+
+async def publish_humidity(client):
+    await client.publish("humidity/inside", payload=0.38)
 
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await publish_humidity(client)
         await publish_temperature(client)
+        await publish_humidity(client)
 
 
 asyncio.run(main())

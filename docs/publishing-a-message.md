@@ -9,7 +9,7 @@ import asyncio_mqtt as aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.publish("humidity/outside", payload=0.38)
+        await client.publish("temperature/outside", payload=28.4)
 
 
 asyncio.run(main())
