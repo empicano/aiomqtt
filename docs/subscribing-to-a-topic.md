@@ -85,9 +85,9 @@ In our example, messages to `temperature/inside` are handled twice!
 
 ## The message queue
 
-Messages are buffered in a queue internally. The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass an alternative queue class to the `queue_class` parameter of `messages()`, e.g. the `asyncio.LifoQueue`.
+Messages are buffered in a queue internally. The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to `messages()` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
 
-You can even queue by priority by subclassing `asyncio.PriorityQueue`:
+If you want to queue based on priority, you can subclass `asyncio.PriorityQueue`. This queue returns messages in priority order (lowest priority first). In case of ties, messages with lower message identifiers are returned first.
 
 ```python
 import asyncio
@@ -97,7 +97,7 @@ import random
 
 class PriorityQueue(asyncio.PriorityQueue):
     def _put(self, item):
-        priority = random.randint(0, 999)  # Random priority as example
+        priority = random.randint(0, 999)  # Assign random priorities as example
         super()._put((priority, item))
 
     def _get(self):

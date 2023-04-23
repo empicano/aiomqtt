@@ -1,6 +1,6 @@
 # Connecting to the broker
 
-To publish messages and subscribe to topics, we need to build a connection to the broker. A minimal working example that connects to the public [Mosquitto test server](https://test.mosquitto.org/) and publishes a message to the `humidity/outside` topic looks like this:
+To publish messages and subscribe to topics, we need to connect to a broker. A minimal working example that publishes a message to the `humidity/outside` topic looks like this:
 
 ```python
 import asyncio
@@ -15,8 +15,10 @@ async def main():
 asyncio.run(main())
 ```
 
-```{note}
-The connection to the broker is managed by the `Client` context manager. This approach is easier and less error-prone than manually managing the connection with `connect` and `disconnect` calls. Context managers handle all connection and disconnection logic for you, so that you don't have to worry about things like correctly closing the connection in spite of exceptions.
+The connection to the broker is managed by the `Client` context manager. Context managers handle all connection and disconnection logic for you. asyncio-mqtt doesn't support manual calls to `connect` and `disconnect`.
+
+```{tip}
+The above example uses the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Please use the mosquitto test broker in issues or discussions (if possible) to make it easier for others to run your code.
 ```
 
 ## The client in detail
