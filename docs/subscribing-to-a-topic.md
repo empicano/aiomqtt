@@ -83,6 +83,42 @@ asyncio.run(main())
 In our example, messages to `temperature/inside` are handled twice!
 ```
 
+## The message queue
+
+Messages are buffered in a queue internally. The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass an alternative queue class to the `queue_class` parameter of `messages()`, e.g. the `asyncio.LifoQueue`.
+
+You can even queue by priority by subclassing `asyncio.PriorityQueue`:
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+import random
+
+
+class PriorityQueue(asyncio.PriorityQueue):
+    def _put(self, item):
+        priority = random.randint(0, 999)  # Random priority as example
+        super()._put((priority, item))
+
+    def _get(self):
+        return super()._get()[1]
+
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        async with client.messages(queue_class=PriorityQueue) as messages:
+            await client.subscribe("humidity/#")
+            async for message in messages:
+                print(message.payload)
+
+
+asyncio.run(main())
+```
+
+```{note}
+By default, the size of the queue is unlimited. You can limit it by passing the `queue_maxsize` parameter to `messages()`.
+```
+
 ## Unblocking the listener
 
 When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish. Waiting for messages through the `messages()` generator blocks the execution of everything that comes afterward.
