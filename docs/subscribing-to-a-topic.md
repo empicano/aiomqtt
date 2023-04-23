@@ -22,6 +22,36 @@ asyncio.run(main())
 You can set the [Quality of Service](publishing-a-message.md#quality-of-service-qos) of the subscription by passing the `qos` parameter to `subscribe()`.
 ```
 
+````{important}
+Messages are handled _one after another_. If a message takes a long time to handle, other messages are queued and handled only after the first one is done.
+
+You can handle messages in parallel by using an `asyncio.TaskGroup` like so:
+
+```python
+import asyncio
+import asyncio_mqtt as aiomqtt
+
+
+async def process(message):
+    await asyncio.sleep(5)  # Simulate some I/O-bound work
+    print(message.payload)
+
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        async with client.messages() as messages:
+            await client.subscribe("humidity/#")
+            async with asyncio.TaskGroup() as tg:
+                async for message in messages:
+                    tg.create_task(process(message))
+
+
+asyncio.run(main())
+```
+
+Note that this only makes sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
+````
+
 ## Filtering messages
 
 Imagine you're measuring temperature and humidity on the outside and inside, and our topics look like this: `temperature/outside`. You want to receive all types of measurements but handle them differently.
@@ -53,9 +83,9 @@ asyncio.run(main())
 In our example, messages to `temperature/inside` are handled twice!
 ```
 
-## Listening without blocking
+## Unblocking the listener
 
-When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish until you stop it. Waiting for messages through the `messages()` generator blocks the execution of everything that comes afterward.
+When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish. Waiting for messages through the `messages()` generator blocks the execution of everything that comes afterward.
 
 In case you want to run other code after starting your listener, this is not practical.
 
@@ -80,24 +110,22 @@ async def listen():
 
 
 async def main():
-    async with asyncio.TaskGroup() as group:
-        group.create_task(sleep(2))
-        group.create_task(listen())  # Start listening
-        group.create_task(sleep(3))
-        group.create_task(sleep(1))
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(sleep(2))
+        tg.create_task(listen())  # Start the listener task
+        tg.create_task(sleep(3))
+        tg.create_task(sleep(1))
 
 
 asyncio.run(main())
 ```
 
-### Fire and forget
-
-Another way to avoid blocking the execution is to start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` without `await`ing the created task:
+In case task groups are not an option (e.g. because you run asyncio-mqtt [side by side with a web framework](side-by-side-with-web-frameworks.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` but not `await` the created task:
 
 ```{caution}
-You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only if we `await` the task. In this case, we explicitly don't.
+You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only when we `await` the task. In this case, we explicitly don't.
 
-This means that you need to handle all possible exceptions _inside_ the fire-and-forget task. If you don't, any exceptions will be silently ignored until the program exits.
+This means that you need to handle all possible exceptions _inside_ the fire-and-forget task. Any unhandled exceptions will be silently ignored until the program exits.
 ```
 
 ```python
@@ -171,7 +199,7 @@ async def main():
 asyncio.run(main())
 ```
 
-### Stop listening after a certain amount of time
+## Stop listening after timeout
 
 For use cases where you only want to listen to messages for a certain amount of time, Python `3.11` introduced a neat feature called [timeouts](https://docs.python.org/3/library/asyncio-task.html#timeouts):
 
