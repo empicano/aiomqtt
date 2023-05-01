@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
-from ._version import __version__, __version_tuple__
 from .client import (
     Client,
     Message,
