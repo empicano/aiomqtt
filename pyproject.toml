@@ -1,69 +1,59 @@
-[build-system]
-requires = ["setuptools >= 65", "setuptools-scm >= 7"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "asyncio_mqtt"
-description = "Idiomatic asyncio wrapper around paho-mqtt"
+[tool.poetry]
+name = "aiomqtt-test"
+version = "0.0.0"  # Placeholder: Managed by poetry-dynamic-versioning
+description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
+license = "BSD-3-Clause"
+authors = ["Frederik Aalund <fpa@sbtinstruments.com>"]
+maintainers = ["Felix Böhm <felix@felixboehm.dev>", "Jonathan Plasse <jonathan.plasse@live.fr>"]
 readme = "README.md"
-authors = [{ name = "Frederik Aalund", email = "fpa@sbtinstruments.com" }]
-maintainers = [
-    { name = "Jonathan Plasse", email = "jonathan.plasse@live.fr" },
-    { name = "Felix Böhm", email = "felix@felixboehm.dev" },
-]
-keywords = ["mqtt", "async", "asyncio", "paho-mqtt", "wrapper"]
-license = { text = "BSD 3-Clause License" }
+packages = [{include = "asyncio_mqtt"}]
+repository = "https://github.com/sbtinstruments/asyncio-mqtt"
+documentation = "https://sbtinstruments.github.io/asyncio-mqtt"
+keywords = ["mqtt", "iot", "internet-of-things", "asyncio", "paho-mqtt", "mqttv5"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: MacOS",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: OS Independent",
 ]
-requires-python = ">= 3.7"
-dependencies = [
-    "paho-mqtt>=1.6.0",
-    "typing_extensions>=4.4.0; python_version<'3.10'",
-]
-dynamic = ["version"]
 
-[project.urls]
-"Source code" = "https://github.com/sbtinstruments/asyncio-mqtt"
+[tool.poetry.urls]
 "Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
 
-[project.optional-dependencies]
-lint = ["mypy>=1.3.0", "ruff==0.0.270", "types-paho-mqtt>=1.6.0.6"]
-format = ["black>=23.3.0"]
-tests = ["pytest>=7.2.0", "pytest-cov>=4.0.0", "anyio>=3.6.2"]
-docs = [
-    "sphinx>=5.3.0",
-    "furo>=2022.9.29",
-    "sphinx-autobuild>=2021.3.14",
-    "myst-parser>=0.18.1",
-    "sphinx-copybutton>=0.5.1",
-]
+[tool.poetry.dependencies]
+python = "^3.8"
+paho-mqtt = ">=1.6.0"
+typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.10\""}
 
-[tool.setuptools] # https://setuptools.pypa.io/en/latest/userguide/package_discovery.html
-packages = ["asyncio_mqtt"]
+[tool.poetry.group.dev]
+optional = true
 
-[tool.setuptools_scm] # https://github.com/pypa/setuptools_scm/
-write_to = "asyncio_mqtt/_version.py"
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.3.0"
+ruff = "^0.0.270"
+types-paho-mqtt = "^1.6.0.6"
+black = "^23.3.0"
+pytest = "^7.3.1"
+pytest-cov = "^4.0.0"
+anyio = "^3.6.2"
+sphinx = "^6.2.1"
+furo = "^2023.3.27"
+sphinx-autobuild = "^2021.3.14"
+myst-parser = "^1.0.0"
+sphinx-copybutton = "^0.5.2"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
+strict = true
+metadata = false
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.black] # https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
 target-version = ["py37", "py38", "py39", "py310", "py311"]
-
-[tool.isort] # https://pycqa.github.io/isort/docs/configuration/options.html
-color_output = true
-profile = "black"
 
 [tool.ruff]
 required-version = "0.0.270"
