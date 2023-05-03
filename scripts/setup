@@ -5,5 +5,5 @@ set -o errexit -o pipefail -o nounset
 # Change into the project's directory
 cd "$(dirname "$0")/.."
 
-# Serve the documentation
-poetry run sphinx-autobuild --port 8145 --open-browser docs docs/_build
+# Install the dependencies
+poetry install --with dev
