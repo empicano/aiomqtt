@@ -3,8 +3,7 @@ name = "aiomqtt-test"
 version = "0.0.0"  # Placeholder: Managed by poetry-dynamic-versioning
 description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
 license = "BSD-3-Clause"
-authors = ["Frederik Aalund <fpa@sbtinstruments.com>"]
-maintainers = ["Felix Böhm <felix@felixboehm.dev>", "Jonathan Plasse <jonathan.plasse@live.fr>"]
+authors = ["Frederik Aalund <fpa@sbtinstruments.com>", "Felix Böhm <felix@felixboehm.dev>", "Jonathan Plasse <jonathan.plasse@live.fr>"]
 readme = "README.md"
 packages = [{include = "asyncio_mqtt"}]
 repository = "https://github.com/sbtinstruments/asyncio-mqtt"
@@ -20,9 +19,9 @@ classifiers = [
 "Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 paho-mqtt = ">=1.6.0"
-typing-extensions = {version = ">=4.4.0", markers = "python_version < \"3.10\""}
+typing-extensions = {version = ">=4.4.0", markers = "python_version < '3.10'"}
 
 [tool.poetry.group.dev]
 optional = true
@@ -35,16 +34,16 @@ black = "^23.3.0"
 pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 anyio = "^3.6.2"
-sphinx = "^6.2.1"
 furo = "^2023.3.27"
 sphinx-autobuild = "^2021.3.14"
 myst-parser = "^1.0.0"
 sphinx-copybutton = "^0.5.2"
+sphinx = "^5.3"
 
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-style = "semver"
+style = "pep440"
 strict = true
 metadata = false
 
