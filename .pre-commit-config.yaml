@@ -1,7 +1,7 @@
 fail_fast: true
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.262
+    rev: v0.0.265
     hooks:
       - id: ruff
         args:
@@ -43,4 +43,4 @@ repos:
         additional_dependencies:
           - anyio == 3.6.2
           - pytest == 7.2.0
-          - types-paho-mqtt == 1.6.0.1
+          - types-paho-mqtt == 1.6.0.6
