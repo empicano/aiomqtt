@@ -105,7 +105,7 @@ SubscribeTopic: TypeAlias = (
 )
 
 P = ParamSpec("P")
-S = TypeVar("S", bound="Client")
+S = TypeVar("S", bound="ClientT")
 
 
 # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
@@ -115,7 +115,7 @@ def _outgoing_call(
     method: Callable[Concatenate[S, P], Coroutine[Any, Any, T]]
 ) -> Callable[Concatenate[S, P], Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(self: S, /, *args: P.args, **kwargs: P.kwargs) -> T:
+    async def decorated(self: S, *args: P.args, **kwargs: P.kwargs) -> T:
         if not self._outgoing_calls_sem:
             return await method(self, *args, **kwargs)
 
