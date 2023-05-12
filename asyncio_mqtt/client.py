@@ -20,6 +20,7 @@ from typing import (
     Generator,
     Iterable,
     Iterator,
+    TypeVar,
     cast,
 )
 
@@ -104,16 +105,17 @@ SubscribeTopic: TypeAlias = (
 )
 
 P = ParamSpec("P")
+S = TypeVar("S", bound="Client")
 
 
 # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
-    method: Callable[Concatenate[Client, P], Coroutine[Any, Any, T]]
-) -> Callable[Concatenate[Client, P], Coroutine[Any, Any, T]]:
+    method: Callable[Concatenate[S, P], Coroutine[Any, Any, T]]
+) -> Callable[Concatenate[S, P], Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(self: Client, *args: P.args, **kwargs: P.kwargs) -> T:
+    async def decorated(self: S, /, *args: P.args, **kwargs: P.kwargs) -> T:
         if not self._outgoing_calls_sem:
             return await method(self, *args, **kwargs)
 
