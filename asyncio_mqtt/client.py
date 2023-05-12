@@ -105,17 +105,17 @@ SubscribeTopic: TypeAlias = (
 )
 
 P = ParamSpec("P")
-S = TypeVar("S", bound="ClientT")
+ClientT = TypeVar("ClientT", bound="Client")
 
 
 # TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
-    method: Callable[Concatenate[S, P], Coroutine[Any, Any, T]]
-) -> Callable[Concatenate[S, P], Coroutine[Any, Any, T]]:
+    method: Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]]
+) -> Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(self: S, *args: P.args, **kwargs: P.kwargs) -> T:
+    async def decorated(self: ClientT, *args: P.args, **kwargs: P.kwargs) -> T:
         if not self._outgoing_calls_sem:
             return await method(self, *args, **kwargs)
 
