@@ -32,6 +32,10 @@ from typing import (
 if sys.version_info >= (3, 10):
     from typing import Concatenate, ParamSpec, TypeAlias
 else:
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
     from typing_extensions import Concatenate, ParamSpec, TypeAlias
 
 from contextlib import asynccontextmanager
@@ -860,7 +864,7 @@ class Client:
         while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:
             await asyncio.sleep(1)
 
-    async def __aenter__(self) -> "Client":
+    async def __aenter__(self) -> Self:
         """Connect to the broker."""
         await self.connect()
         return self
