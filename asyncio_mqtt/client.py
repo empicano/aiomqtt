@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: BSD-3-Clause
-from __future__ import annotations
 
 import asyncio
 import functools
@@ -17,10 +16,16 @@ from typing import (
     Awaitable,
     Callable,
     Coroutine,
+    Dict,
     Generator,
     Iterable,
     Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -40,11 +45,11 @@ from .types import PayloadType, T
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
-_PahoSocket: TypeAlias = "socket.socket | ssl.SSLSocket | mqtt.WebsocketWrapper | Any"
+_PahoSocket: TypeAlias = Union[socket.socket, ssl.SSLSocket, mqtt.WebsocketWrapper, Any]
 
-WebSocketHeaders: TypeAlias = (
-    "dict[str, str] | Callable[[dict[str, str]], dict[str, str]]"
-)
+WebSocketHeaders: TypeAlias = Union[
+    Dict[str, str], Callable[[Dict[str, str]], Dict[str, str]]
+]
 
 
 class ProtocolVersion(IntEnum):
@@ -58,22 +63,22 @@ class ProtocolVersion(IntEnum):
 @dataclass(frozen=True)
 class Will:
     topic: str
-    payload: PayloadType | None = None
+    payload: Union[PayloadType, None] = None
     qos: int = 0
     retain: bool = False
-    properties: mqtt.Properties | None = None
+    properties: Union[mqtt.Properties, None] = None
 
 
 # TLS set parameter class
 @dataclass(frozen=True)
 class TLSParameters:
-    ca_certs: str | None = None
-    certfile: str | None = None
-    keyfile: str | None = None
-    cert_reqs: ssl.VerifyMode | None = None
-    tls_version: Any | None = None
-    ciphers: str | None = None
-    keyfile_password: str | None = None
+    ca_certs: Optional[Union[str, None]] = None
+    certfile: Optional[Union[str, None]] = None
+    keyfile: Optional[Union[str, None]] = None
+    cert_reqs: Optional[Union[ssl.VerifyMode, None]] = None
+    tls_version: Optional[Union[Any, None]] = None
+    ciphers: Optional[Union[str, None]] = None
+    keyfile_password: Optional[Union[str, None]] = None
 
 
 # Proxy parameters class
@@ -83,9 +88,9 @@ class ProxySettings:
         *,
         proxy_type: int,
         proxy_addr: str,
-        proxy_rdns: bool | None = True,
-        proxy_username: str | None = None,
-        proxy_password: str | None = None,
+        proxy_rdns: Optional[Union[bool, None]] = True,
+        proxy_username: Optional[Union[str, None]] = None,
+        proxy_password: Optional[Union[str, None]] = None,
     ) -> None:
         self.proxy_args = {
             "proxy_type": proxy_type,
@@ -97,12 +102,16 @@ class ProxySettings:
 
 
 # See the overloads of `socket.setsockopt` for details.
-SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
+SocketOption: TypeAlias = Union[
+    Tuple[int, int, Union[int, bytes]], Tuple[int, int, None, int]
+]
 
-SubscribeTopic: TypeAlias = (
-    "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]]"
-    " | list[tuple[str, int]]"
-)
+SubscribeTopic: TypeAlias = Union[
+    str,
+    Tuple[str, mqtt.SubscribeOptions],
+    List[Tuple[str, mqtt.SubscribeOptions]],
+    List[Tuple[str, int]],
+]
 
 P = ParamSpec("P")
 ClientT = TypeVar("ClientT", bound="Client")
@@ -191,7 +200,7 @@ class Topic(Wildcard):
             # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
             wildcard_levels = wildcard_levels[2:]
 
-        def recurse(x: list[str], y: list[str]) -> bool:
+        def recurse(x: List[str], y: List[str]) -> bool:
             if not x:
                 if not y:
                     return True
@@ -213,14 +222,14 @@ TopicLike: TypeAlias = "str | Topic"
 class Message:
     """Wrap paho-mqtt message class that allows us to use our own Topic class."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         topic: TopicLike,
         payload: PayloadType,
         qos: int,
         retain: bool,
         mid: int,
-        properties: Properties | None,
+        properties: Union[Properties, None],
     ) -> None:
         self.topic = Topic(topic) if not isinstance(topic, Topic) else topic
         self.payload = payload
@@ -230,7 +239,7 @@ class Message:
         self.properties = properties
 
     @classmethod
-    def _from_paho_message(cls, message: mqtt.MQTTMessage) -> Message:
+    def _from_paho_message(cls, message: mqtt.MQTTMessage) -> "Message":
         return cls(
             topic=message.topic,
             payload=message.payload,
@@ -240,7 +249,7 @@ class Message:
             properties=message.properties if hasattr(message, "properties") else None,
         )
 
-    def __lt__(self, other: Message) -> bool:
+    def __lt__(self, other: "Message") -> bool:
         return self.mid < other.mid
 
 
@@ -250,29 +259,29 @@ class Client:
         hostname: str,
         port: int = 1883,
         *,
-        username: str | None = None,
-        password: str | None = None,
-        logger: logging.Logger | None = None,
-        client_id: str | None = None,
-        tls_context: ssl.SSLContext | None = None,
-        tls_params: TLSParameters | None = None,
-        proxy: ProxySettings | None = None,
-        protocol: ProtocolVersion | None = None,
-        will: Will | None = None,
-        clean_session: bool | None = None,
+        username: Optional[Union[str, None]] = None,
+        password: Optional[Union[str, None]] = None,
+        logger: Optional[Union[logging.Logger, None]] = None,
+        client_id: Optional[Union[str, None]] = None,
+        tls_context: Optional[Union[ssl.SSLContext, None]] = None,
+        tls_params: Optional[Union[TLSParameters, None]] = None,
+        proxy: Optional[Union[ProxySettings, None]] = None,
+        protocol: Optional[Union[ProtocolVersion, None]] = None,
+        will: Optional[Union[Will, None]] = None,
+        clean_session: Optional[Union[bool, None]] = None,
         transport: str = "tcp",
         keepalive: int = 60,
         bind_address: str = "",
         bind_port: int = 0,
         clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
-        properties: Properties | None = None,
+        properties: Optional[Union[Properties, None]] = None,
         message_retry_set: int = 20,
-        socket_options: Iterable[SocketOption] | None = None,
-        max_concurrent_outgoing_calls: int | None = None,
-        websocket_path: str | None = None,
-        websocket_headers: WebSocketHeaders | None = None,
-        max_inflight_messages: int | None = None,
-        max_queued_messages: int | None = None,
+        socket_options: Optional[Union[Iterable[SocketOption], None]] = None,
+        max_concurrent_outgoing_calls: Optional[Union[int, None]] = None,
+        websocket_path: Optional[Union[str, None]] = None,
+        websocket_headers: Optional[Union[WebSocketHeaders, None]] = None,
+        max_inflight_messages: Optional[Union[int, None]] = None,
+        max_queued_messages: Optional[Union[int, None]] = None,
     ) -> None:
         self._hostname = hostname
         self._port = port
@@ -282,26 +291,26 @@ class Client:
         self._clean_start = clean_start
         self._properties = properties
         self._loop = asyncio.get_event_loop()
-        self._connected: asyncio.Future[int | mqtt.ReasonCodes] = asyncio.Future()
+        self._connected: asyncio.Future[Union[int, mqtt.ReasonCodes]] = asyncio.Future()
         self._disconnected: asyncio.Future[
-            int | mqtt.ReasonCodes | None
+            Union[int, mqtt.ReasonCodes, None]
         ] = asyncio.Future()
         # Pending subscribe, unsubscribe, and publish calls
-        self._pending_subscribes: dict[
-            int, asyncio.Future[tuple[int] | list[mqtt.ReasonCodes]]
+        self._pending_subscribes: Dict[
+            int, asyncio.Future[Union[Tuple[int], List[mqtt.ReasonCodes]]]
         ] = {}
-        self._pending_unsubscribes: dict[int, asyncio.Event] = {}
-        self._pending_publishes: dict[int, asyncio.Event] = {}
+        self._pending_unsubscribes: Dict[int, asyncio.Event] = {}
+        self._pending_publishes: Dict[int, asyncio.Event] = {}
         self.pending_calls_threshold: int = 10
-        self._misc_task: asyncio.Task[None] | None = None
+        self._misc_task: Union[asyncio.Task[None], None] = None
 
         # List of all callbacks to call when a message is received
-        self._on_message_callbacks: list[Callable[[Message], None]] = []
-        self._unfiltered_messages_callback: Callable[
-            [mqtt.Client, Any, mqtt.MQTTMessage], None
-        ] | None = None
+        self._on_message_callbacks: List[Callable[[Message], None]] = []
+        self._unfiltered_messages_callback: Union[
+            Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None], None
+        ] = None
 
-        self._outgoing_calls_sem: asyncio.Semaphore | None
+        self._outgoing_calls_sem: Union[asyncio.Semaphore, None]
         if max_concurrent_outgoing_calls is not None:
             self._outgoing_calls_sem = asyncio.Semaphore(max_concurrent_outgoing_calls)
         else:
@@ -434,21 +443,17 @@ class Client:
         self,
         topic: SubscribeTopic,
         qos: int = 0,
-        options: mqtt.SubscribeOptions | None = None,
-        properties: Properties | None = None,
-        *args: Any,
+        options: Optional[Union[mqtt.SubscribeOptions, None]] = None,
+        properties: Optional[Union[Properties, None]] = None,
         timeout: int = 10,
-        **kwargs: Any,
-    ) -> tuple[int] | list[mqtt.ReasonCodes]:
-        result, mid = self._client.subscribe(
-            topic, qos, options, properties, *args, **kwargs
-        )
+    ) -> Union[Tuple[int], List[mqtt.ReasonCodes]]:
+        result, mid = self._client.subscribe(topic, qos, options, properties)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(result, "Could not subscribe to topic")
         # Create future for when the on_subscribe callback is called
         callback_result: asyncio.Future[
-            tuple[int] | list[mqtt.ReasonCodes]
+            Union[Tuple[int], List[mqtt.ReasonCodes]]
         ] = asyncio.Future()
         with self._pending_call(mid, callback_result, self._pending_subscribes):
             # Wait for callback_result
@@ -457,13 +462,11 @@ class Client:
     @_outgoing_call
     async def unsubscribe(
         self,
-        topic: str | list[str],
-        properties: Properties | None = None,
-        *args: Any,
+        topic: Union[str, List[str]],
+        properties: Optional[Union[Properties, None]] = None,
         timeout: int = 10,
-        **kwargs: Any,
     ) -> None:
-        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
+        result, mid = self._client.unsubscribe(topic, properties)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
@@ -474,20 +477,16 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def publish(  # noqa: PLR0913
+    async def publish(
         self,
         topic: str,
         payload: PayloadType = None,
         qos: int = 0,
         retain: bool = False,
-        properties: Properties | None = None,
-        *args: Any,
+        properties: Optional[Union[Properties, None]] = None,
         timeout: int = 10,
-        **kwargs: Any,
     ) -> None:
-        info = self._client.publish(
-            topic, payload, qos, retain, properties, *args, **kwargs
-        )  # [2]
+        info = self._client.publish(topic, payload, qos, retain, properties)  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(info.rc, "Could not publish message")
@@ -548,7 +547,7 @@ class Client:
     async def messages(
         self,
         *,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_class: Type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Return async generator of incoming messages.
@@ -571,7 +570,7 @@ class Client:
 
     def _deprecated_callback_and_generator(
         self, *, log_context: str, queue_maxsize: int = 0
-    ) -> tuple[
+    ) -> Tuple[
         Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
         AsyncGenerator[mqtt.MQTTMessage, None],
     ]:
@@ -623,9 +622,9 @@ class Client:
     def _callback_and_generator(
         self,
         *,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_class: Type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
-    ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
+    ) -> Tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
         # Queue to hold the incoming messages
         messages: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
 
@@ -665,7 +664,7 @@ class Client:
         return _callback, _generator()
 
     async def _wait_for(
-        self, fut: Awaitable[T], timeout: float | None, **kwargs: Any
+        self, fut: Awaitable[T], timeout: Union[float, None], **kwargs: Any
     ) -> T:
         try:
             return await asyncio.wait_for(fut, timeout=timeout, **kwargs)
@@ -675,7 +674,7 @@ class Client:
 
     @contextmanager
     def _pending_call(
-        self, mid: int, value: T, pending_dict: dict[int, T]
+        self, mid: int, value: T, pending_dict: Dict[int, T]
     ) -> Iterator[None]:
         if mid in self._pending_calls:
             msg = f'There already exists a pending call for message ID "{mid}"'
@@ -700,13 +699,13 @@ class Client:
             except KeyError:
                 pass
 
-    def _on_connect(  # noqa: PLR0913
+    def _on_connect(
         self,
         client: mqtt.Client,
         userdata: Any,
-        flags: dict[str, int],
-        rc: int | mqtt.ReasonCodes,
-        properties: mqtt.Properties | None = None,
+        flags: Dict[str, int],
+        rc: Union[int, mqtt.ReasonCodes],
+        properties: Optional[Union[mqtt.Properties, None]] = None,
     ) -> None:
         # Return early if already connected. Sometimes, paho-mqtt calls _on_connect
         # multiple times. Maybe because we receive multiple CONNACK messages
@@ -724,8 +723,8 @@ class Client:
         self,
         client: mqtt.Client,
         userdata: Any,
-        rc: int | mqtt.ReasonCodes | None,
-        properties: mqtt.Properties | None = None,
+        rc: Union[int, mqtt.ReasonCodes, None],
+        properties: Optional[Union[mqtt.Properties, None]] = None,
     ) -> None:
         # Return early if the disconnect is already acknowledged.
         # Sometimes (e.g., due to timeouts), paho-mqtt calls _on_disconnect
@@ -749,13 +748,13 @@ class Client:
         else:
             self._disconnected.set_exception(MqttCodeError(rc, "Unexpected disconnect"))
 
-    def _on_subscribe(  # noqa: PLR0913
+    def _on_subscribe(
         self,
         client: mqtt.Client,
         userdata: Any,
         mid: int,
-        granted_qos: tuple[int] | list[mqtt.ReasonCodes],
-        properties: mqtt.Properties | None = None,
+        granted_qos: Union[Tuple[int], List[mqtt.ReasonCodes]],
+        properties: Optional[Union[mqtt.Properties, None]] = None,
     ) -> None:
         try:
             fut = self._pending_subscribes.pop(mid)
@@ -766,13 +765,15 @@ class Client:
                 f'Unexpected message ID "{mid}" in on_subscribe callback'
             )
 
-    def _on_unsubscribe(  # noqa: PLR0913
+    def _on_unsubscribe(
         self,
         client: mqtt.Client,
         userdata: Any,
         mid: int,
-        properties: mqtt.Properties | None = None,
-        reason_codes: list[mqtt.ReasonCodes] | mqtt.ReasonCodes | None = None,
+        properties: Optional[Union[mqtt.Properties, None]] = None,
+        reason_codes: Optional[
+            Union[List[mqtt.ReasonCodes], mqtt.ReasonCodes, None]
+        ] = None,
     ) -> None:
         try:
             self._pending_unsubscribes.pop(mid).set()
@@ -859,16 +860,16 @@ class Client:
         while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:
             await asyncio.sleep(1)
 
-    async def __aenter__(self) -> Client:
+    async def __aenter__(self) -> "Client":
         """Connect to the broker."""
         await self.connect()
         return self
 
     async def __aexit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: TracebackType | None,
+        exc_type: Union[Type[BaseException], None],
+        exc: Union[BaseException, None],
+        tb: Union[TracebackType, None],
     ) -> None:
         """Disconnect from the broker."""
         # Early out if already disconnected...
@@ -892,7 +893,7 @@ class Client:
 
 
 def _set_client_socket_defaults(
-    client_socket: _PahoSocket | None, socket_options: Iterable[SocketOption]
+    client_socket: Union[_PahoSocket, None], socket_options: Iterable[SocketOption]
 ) -> None:
     # Note that socket may be None if, e.g., the username and
     # password combination didn't work. In this case, we return early.
