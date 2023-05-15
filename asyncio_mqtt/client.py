@@ -547,7 +547,7 @@ class Client:
     async def messages(
         self,
         *,
-        queue_class: Type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_class: "Type[asyncio.Queue[Message]]" = asyncio.Queue,
         queue_maxsize: int = 0,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Return async generator of incoming messages.
@@ -622,7 +622,7 @@ class Client:
     def _callback_and_generator(
         self,
         *,
-        queue_class: Type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_class: "Type[asyncio.Queue[Message]]" = asyncio.Queue,
         queue_maxsize: int = 0,
     ) -> Tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
         # Queue to hold the incoming messages
