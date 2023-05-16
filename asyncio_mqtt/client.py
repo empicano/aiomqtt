@@ -282,7 +282,9 @@ class Client:
         self._clean_start = clean_start
         self._properties = properties
         self._loop = asyncio.get_event_loop()
-        self._connected: asyncio.Future[int | mqtt.ReasonCodes] = asyncio.Future()
+        self._connected: asyncio.Future[
+            int | mqtt.ReasonCodes | None
+        ] = asyncio.Future()
         self._disconnected: asyncio.Future[
             int | mqtt.ReasonCodes | None
         ] = asyncio.Future()
@@ -416,6 +418,9 @@ class Client:
         except (OSError, mqtt.WebsocketConnectionError) as error:
             raise MqttError(str(error)) from None
         await self._wait_for(self._connected, timeout=timeout)
+        # If _disconnected is already completed after connecting, reset it.
+        if self._disconnected.done():
+            self._disconnected: asyncio.Future[int | mqtt.ReasonCodes | None] = asyncio.Future()  # type: ignore[no-redef]
 
     async def disconnect(self, *, timeout: int = 10) -> None:
         rc = self._client.disconnect()
@@ -424,6 +429,10 @@ class Client:
             raise MqttCodeError(rc, "Could not disconnect")
         # Wait for acknowledgement
         await self._wait_for(self._disconnected, timeout=timeout)
+        # If _connected is not completed after disconnecting, reset it
+        if not self._connected.done():
+            self._connected.set_result(None)
+            self._connected: asyncio.Future[int | mqtt.ReasonCodes | None] = asyncio.Future()  # type: ignore[no-redef]
 
     async def force_disconnect(self) -> None:
         if not self._disconnected.done():
