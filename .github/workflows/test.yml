@@ -1,4 +1,4 @@
-name: test suite
+name: Run tests
 
 on:
   push:
@@ -22,24 +22,29 @@ jobs:
           - os: windows-latest
             python-version: "3.11"
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: pip-test-${{ matrix.python-version }}-${{ matrix.os }}
+          cache: "poetry"
       - name: Install dependencies
-        run: pip install -e .[lint,tests]
-      - name: Run Ruff
-        run: ruff --format=github .
-      - name: Run mypy
-        run: mypy .
+        run: rm poetry.lock && script/setup # Ignore poetry.lock
+      - name: Run checks
+        run: scripts/check
       - name: Test with pytest
-        run: pytest --cov=asyncio_mqtt --cov=tests --cov-report=xml
+        run: scripts/test
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
@@ -47,7 +52,7 @@ jobs:
           files: ./reports/coverage.xml
       - name: Publish JUnit reports
         uses: mikepenz/action-junit-report@v3
-        if: always() # always run even if the previous step fails
+        if: always() # Always run, even if the previous step fails
         with:
           check_name: Junit reports
           report_paths: "./reports/*.xml"

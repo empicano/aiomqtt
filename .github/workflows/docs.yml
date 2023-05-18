@@ -1,8 +1,8 @@
-name: docs
+name: Build documentation
 
 on:
   push:
-    branches: [main, poetry-and-rename]
+    branches: [main]
     paths:
       - "docs/**"
       - README.md
@@ -22,24 +22,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Set up Python
-        id: setup-python
-        uses: actions/setup-python@v4 # Uses the Python version in the .python-version file
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: "1.4.2"
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
-      - name: Load cached dependencies
-        id: cache
-        uses: actions/cache@v3
+      - name: Set up Python
+        id: setup-python
+        uses: actions/setup-python@v4 # Uses the Python version in .python-version
         with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}
+          cache: "poetry"
       - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
         run: scripts/setup
       - name: Build documentation
         run: poetry run sphinx-build -b html docs docs/_build
