@@ -68,22 +68,51 @@ profile = "black"
 [tool.ruff]
 required-version = "0.0.267"
 target-version = "py37"
-select = ["ALL"]
+select = [
+    "F",   # Pyflakes
+    "E",   # pycodestyle
+    "W",   # pycodestyle
+    "C90", # mccabe
+    "I",   # isort
+    "N",   # pep8-naming
+    "D",   # pydocstyle
+    "UP",  # pyupgrade
+    "YTT", # flake8-2020
+    "ANN", # flake8-annotations
+    "S",   # flake8-bandit
+    "B",   # flake8-bugbear
+    "A",   # flake8-builtins
+    "COM", # flake8-commas
+    "C4",  # flake8-comprehensions
+    "EM",  # flake8-errmsg
+    "ISC", # flake8-implicit-str-concat
+    "ICN", # flake8-import-conventions
+    "INP", # flake8-no-pep420
+    "PIE", # flake8-pie
+    "T20", # flake8-print
+    "PT",  # flake8-pytest-style
+    "RSE", # flake8-raise
+    "RET", # flake8-return
+    "SLF", # flake8-self
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+    "PGH", # pygrep-hooks
+    "PL",  # Pylint
+    "TRY", # tryceratops
+    "RUF", # Ruff-specific rules
+]
 ignore = [
     "ANN101", # missing-type-self
     "ANN102", # missing-type-cls
     "ANN401", # dynamically-typed-expression
-    "ARG001", # unused-function-argument
-    "ARG002", # unused-method-argument
     "BLE001", # blind-except # TODO: remove when ruff supports our use-case
     "COM",    # trailing-comma
     "D10",    # missing-docstring
     "E501",   # line-too-long
-    "FBT",    # boolean-trap
-    "G004",   # logging-f-string
     "S101",   # assert-used
     "SIM105", # use-contextlib-suppress
-    "TCH",    # type-checking
 ]
 unfixable = [
     "ERA001", # commented-out-code
@@ -91,9 +120,7 @@ unfixable = [
     "F841",   # unused-variable
     "T20",    # print-found
 ]
-task-tags = [
-    "SPDX-License-Identifier", # TODO: remove when ruff fix https://github.com/charliermarsh/ruff/issues/2068
-]
+task-tags = ["SPDX-License-Identifier"]
 
 [tool.ruff.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
 fixture-parentheses = false
