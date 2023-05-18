@@ -78,7 +78,7 @@ class TLSParameters:
 
 # Proxy parameters class
 class ProxySettings:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         proxy_type: int,
@@ -99,10 +99,7 @@ class ProxySettings:
 # See the overloads of `socket.setsockopt` for details.
 SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
 
-SubscribeTopic: TypeAlias = (
-    "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]]"
-    " | list[tuple[str, int]]"
-)
+SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
 
 P = ParamSpec("P")
 ClientT = TypeVar("ClientT", bound="Client")
@@ -245,7 +242,7 @@ class Message:
 
 
 class Client:
-    def __init__(  # noqa: C901, PLR0912, PLR0915
+    def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
         self,
         hostname: str,
         port: int = 1883,
@@ -430,7 +427,7 @@ class Client:
             self._disconnected.set_result(None)
 
     @_outgoing_call
-    async def subscribe(
+    async def subscribe(  # noqa: PLR0913
         self,
         topic: SubscribeTopic,
         qos: int = 0,
