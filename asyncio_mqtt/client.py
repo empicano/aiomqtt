@@ -7,7 +7,7 @@ import logging
 import socket
 import ssl
 import sys
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from enum import IntEnum
 from types import TracebackType
@@ -24,18 +24,17 @@ from typing import (
     cast,
 )
 
-if sys.version_info >= (3, 10):
-    from typing import Concatenate, ParamSpec, TypeAlias
-else:
-    from typing_extensions import Concatenate, ParamSpec, TypeAlias
-
-from contextlib import asynccontextmanager
-
 import paho.mqtt.client as mqtt
 from paho.mqtt.properties import Properties
 
 from .error import MqttCodeError, MqttConnectError, MqttError
 from .types import PayloadType, T
+
+if sys.version_info >= (3, 10):
+    from typing import Concatenate, ParamSpec, TypeAlias
+else:
+    from typing_extensions import Concatenate, ParamSpec, TypeAlias
+
 
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
