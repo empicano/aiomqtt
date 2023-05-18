@@ -5,5 +5,6 @@ set -o errexit -o pipefail -o nounset
 # Change into the project's directory
 cd "$(dirname "$0")/.."
 
-# Install the dependencies
-poetry install --with dev --sync
+# Check with ruff and mypy
+poetry run ruff check asyncio_mqtt tests
+poetry run mypy asyncio_mqtt tests
