@@ -17,7 +17,7 @@ class MqttCodeError(MqttError):
 
     def __str__(self) -> str:
         if isinstance(self.rc, mqtt.ReasonCodes):
-            return f"[code:{self.rc.value}] {str(self.rc)}"
+            return f"[code:{self.rc.value}] {self.rc!s}"
         if isinstance(self.rc, int):
             return f"[code:{self.rc}] {mqtt.error_string(self.rc)}"
         return f"[code:{self.rc}] {super().__str__()}"
