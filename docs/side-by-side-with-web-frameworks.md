@@ -4,11 +4,11 @@ MQTT is often used in the context of web servers.
 
 Many web frameworks take control over the main function, which can make it tricky to figure out where to create the `Client` and how to share this connection.
 
-With [FastAPI](https://github.com/tiangolo/fastapi) (`0.93+`) and [Starlette](https://github.com/encode/starlette) you can use lifespan context managers to safely set up a global client instance. Here's a minimal working example of FastAPI side by side with an asyncio-mqtt listener task and message publication on `GET /`:
+With [FastAPI](https://github.com/tiangolo/fastapi) (`0.93+`) and [Starlette](https://github.com/encode/starlette) you can use lifespan context managers to safely set up a global client instance. Here's a minimal working example of FastAPI side by side with an aiomqtt listener task and message publication on `GET /`:
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 import contextlib
 import fastapi
 

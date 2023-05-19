@@ -23,8 +23,8 @@ side-by-side-with-web-frameworks
 :caption: Project links
 :hidden:
 
-GitHub <https://github.com/sbtinstruments/asyncio-mqtt>
-Issue tracker <https://github.com/sbtinstruments/asyncio-mqtt/issues>
-Discussions <https://github.com/sbtinstruments/asyncio-mqtt/discussions>
-PyPI <https://pypi.org/project/asyncio-mqtt/>
+GitHub <https://github.com/sbtinstruments/aiomqtt>
+Issue tracker <https://github.com/sbtinstruments/aiomqtt/issues>
+Discussions <https://github.com/sbtinstruments/aiomqtt/discussions>
+PyPI <https://pypi.org/project/aiomqtt/>
 ```

@@ -1,10 +1,10 @@
 # Subscribing to a topic
 
-To receive messages for a topic, we need to subscribe to it and listen for messages. A minimal working example looks like this:
+To receive messages for a topic, we need to subscribe to it and listen for messages. A minimal working example that listens for messages to the `temperature/#` wildcard looks like this:
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def main():
@@ -18,16 +18,16 @@ async def main():
 asyncio.run(main())
 ```
 
-Now you can use the [minimal publisher example](publishing-a-message.md) to publish a test message to `temperature/outside` and see it appear in the console.
+Now you can use the [minimal publisher example](publishing-a-message.md) to publish a message to `temperature/outside` and see it appear in the console.
 
 ````{important}
-Messages are handled _one after another_. If a message takes a long time to handle, other messages are queued and handled only after the first one is done.
+Messages are handled _one after another_. If a message takes a long time to handle, other [messages are queued](#the-message-queue) and handled only after the first one is done.
 
 You can handle messages in parallel by using an `asyncio.TaskGroup` like so:
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def handle(message):
@@ -58,11 +58,11 @@ You can set the [Quality of Service](publishing-a-message.md#quality-of-service-
 
 Imagine we measure temperature and humidity on the outside and inside, and our topics look like this: `temperature/outside`. We want to receive all types of measurements but handle them differently.
 
-asyncio-mqtt provides `Topic.matches()` to make this easy:
+aiomqtt provides `Topic.matches()` to make this easy:
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def main():
@@ -96,7 +96,7 @@ Let's say we measure temperature and humidity again, but we want to prioritize h
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 class CustomPriorityQueue(asyncio.PriorityQueue):
@@ -126,7 +126,7 @@ asyncio.run(main())
 By default, the size of the queue is unlimited. You can limit it by passing the `queue_maxsize` parameter to `messages()`.
 ```
 
-## Unblocking the listener
+## Listening without blocking
 
 When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish. Waiting for messages through the `messages()` generator blocks the execution of everything that comes afterward.
 
@@ -136,7 +136,7 @@ You can use `asyncio.TaskGroup` (or `asyncio.gather` for Python `<3.11`) to safe
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def sleep(seconds):
@@ -163,7 +163,7 @@ async def main():
 asyncio.run(main())
 ```
 
-In case task groups are not an option (e.g. because you run asyncio-mqtt [side by side with a web framework](side-by-side-with-web-frameworks.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` but not `await` the created task:
+In case task groups are not an option (e.g. because you run aiomqtt [side by side with a web framework](side-by-side-with-web-frameworks.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` but not `await` the created task:
 
 ```{caution}
 You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only when we `await` the task. In this case, we explicitly don't.
@@ -173,7 +173,7 @@ This means that you need to handle all possible exceptions _inside_ the fire-and
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def listen():
@@ -213,7 +213,7 @@ You might want to have a listener task running alongside other code, and then st
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def listen():
@@ -248,7 +248,7 @@ For use cases where you only want to listen to messages for a certain amount of 
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def listen():

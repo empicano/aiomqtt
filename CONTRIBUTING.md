@@ -1,10 +1,10 @@
 # Contributing
 
-Hi there! Thanks for your interest in contributing to asyncio-mqtt.
+We're happy about your contributions to aiomqtt!
 
 ## Setting up an environment
 
-Clone the `asyncio-mqtt` repository.
+Clone the aiomqtt repository
 
 Inside the repository, create a virtual environment:
 
@@ -49,7 +49,7 @@ To test the code use [pytest](https://docs.pytest.org/en/7.1.x/):
 pytest
 ```
 
-To get the full test coverage report of `asyncio-mqtt`, run the following command:
+To get the full test coverage report of aiomqtt, run the following command:
 
 ```bash
 pytest --cov=src --cov=tests --cov-report=html

@@ -11,7 +11,7 @@ The `Client` context is designed to be [reusable (but not reentrant)](https://do
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def main():

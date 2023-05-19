@@ -4,7 +4,7 @@ To publish messages and subscribe to topics, we need to connect to a broker. A m
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def main():
@@ -15,7 +15,7 @@ async def main():
 asyncio.run(main())
 ```
 
-The connection to the broker is managed by the `Client` context manager. Context managers handle all connection and disconnection logic for you. asyncio-mqtt doesn't support manual calls to `connect` and `disconnect`.
+The connection to the broker is managed by the `Client` context manager. Context managers handle all connection and disconnection logic for you. aiomqtt doesn't support manual connect and disconnect calls.
 
 ```{tip}
 The above example uses the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Please use the mosquitto test broker in issues or discussions (if possible) to make it easier for others to run your code.
@@ -26,7 +26,7 @@ The above example uses the public [mosquitto test broker](https://test.mosquitto
 You can configure quite a few things when initializing the client. These are all the possible parameters together with their default values. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python) for more information about the individual parameters.
 
 ```python
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 import paho.mqtt as mqtt
 
 
@@ -76,7 +76,7 @@ You can configure TLS via the `TLSParameters` class. The parameters are directly
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 import ssl
 
 
@@ -104,7 +104,7 @@ You can configure proxying via the `ProxySettings` class. The parameters are dir
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 import socks
 
 
@@ -135,7 +135,7 @@ You can share the connection by passing the `Client` instance to all functions t
 
 ```python
 import asyncio
-import asyncio_mqtt as aiomqtt
+import aiomqtt
 
 
 async def publish_temperature(client):
