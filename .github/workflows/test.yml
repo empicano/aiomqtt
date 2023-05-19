@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: rm poetry.lock && script/setup # Ignore poetry.lock
       - name: Run checks
-        run: scripts/check
+        run: scripts/check --dry
       - name: Test with pytest
         run: scripts/test
       - name: Upload coverage

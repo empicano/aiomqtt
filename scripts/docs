@@ -5,5 +5,28 @@ set -o errexit -o pipefail -o nounset
 # Change into the project's directory
 cd "$(dirname "$0")/.."
 
+# Set defaults
+reload=false
+
+# Parse arguments
+for i in "$@"; do
+  case $i in
+    --reload)
+      reload=true
+      shift
+      ;;
+    --*)
+      echo "Unknown option $i"
+      exit 1
+      ;;
+    *)
+      ;;
+  esac
+done
+
 # Serve the documentation
-poetry run sphinx-autobuild --port 8145 --open-browser docs docs/_build
+if [ "${reload}" = true ]; then
+    poetry run sphinx-autobuild --port 8145 --open-browser docs docs/_build
+else
+    poetry run sphinx-build -b html docs docs/_build
+fi

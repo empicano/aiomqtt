@@ -8,6 +8,7 @@ We're happy about your contributions to aiomqtt!
 - Install the Python version noted in `.python-version` via `pyenv`
 - [Install poetry](https://python-poetry.org/docs/#installation)
 - Install the dependencies with `./scripts/setup`
+- You can run black, ruff, and mypy with `./scripts/check --fix`
 - You can run the tests with `./scripts/test`
 
 Install [pre-commit](https://pre-commit.com/) so that your code is formatted and checked when you are doing a commit:
@@ -23,7 +24,7 @@ If you are using VSCode, these are workspace settings and highly recommended ext
 
 ## The documentation
 
-The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The Markdown source files are located in the `docs` folder. You can build the documentation with `./scripts/docs`.
+The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The Markdown source files are located in the `docs` folder. You can build the documentation with `./scripts/docs --reload`.
 
 ## Committing
 

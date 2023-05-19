@@ -36,7 +36,7 @@ jobs:
       - name: Install dependencies
         run: scripts/setup
       - name: Build documentation
-        run: poetry run sphinx-build -b html docs docs/_build
+        run: scripts/docs
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
