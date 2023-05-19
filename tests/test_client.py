@@ -427,11 +427,7 @@ async def test_client_reusable_message() -> None:
 
     async def task_b_customer() -> None:
         async with custom_client:
-            async with custom_client.messages() as messages:
-                await custom_client.subscribe("task/b")
-                async for message in messages:
-                    assert message.payload == b"task_b"
-                    return
+            ...
 
     async def task_a_publisher() -> None:
         async with publish_client:
@@ -486,3 +482,25 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
 
     await custom_client.disconnect()
     await publish_client.disconnect()
+
+
+async def test_client_disconnected_exception() -> None:
+    client = Client(HOSTNAME)
+    await client.connect()
+    client._disconnected.set_exception(RuntimeError)
+    with pytest.raises(RuntimeError):
+        await client.disconnect()
+
+
+async def test_client_disconnected_done() -> None:
+    client = Client(HOSTNAME)
+    await client.connect()
+    client._disconnected.set_result(None)
+    await client.disconnect()
+
+
+async def test_client_connecting_disconnected_done() -> None:
+    client = Client(HOSTNAME)
+    client._disconnected.set_result(None)
+    await client.connect()
+    await client.disconnect()

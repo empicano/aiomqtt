@@ -447,9 +447,8 @@ class Client:
             raise MqttCodeError(rc, "Could not disconnect")
         # Wait for acknowledgement
         await self._wait_for(self._disconnected, timeout=timeout)
-        # If _connected is not completed after disconnecting, reset it
-        if not self._connected.done():
-            self._connected.set_result(None)
+        # If _connected is still in the completed state after disconnection, reset it
+        if self._connected.done():
             self._connected: asyncio.Future[int | mqtt.ReasonCodes | None] = asyncio.Future()  # type: ignore[no-redef]
 
     async def force_disconnect(self) -> None:
