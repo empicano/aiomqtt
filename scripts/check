@@ -5,6 +5,31 @@ set -o errexit -o pipefail -o nounset
 # Change into the project's directory
 cd "$(dirname "$0")/.."
 
-# Check with ruff and mypy
-poetry run ruff check asyncio_mqtt tests
-poetry run mypy asyncio_mqtt tests
+# Set defaults
+dry=false
+
+# Parse arguments
+for i in "$@"; do
+  case $i in
+    --dry)
+      dry=true
+      shift
+      ;;
+    --*)
+      echo "Unknown option $i"
+      exit 1
+      ;;
+    *)
+      ;;
+  esac
+done
+
+# Run checks
+if [ "${dry}" = true ]; then
+  poetry run black aiomqtt tests
+  poetry run ruff --fix aiomqtt tests
+else
+    poetry run black --check --diff aiomqtt tests
+    poetry run ruff check aiomqtt tests
+fi
+poetry run mypy aiomqtt tests
