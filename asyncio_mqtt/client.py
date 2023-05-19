@@ -213,7 +213,7 @@ TopicLike: TypeAlias = "str | Topic"
 class Message:
     """Wrap paho-mqtt message class that allows us to use our own Topic class."""
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         topic: TopicLike,
         payload: PayloadType,
@@ -501,7 +501,7 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def publish(  # noqa: PLR0913
+    async def publish(
         self,
         topic: str,
         payload: PayloadType = None,
@@ -712,7 +712,7 @@ class Client:
             except KeyError:
                 pass
 
-    def _on_connect(  # noqa: PLR0913
+    def _on_connect(
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -761,7 +761,7 @@ class Client:
         else:
             self._disconnected.set_exception(MqttCodeError(rc, "Unexpected disconnect"))
 
-    def _on_subscribe(  # noqa: PLR0913
+    def _on_subscribe(
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -778,7 +778,7 @@ class Client:
                 f'Unexpected message ID "{mid}" in on_subscribe callback'
             )
 
-    def _on_unsubscribe(  # noqa: PLR0913
+    def _on_unsubscribe(
         self,
         client: mqtt.Client,
         userdata: Any,
