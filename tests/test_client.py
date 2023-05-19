@@ -11,6 +11,7 @@ import paho.mqtt.client as mqtt
 import pytest
 
 from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
+from asyncio_mqtt.error import MqttReentrantError
 from asyncio_mqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
@@ -383,3 +384,105 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
                 tg.start_soon(client.publish, topic)
 
         assert caplog.record_tuples == []
+
+
+async def test_client_not_reentrant() -> None:
+    client = Client(HOSTNAME)
+
+    with pytest.raises(MqttReentrantError):  # noqa: PT012
+        async with client:
+            async with client:
+                ...
+
+
+async def test_client_reusable() -> None:
+    client = Client(HOSTNAME)
+
+    async with client:
+        await client.publish("task/a", "task_a")
+
+    async with client:
+        await client.publish("task/b", "task_b")
+
+
+async def test_client_connect_disconnect() -> None:
+    client = Client(HOSTNAME)
+
+    await client.connect()
+    await client.publish("connect", "connect")
+    await client.disconnect()
+
+
+async def test_client_reusable_message() -> None:
+    custom_client = Client(HOSTNAME)
+    publish_client = Client(HOSTNAME)
+
+    async def task_a_customer() -> None:
+        async with custom_client:
+            async with custom_client.messages() as messages:
+                await custom_client.subscribe("task/a")
+                async for message in messages:
+                    assert message.payload == b"task_a"
+                    return
+
+    async def task_b_customer() -> None:
+        async with custom_client:
+            async with custom_client.messages() as messages:
+                await custom_client.subscribe("task/b")
+                async for message in messages:
+                    assert message.payload == b"task_b"
+                    return
+
+    async def task_a_publisher() -> None:
+        async with publish_client:
+            await publish_client.publish("task/a", "task_a")
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(task_a_customer)
+        await anyio.sleep(1)
+        tg.start_soon(task_a_publisher)
+
+    with pytest.raises(MqttReentrantError):  # noqa: PT012
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(task_a_customer)
+            tg.start_soon(task_b_customer)
+            await anyio.sleep(1)
+            tg.start_soon(task_a_publisher)
+
+
+async def test_client_use_connect_disconnect_multiple_message() -> None:
+    custom_client = Client(HOSTNAME)
+    publish_client = Client(HOSTNAME)
+
+    await custom_client.connect()
+    await publish_client.connect()
+
+    async def task_a_customer() -> None:
+        await custom_client.subscribe("a/b/c")
+        async with custom_client.messages() as messages:
+            async for message in messages:
+                assert message.payload == b"task_a"
+                return
+
+    async def task_b_customer() -> None:
+        num = 0
+        await custom_client.subscribe("qwer")
+        async with custom_client.messages() as messages:
+            async for message in messages:
+                assert message.payload in [b"task_a", b"task_b"]
+                num += 1
+                if num == 2:  # noqa: PLR2004
+                    return
+
+    async def task_publisher(topic: str, payload: PayloadType) -> None:
+        await publish_client.publish(topic, payload)
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(task_a_customer)
+        tg.start_soon(task_b_customer)
+        await anyio.sleep(1)
+        tg.start_soon(task_publisher, "a/b/c", "task_a")
+        tg.start_soon(task_publisher, "qwer", "task_b")
+
+    await custom_client.disconnect()
+    await publish_client.disconnect()

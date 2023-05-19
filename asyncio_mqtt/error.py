@@ -36,6 +36,10 @@ class MqttConnectError(MqttCodeError):
         super().__init__(rc, msg)
 
 
+class MqttReentrantError(MqttError):
+    ...
+
+
 _CONNECT_RC_STRINGS: dict[int, str] = {
     # Reference: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1898
     # 0: Connection successful
