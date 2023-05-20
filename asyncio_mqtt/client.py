@@ -104,7 +104,7 @@ P = ParamSpec("P")
 ClientT = TypeVar("ClientT", bound="Client")
 
 
-# TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
+# TODO(frederik): Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
@@ -369,7 +369,7 @@ class Client:
         self._socket_options = tuple(socket_options)
 
     @property
-    def id(  # noqa: A003 # TODO: When doing BREAKING CHANGES rename to avoid shadowing builtin id
+    def id(  # noqa: A003 # TODO(jonathan): When doing BREAKING CHANGES rename to avoid shadowing builtin id
         self,
     ) -> str:
         """Return the client ID.
