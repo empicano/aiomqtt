@@ -7,7 +7,7 @@ import logging
 import socket
 import ssl
 import sys
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass
 from enum import IntEnum
 from types import TracebackType
@@ -24,18 +24,17 @@ from typing import (
     cast,
 )
 
-if sys.version_info >= (3, 10):
-    from typing import Concatenate, ParamSpec, TypeAlias
-else:
-    from typing_extensions import Concatenate, ParamSpec, TypeAlias
-
-from contextlib import asynccontextmanager
-
 import paho.mqtt.client as mqtt
 from paho.mqtt.properties import Properties
 
 from .error import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
 from .types import PayloadType, T
+
+if sys.version_info >= (3, 10):
+    from typing import Concatenate, ParamSpec, TypeAlias
+else:
+    from typing_extensions import Concatenate, ParamSpec, TypeAlias
+
 
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
@@ -78,7 +77,7 @@ class TLSParameters:
 
 # Proxy parameters class
 class ProxySettings:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         *,
         proxy_type: int,
@@ -99,16 +98,13 @@ class ProxySettings:
 # See the overloads of `socket.setsockopt` for details.
 SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
 
-SubscribeTopic: TypeAlias = (
-    "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]]"
-    " | list[tuple[str, int]]"
-)
+SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
 
 P = ParamSpec("P")
 ClientT = TypeVar("ClientT", bound="Client")
 
 
-# TODO: Simplify the logic that surrounds `self._outgoing_calls_sem` with
+# TODO(frederik): Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
@@ -213,7 +209,7 @@ TopicLike: TypeAlias = "str | Topic"
 class Message:
     """Wrap paho-mqtt message class that allows us to use our own Topic class."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         topic: TopicLike,
         payload: PayloadType,
@@ -245,7 +241,7 @@ class Message:
 
 
 class Client:
-    def __init__(  # noqa: C901, PLR0912, PLR0915
+    def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
         self,
         hostname: str,
         port: int = 1883,
@@ -376,7 +372,7 @@ class Client:
         self._lock: asyncio.Lock = asyncio.Lock()
 
     @property
-    def id(  # noqa: A003 # TODO: When doing BREAKING CHANGES rename to avoid shadowing builtin id
+    def id(  # noqa: A003 # TODO(jonathan): When doing BREAKING CHANGES rename to avoid shadowing builtin id
         self,
     ) -> str:
         """Return the client ID.
@@ -449,7 +445,7 @@ class Client:
             self._disconnected.set_result(None)
 
     @_outgoing_call
-    async def subscribe(
+    async def subscribe(  # noqa: PLR0913
         self,
         topic: SubscribeTopic,
         qos: int = 0,
@@ -493,7 +489,7 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def publish(
+    async def publish(  # noqa: PLR0913
         self,
         topic: str,
         payload: PayloadType = None,
@@ -719,7 +715,7 @@ class Client:
             except KeyError:
                 pass
 
-    def _on_connect(
+    def _on_connect(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -768,7 +764,7 @@ class Client:
         else:
             self._disconnected.set_exception(MqttCodeError(rc, "Unexpected disconnect"))
 
-    def _on_subscribe(
+    def _on_subscribe(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -785,7 +781,7 @@ class Client:
                 f'Unexpected message ID "{mid}" in on_subscribe callback'
             )
 
-    def _on_unsubscribe(
+    def _on_unsubscribe(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,

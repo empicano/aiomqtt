@@ -302,7 +302,7 @@ async def test_client_max_concurrent_outgoing_calls(
             assert client._outgoing_calls_sem.locked()
             return super().unsubscribe(topic, properties)
 
-        def publish(
+        def publish(  # noqa: PLR0913
             self,
             topic: str,
             payload: PayloadType | None = None,
