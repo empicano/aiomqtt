@@ -9,6 +9,8 @@ import anyio
 import anyio.abc
 import paho.mqtt.client as mqtt
 import pytest
+from anyio import TASK_STATUS_IGNORED
+from anyio.abc import TaskStatus
 
 from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
 from asyncio_mqtt.error import MqttReentrantError
@@ -417,10 +419,11 @@ async def test_client_reusable_message() -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
 
-    async def task_a_customer() -> None:
+    async def task_a_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
         async with custom_client:
             async with custom_client.messages() as messages:
                 await custom_client.subscribe("task/a")
+                task_status.started()
                 async for message in messages:
                     assert message.payload == b"task_a"
                     return
@@ -434,13 +437,12 @@ async def test_client_reusable_message() -> None:
             await publish_client.publish("task/a", "task_a")
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(task_a_customer)
-        await anyio.sleep(1)
+        await tg.start(task_a_customer)
         tg.start_soon(task_a_publisher)
 
     with pytest.raises(MqttReentrantError):  # noqa: PT012
         async with anyio.create_task_group() as tg:
-            tg.start_soon(task_a_customer)
+            await tg.start(task_a_customer)
             tg.start_soon(task_b_customer)
             await anyio.sleep(1)
             tg.start_soon(task_a_publisher)
@@ -453,17 +455,19 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
     await custom_client.connect()
     await publish_client.connect()
 
-    async def task_a_customer() -> None:
+    async def task_a_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
         await custom_client.subscribe("a/b/c")
         async with custom_client.messages() as messages:
+            task_status.started()
             async for message in messages:
                 assert message.payload == b"task_a"
                 return
 
-    async def task_b_customer() -> None:
+    async def task_b_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
         num = 0
         await custom_client.subscribe("qwer")
         async with custom_client.messages() as messages:
+            task_status.started()
             async for message in messages:
                 assert message.payload in [b"task_a", b"task_b"]
                 num += 1
@@ -474,9 +478,8 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
         await publish_client.publish(topic, payload)
 
     async with anyio.create_task_group() as tg:
-        tg.start_soon(task_a_customer)
-        tg.start_soon(task_b_customer)
-        await anyio.sleep(1)
+        await tg.start(task_a_customer)
+        await tg.start(task_b_customer)
         tg.start_soon(task_publisher, "a/b/c", "task_a")
         tg.start_soon(task_publisher, "qwer", "task_b")
 

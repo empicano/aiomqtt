@@ -428,7 +428,7 @@ class Client:
         await self._wait_for(self._connected, timeout=timeout)
         # If _disconnected is already completed after connecting, reset it.
         if self._disconnected.done():
-            self._disconnected: asyncio.Future[int | mqtt.ReasonCodes | None] = asyncio.Future()  # type: ignore[no-redef]
+            self._disconnected = asyncio.Future()
 
     async def disconnect(self, *, timeout: int = 10) -> None:
         """Disconnect from the broker."""
@@ -449,9 +449,9 @@ class Client:
         await self._wait_for(self._disconnected, timeout=timeout)
         # If _connected is still in the completed state after disconnection, reset it
         if self._connected.done():
-            self._connected: asyncio.Future[int | mqtt.ReasonCodes | None] = asyncio.Future()  # type: ignore[no-redef]
+            self._connected = asyncio.Future()
 
-    async def force_disconnect(self) -> None:
+    def _force_disconnect(self) -> None:
         if not self._disconnected.done():
             self._disconnected.set_result(None)
 
@@ -894,8 +894,8 @@ class Client:
                 f'Could not gracefully disconnect due to "{error}". Forcing'
                 " disconnection."
             )
-            await self.force_disconnect()
         finally:
+            self._force_disconnect()
             self._lock.release()
 
 
