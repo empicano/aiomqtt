@@ -111,8 +111,8 @@ class CustomPriorityQueue(asyncio.PriorityQueue):
 
 
 async def main():
-    async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages(queue_class=CustomPriorityQueue) as messages:
+    async with aiomqtt.Client("test.mosquitto.org", message_queue_class=CustomPriorityQueue) as client:
+        async with client.messages() as messages:
             await client.subscribe("temperature/#")
             await client.subscribe("humidity/#")
             async for message in messages:

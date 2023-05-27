@@ -1,16 +1,26 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import ssl
 import sys
 from pathlib import Path
+from typing import Any
 
 import anyio
 import anyio.abc
 import paho.mqtt.client as mqtt
 import pytest
 
-from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
+from asyncio_mqtt import (
+    Client,
+    Message,
+    ProtocolVersion,
+    TLSParameters,
+    Topic,
+    Wildcard,
+    Will,
+)
 from asyncio_mqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
@@ -383,3 +393,49 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
                 tg.start_soon(client.publish, topic)
 
         assert caplog.record_tuples == []
+
+
+async def test_client_default_message_queue_class() -> None:
+    expect_message_list = [b"1", b"2", b"3"]
+    result_message_list = []
+    async with Client(HOSTNAME, message_queue_class=asyncio.Queue) as client:
+        async with client.messages() as messages:
+            await client.subscribe("msg/queue")
+            await client.publish("msg/queue", payload=1)
+            await client.publish("msg/queue", payload=2)
+            await client.publish("msg/queue", payload=3)
+            async for message in messages:
+                result_message_list.append(message.payload)
+                if len(result_message_list) == 3:  # noqa: PLR2004
+                    assert result_message_list == expect_message_list
+                    return
+
+
+async def test_client_priority_queue_class() -> None:
+    class CustomPriorityQueue(asyncio.PriorityQueue):  # type: ignore[type-arg]
+        def _put(self, item: Message) -> None:
+            priority = 2
+            if item.topic.matches("humidity/#"):  # Assign priority
+                priority = 1
+            super()._put((priority, item))
+
+        def _get(self) -> Any:
+            return super()._get()[1]
+
+    expect_message_list = [b"1", b"3", b"2"]
+    result_message_list = []
+    async with Client(HOSTNAME, message_queue_class=CustomPriorityQueue) as client:
+        async with client.messages() as messages:
+            await client.subscribe("temperature/#")
+            await client.subscribe("humidity/#")
+            await client.publish("temperature/outside", payload=1)
+            await client.publish("temperature/outside", payload=2)
+            await client.publish("humidity/outside", payload=3)
+            async for message in messages:
+                await asyncio.sleep(
+                    0.1
+                )  # Simulate message blocking, convenient for testing priority.
+                result_message_list.append(message.payload)
+                if len(result_message_list) == 3:  # noqa: PLR2004
+                    assert result_message_list == expect_message_list
+                    return

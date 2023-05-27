@@ -269,6 +269,10 @@ class Client:
         websocket_headers: WebSocketHeaders | None = None,
         max_inflight_messages: int | None = None,
         max_queued_messages: int | None = None,
+        message_queue_class: type[
+            asyncio.Queue[Message | mqtt.MQTTMessage]
+        ] = asyncio.Queue,
+        message_queue_maxsize: int = 0,
     ) -> None:
         self._hostname = hostname
         self._port = port
@@ -367,6 +371,9 @@ class Client:
         if socket_options is None:
             socket_options = ()
         self._socket_options = tuple(socket_options)
+        self._message_queue_class: asyncio.Queue[
+            Message | mqtt.MQTTMessage
+        ] = message_queue_class(message_queue_maxsize)
 
     @property
     def id(  # noqa: A003 # TODO(jonathan): When doing BREAKING CHANGES rename to avoid shadowing builtin id
@@ -498,7 +505,7 @@ class Client:
 
     @asynccontextmanager
     async def filtered_messages(
-        self, topic_filter: str, *, queue_maxsize: int = 0
+        self, topic_filter: str
     ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
         """Return async generator of messages that match the given filter."""
         self._logger.warning(
@@ -506,7 +513,7 @@ class Client:
             " Use messages() together with Topic.matches() instead."
         )
         callback, generator = self._deprecated_callback_and_generator(
-            log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
+            log_context=f'topic_filter="{topic_filter}"'
         )
         try:
             self._client.message_callback_add(topic_filter, callback)
@@ -518,7 +525,7 @@ class Client:
 
     @asynccontextmanager
     async def unfiltered_messages(
-        self, *, queue_maxsize: int = 0
+        self,
     ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
         """Return async generator of all messages that are not caught in filters."""
         self._logger.warning(
@@ -530,7 +537,7 @@ class Client:
             msg = "Only a single unfiltered_messages generator can be used at a time."
             raise RuntimeError(msg)
         callback, generator = self._deprecated_callback_and_generator(
-            log_context="unfiltered", queue_maxsize=queue_maxsize
+            log_context="unfiltered"
         )
         try:
             self._unfiltered_messages_callback = callback
@@ -543,9 +550,6 @@ class Client:
     @asynccontextmanager
     async def messages(
         self,
-        *,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
-        queue_maxsize: int = 0,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Return async generator of incoming messages.
 
@@ -553,9 +557,7 @@ class Client:
         incoming messages will be discarded (and a warning is logged).
         If queue_maxsize is less than or equal to zero, the queue size is infinite.
         """
-        callback, generator = self._callback_and_generator(
-            queue_class=queue_class, queue_maxsize=queue_maxsize
-        )
+        callback, generator = self._callback_and_generator()
         try:
             # Add to the list of callbacks to call when a message is received
             self._on_message_callbacks.append(callback)
@@ -566,20 +568,17 @@ class Client:
             self._on_message_callbacks.remove(callback)
 
     def _deprecated_callback_and_generator(
-        self, *, log_context: str, queue_maxsize: int = 0
+        self, *, log_context: str
     ) -> tuple[
         Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
         AsyncGenerator[mqtt.MQTTMessage, None],
     ]:
-        # Queue to hold the incoming messages
-        messages: asyncio.Queue[mqtt.MQTTMessage] = asyncio.Queue(maxsize=queue_maxsize)
-
         # Callback for the underlying API
         def _put_in_queue(
             client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
         ) -> None:
             try:
-                messages.put_nowait(message)
+                self._message_queue_class.put_nowait(message)
             except asyncio.QueueFull:
                 self._logger.warning(
                     f"[{log_context}] Message queue is full. Discarding message."
@@ -592,9 +591,7 @@ class Client:
                 # Wait until we either:
                 #  1. Receive a message
                 #  2. Disconnect from the broker
-                get: asyncio.Task[mqtt.MQTTMessage] = self._loop.create_task(
-                    messages.get()
-                )
+                get: asyncio.Task[mqtt.MQTTMessage] = self._loop.create_task(self._message_queue_class.get())  # type: ignore[arg-type]
                 try:
                     done, _ = await asyncio.wait(
                         (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
@@ -618,17 +615,11 @@ class Client:
 
     def _callback_and_generator(
         self,
-        *,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
-        queue_maxsize: int = 0,
     ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
-        # Queue to hold the incoming messages
-        messages: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
-
         def _callback(message: Message) -> None:
             """Put the new message in the queue."""
             try:
-                messages.put_nowait(message)
+                self._message_queue_class.put_nowait(message)
             except asyncio.QueueFull:
                 self._logger.warning("Message queue is full. Discarding message.")
 
@@ -638,7 +629,7 @@ class Client:
                 # Wait until we either:
                 #  1. Receive a message
                 #  2. Disconnect from the broker
-                get: asyncio.Task[Message] = self._loop.create_task(messages.get())
+                get: asyncio.Task[Message] = self._loop.create_task(self._message_queue_class.get())  # type: ignore[arg-type]
                 try:
                     done, _ = await asyncio.wait(
                         (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
