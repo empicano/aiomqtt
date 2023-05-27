@@ -425,12 +425,12 @@ async def test_client_priority_queue_class() -> None:
     expect_message_list = [b"1", b"3", b"2"]
     result_message_list = []
     async with Client(HOSTNAME, message_queue_class=CustomPriorityQueue) as client:
+        await client.subscribe("customPriorityQueue/#")
+        await client.subscribe("PriorityQueue/#")
+        await client.publish("customPriorityQueue/outside", payload=1)
+        await client.publish("customPriorityQueue/outside", payload=2)
+        await client.publish("PriorityQueue/outside", payload=3)
         async with client.messages() as messages:
-            await client.subscribe("customPriorityQueue/#")
-            await client.subscribe("PriorityQueue/#")
-            await client.publish("customPriorityQueue/outside", payload=1)
-            await client.publish("customPriorityQueue/outside", payload=2)
-            await client.publish("PriorityQueue/outside", payload=3)
             async for message in messages:
                 await asyncio.sleep(
                     0.5
