@@ -415,7 +415,7 @@ async def test_client_priority_queue_class() -> None:
     class CustomPriorityQueue(asyncio.PriorityQueue):  # type: ignore[type-arg]
         def _put(self, item: Message) -> None:
             priority = 2
-            if item.topic.matches("humidity/#"):  # Assign priority
+            if item.topic.matches("PriorityQueue/#"):  # Assign priority
                 priority = 1
             super()._put((priority, item))
 
@@ -426,14 +426,14 @@ async def test_client_priority_queue_class() -> None:
     result_message_list = []
     async with Client(HOSTNAME, message_queue_class=CustomPriorityQueue) as client:
         async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            await client.subscribe("humidity/#")
-            await client.publish("temperature/outside", payload=1)
-            await client.publish("temperature/outside", payload=2)
-            await client.publish("humidity/outside", payload=3)
+            await client.subscribe("customPriorityQueue/#")
+            await client.subscribe("PriorityQueue/#")
+            await client.publish("customPriorityQueue/outside", payload=1)
+            await client.publish("customPriorityQueue/outside", payload=2)
+            await client.publish("PriorityQueue/outside", payload=3)
             async for message in messages:
                 await asyncio.sleep(
-                    0.1
+                    0.5
                 )  # Simulate message blocking, convenient for testing priority.
                 result_message_list.append(message.payload)
                 if len(result_message_list) == 3:  # noqa: PLR2004
