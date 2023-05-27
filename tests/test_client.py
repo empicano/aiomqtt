@@ -399,11 +399,11 @@ async def test_client_default_message_queue_class() -> None:
     expect_message_list = [b"1", b"2", b"3"]
     result_message_list = []
     async with Client(HOSTNAME, message_queue_class=asyncio.Queue) as client:
+        await client.subscribe("msg/queue")
+        await client.publish("msg/queue", payload=1)
+        await client.publish("msg/queue", payload=2)
+        await client.publish("msg/queue", payload=3)
         async with client.messages() as messages:
-            await client.subscribe("msg/queue")
-            await client.publish("msg/queue", payload=1)
-            await client.publish("msg/queue", payload=2)
-            await client.publish("msg/queue", payload=3)
             async for message in messages:
                 result_message_list.append(message.payload)
                 if len(result_message_list) == 3:  # noqa: PLR2004
