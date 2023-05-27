@@ -26,6 +26,7 @@ The above example uses the public [mosquitto test broker](https://test.mosquitto
 You can configure quite a few things when initializing the client. These are all the possible parameters together with their default values. See [paho-mqtt's documentation](https://github.com/eclipse/paho.mqtt.python) for more information about the individual parameters.
 
 ```python
+import asyncio
 import asyncio_mqtt as aiomqtt
 import paho.mqtt as mqtt
 
@@ -54,6 +55,10 @@ aiomqtt.Client(
     max_concurrent_outgoing_calls=None,
     websocket_path=None,
     websocket_headers=None,
+    max_inflight_messages=None,
+    max_queued_messages=None,
+    message_queue_class=asyncio.Queue,
+    message_queue_maxsize=0,
 )
 ```
 
