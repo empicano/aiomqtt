@@ -22,6 +22,7 @@ from asyncio_mqtt import (
     Will,
 )
 from asyncio_mqtt.types import PayloadType
+from tests.utils import generate_random_string
 
 pytestmark = pytest.mark.anyio
 
@@ -396,13 +397,14 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
 
 
 async def test_client_default_message_queue_class() -> None:
+    topic = generate_random_string(5) + "/queue"
     expect_message_list = [b"1", b"2", b"3"]
     result_message_list = []
     async with Client(HOSTNAME, message_queue_class=asyncio.Queue) as client:
-        await client.subscribe("msg/queue")
-        await client.publish("msg/queue", payload=1)
-        await client.publish("msg/queue", payload=2)
-        await client.publish("msg/queue", payload=3)
+        await client.subscribe(topic)
+        await client.publish(topic, payload=1)
+        await client.publish(topic, payload=2)
+        await client.publish(topic, payload=3)
         async with client.messages() as messages:
             async for message in messages:
                 result_message_list.append(message.payload)
@@ -412,10 +414,13 @@ async def test_client_default_message_queue_class() -> None:
 
 
 async def test_client_priority_queue_class() -> None:
+    topic1 = generate_random_string(7)
+    topic2 = generate_random_string(8)
+
     class CustomPriorityQueue(asyncio.PriorityQueue):  # type: ignore[type-arg]
         def _put(self, item: Message) -> None:
             priority = 2
-            if item.topic.matches("PriorityQueue/#"):  # Assign priority
+            if item.topic.matches(topic2 + "/#"):  # Assign priority
                 priority = 1
             super()._put((priority, item))
 
@@ -425,11 +430,11 @@ async def test_client_priority_queue_class() -> None:
     expect_message_list = [b"1", b"3", b"2"]
     result_message_list = []
     async with Client(HOSTNAME, message_queue_class=CustomPriorityQueue) as client:
-        await client.subscribe("customPriorityQueue/#")
-        await client.subscribe("PriorityQueue/#")
-        await client.publish("customPriorityQueue/outside", payload=1)
-        await client.publish("customPriorityQueue/outside", payload=2)
-        await client.publish("PriorityQueue/outside", payload=3)
+        await client.subscribe(topic1 + "/#")
+        await client.subscribe(topic2 + "/#")
+        await client.publish(topic1 + "/outside", payload=1)
+        await client.publish(topic1 + "/outside", payload=2)
+        await client.publish(topic2 + "/outside", payload=3)
         async with client.messages() as messages:
             async for message in messages:
                 await asyncio.sleep(
