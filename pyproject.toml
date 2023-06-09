@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "aiomqtt-test"
+name = "aiomqtt"
 version = "0.0.0"  # Placeholder: Managed by poetry-dynamic-versioning
 description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
 license = "BSD-3-Clause"
 authors = ["Frederik Aalund <fpa@sbtinstruments.com>", "Felix Böhm <felix@felixboehm.dev>", "Jonathan Plasse <jonathan.plasse@live.fr>"]
 readme = "README.md"
-packages = [{include = "asyncio_mqtt"}]
-repository = "https://github.com/sbtinstruments/asyncio-mqtt"
-documentation = "https://sbtinstruments.github.io/asyncio-mqtt"
+packages = [{include = "aiomqtt"}]
+repository = "https://github.com/sbtinstruments/aiomqtt"
+documentation = "https://sbtinstruments.github.io/aiomqtt"
 keywords = ["mqtt", "iot", "internet-of-things", "asyncio", "paho-mqtt", "mqttv5"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -16,12 +16,12 @@ classifiers = [
 ]
 
 [tool.poetry.urls]
-"Issue tracker" = "https://github.com/sbtinstruments/asyncio-mqtt/issues"
+"Issue tracker" = "https://github.com/sbtinstruments/aiomqtt/issues"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-paho-mqtt = ">=1.6.0"
-typing-extensions = {version = ">=4.4.0", markers = "python_version < '3.10'"}
+paho-mqtt = "^1.6.0"
+typing-extensions = {version = "^4.4.0", markers = "python_version < '3.10'"}
 
 [tool.poetry.group.dev]
 optional = true

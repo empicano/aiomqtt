@@ -8,7 +8,7 @@
 
 project = "aiomqtt"
 copyright = "2022"  # noqa: A001
-author = "Felix Böhm, Frederik Aalund, Jonathan Plasse"
+author = "Frederik Aalund, Felix Böhm, Jonathan Plasse"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

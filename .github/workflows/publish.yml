@@ -3,7 +3,6 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  pull_request:
 
 jobs:
   publish:
@@ -12,15 +11,15 @@ jobs:
       run:
         shell: bash
     environment:
-      name: test-pypi
-      url: https://test.pypi.org/project/aiomqtt-test
+      name: pypi
+      url: https://pypi.org/project/aiomqtt
     permissions:
       id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 # Fetch entire history for poetry-dynamic-versioning
+          fetch-depth: 0 # Fetch entire history for poetry-dynamic-versioning, see: https://github.com/mtkennerly/poetry-dynamic-versioning/issues/55
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
@@ -28,7 +27,6 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
       - name: Set up Python
-        id: setup-python
         uses: actions/setup-python@v4 # Uses the Python version in .python-version
         with:
           cache: "poetry"
@@ -36,9 +34,5 @@ jobs:
         run: poetry self add "poetry-dynamic-versioning[plugin]"
       - name: Build package
         run: poetry build
-      # - name: Publish to PyPI
-      #  uses: pypa/gh-action-pypi-publish@release/v1
-      - name: Publish to TestPyPI # Uses trusted publishing and thus doesn't need a token
+      - name: Publish to PyPI # Uses trusted publishing and thus doesn't need a token
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
