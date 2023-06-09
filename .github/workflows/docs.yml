@@ -29,7 +29,6 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
       - name: Set up Python
-        id: setup-python
         uses: actions/setup-python@v4 # Uses the Python version in .python-version
         with:
           cache: "poetry"

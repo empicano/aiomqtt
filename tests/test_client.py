@@ -12,15 +12,15 @@ import pytest
 from anyio import TASK_STATUS_IGNORED
 from anyio.abc import TaskStatus
 
-from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
-from asyncio_mqtt.error import MqttReentrantError
-from asyncio_mqtt.types import PayloadType
+from aiomqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
+from aiomqtt.error import MqttReentrantError
+from aiomqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
 
 HOSTNAME = "test.mosquitto.org"
 OS_PY_VERSION = sys.platform + "_" + ".".join(map(str, sys.version_info[:2]))
-TOPIC_HEADER = OS_PY_VERSION + "/tests/asyncio_mqtt/"
+TOPIC_HEADER = OS_PY_VERSION + "/tests/aiomqtt/"
 
 
 async def test_topic_validation() -> None:
@@ -270,7 +270,7 @@ async def test_client_username_password() -> None:
 
 
 async def test_client_logger() -> None:
-    logger = logging.getLogger("asyncio-mqtt")
+    logger = logging.getLogger("aiomqtt")
     async with Client(HOSTNAME, logger=logger) as client:
         assert logger is client._client._logger  # type: ignore[attr-defined]
 
@@ -419,7 +419,9 @@ async def test_client_reusable_message() -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
 
-    async def task_a_customer(task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+    async def task_a_customer(
+        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+    ) -> None:
         async with custom_client:
             async with custom_client.messages() as messages:
                 await custom_client.subscribe("task/a")
@@ -455,7 +457,9 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
     await custom_client.connect()
     await publish_client.connect()
 
-    async def task_a_customer(task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+    async def task_a_customer(
+        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+    ) -> None:
         await custom_client.subscribe("a/b/c")
         async with custom_client.messages() as messages:
             task_status.started()
@@ -463,7 +467,9 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
                 assert message.payload == b"task_a"
                 return
 
-    async def task_b_customer(task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
+    async def task_b_customer(
+        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
+    ) -> None:
         num = 0
         await custom_client.subscribe("qwer")
         async with custom_client.messages() as messages:
