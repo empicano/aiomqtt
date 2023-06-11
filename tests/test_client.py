@@ -419,7 +419,7 @@ async def test_client_reusable_message() -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
 
-    async def task_a_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
+    async def task_a_customer(task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         async with custom_client:
             async with custom_client.messages() as messages:
                 await custom_client.subscribe("task/a")
@@ -455,7 +455,7 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
     await custom_client.connect()
     await publish_client.connect()
 
-    async def task_a_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
+    async def task_a_customer(task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         await custom_client.subscribe("a/b/c")
         async with custom_client.messages() as messages:
             task_status.started()
@@ -463,7 +463,7 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
                 assert message.payload == b"task_a"
                 return
 
-    async def task_b_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
+    async def task_b_customer(task_status: TaskStatus[None] = TASK_STATUS_IGNORED) -> None:
         num = 0
         await custom_client.subscribe("qwer")
         async with custom_client.messages() as messages:
