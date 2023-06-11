@@ -59,7 +59,7 @@ You can see the coverage report in `htmlcov/index.html`.
 
 ## Building the documentation
 
-The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The source files are located in the `docs` folder. You can build it by running `./scripts/docs` or `./scripts/docs --no-reload` if you don't want to have the documentation rebuilt automatically when you change a file.
+The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The source files are located in the `docs` folder. You can build it by running `./scripts/docs` or `./scripts/docs --no-reload` if you don't want to have the documentation rebuilt automatically on changes.
 
 ## Committing
 
@@ -71,4 +71,4 @@ If the check failed, it is possible that `pre-commit` auto-fixed the code, so yo
 
 ## Making a Pull Request
 
-The branch to contribute is `main`. You can create a draft pull request as long as your contribution is not ready. Please also update the `CHANGELOG.md` with the changes that your pull request makes!
+The branch to contribute to is `main`. You can create a draft pull request if your contribution is not yet ready to merge. Please check if your changes call for updates to the documentation and don't forget to add your name and contribution to the `CHANGELOG.md`!

@@ -44,6 +44,7 @@ aiomqtt.Client(
     will=None,
     clean_session=None,
     transport="tcp",
+    timeout=None,
     keepalive=60,
     bind_address="",
     bind_port=0,
@@ -54,6 +55,8 @@ aiomqtt.Client(
     max_concurrent_outgoing_calls=None,
     websocket_path=None,
     websocket_headers=None,
+    max_inflight_messages=None,
+    max_queued_messages=None,
 )
 ```
 
