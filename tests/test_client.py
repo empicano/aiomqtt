@@ -9,8 +9,11 @@ import anyio
 import anyio.abc
 import paho.mqtt.client as mqtt
 import pytest
+from anyio import TASK_STATUS_IGNORED
+from anyio.abc import TaskStatus
 
 from asyncio_mqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
+from asyncio_mqtt.error import MqttReentrantError
 from asyncio_mqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
@@ -383,3 +386,124 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
                 tg.start_soon(client.publish, topic)
 
         assert caplog.record_tuples == []
+
+
+async def test_client_not_reentrant() -> None:
+    client = Client(HOSTNAME)
+
+    with pytest.raises(MqttReentrantError):  # noqa: PT012
+        async with client:
+            async with client:
+                ...
+
+
+async def test_client_reusable() -> None:
+    client = Client(HOSTNAME)
+
+    async with client:
+        await client.publish("task/a", "task_a")
+
+    async with client:
+        await client.publish("task/b", "task_b")
+
+
+async def test_client_connect_disconnect() -> None:
+    client = Client(HOSTNAME)
+
+    await client.connect()
+    await client.publish("connect", "connect")
+    await client.disconnect()
+
+
+async def test_client_reusable_message() -> None:
+    custom_client = Client(HOSTNAME)
+    publish_client = Client(HOSTNAME)
+
+    async def task_a_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
+        async with custom_client:
+            async with custom_client.messages() as messages:
+                await custom_client.subscribe("task/a")
+                task_status.started()
+                async for message in messages:
+                    assert message.payload == b"task_a"
+                    return
+
+    async def task_b_customer() -> None:
+        async with custom_client:
+            ...
+
+    async def task_a_publisher() -> None:
+        async with publish_client:
+            await publish_client.publish("task/a", "task_a")
+
+    async with anyio.create_task_group() as tg:
+        await tg.start(task_a_customer)
+        tg.start_soon(task_a_publisher)
+
+    with pytest.raises(MqttReentrantError):  # noqa: PT012
+        async with anyio.create_task_group() as tg:
+            await tg.start(task_a_customer)
+            tg.start_soon(task_b_customer)
+            await anyio.sleep(1)
+            tg.start_soon(task_a_publisher)
+
+
+async def test_client_use_connect_disconnect_multiple_message() -> None:
+    custom_client = Client(HOSTNAME)
+    publish_client = Client(HOSTNAME)
+
+    await custom_client.connect()
+    await publish_client.connect()
+
+    async def task_a_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
+        await custom_client.subscribe("a/b/c")
+        async with custom_client.messages() as messages:
+            task_status.started()
+            async for message in messages:
+                assert message.payload == b"task_a"
+                return
+
+    async def task_b_customer(task_status: TaskStatus = TASK_STATUS_IGNORED) -> None:
+        num = 0
+        await custom_client.subscribe("qwer")
+        async with custom_client.messages() as messages:
+            task_status.started()
+            async for message in messages:
+                assert message.payload in [b"task_a", b"task_b"]
+                num += 1
+                if num == 2:  # noqa: PLR2004
+                    return
+
+    async def task_publisher(topic: str, payload: PayloadType) -> None:
+        await publish_client.publish(topic, payload)
+
+    async with anyio.create_task_group() as tg:
+        await tg.start(task_a_customer)
+        await tg.start(task_b_customer)
+        tg.start_soon(task_publisher, "a/b/c", "task_a")
+        tg.start_soon(task_publisher, "qwer", "task_b")
+
+    await custom_client.disconnect()
+    await publish_client.disconnect()
+
+
+async def test_client_disconnected_exception() -> None:
+    client = Client(HOSTNAME)
+    await client.connect()
+    client._disconnected.set_exception(RuntimeError)
+    with pytest.raises(RuntimeError):
+        await client.disconnect()
+
+
+async def test_client_disconnected_done() -> None:
+    client = Client(HOSTNAME)
+    await client.connect()
+    client._disconnected.set_result(None)
+    await client.disconnect()
+
+
+async def test_client_connecting_disconnected_done() -> None:
+    client = Client(HOSTNAME)
+    client._disconnected.set_result(None)
+    await client.connect()
+    await client.disconnect()

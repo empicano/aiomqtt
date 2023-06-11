@@ -28,7 +28,7 @@ from typing import (
 import paho.mqtt.client as mqtt
 from paho.mqtt.properties import Properties
 
-from .error import MqttCodeError, MqttConnectError, MqttError
+from .error import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
 from .types import PayloadType, T
 
 if sys.version_info >= (3, 10):
@@ -280,7 +280,9 @@ class Client:
         self._clean_start = clean_start
         self._properties = properties
         self._loop = asyncio.get_event_loop()
-        self._connected: asyncio.Future[int | mqtt.ReasonCodes] = asyncio.Future()
+        self._connected: asyncio.Future[
+            int | mqtt.ReasonCodes | None
+        ] = asyncio.Future()
         self._disconnected: asyncio.Future[
             int | mqtt.ReasonCodes | None
         ] = asyncio.Future()
@@ -369,6 +371,7 @@ class Client:
         if socket_options is None:
             socket_options = ()
         self._socket_options = tuple(socket_options)
+        self._lock: asyncio.Lock = asyncio.Lock()
 
         if timeout is None:
             timeout = 10
@@ -418,16 +421,32 @@ class Client:
         except (OSError, mqtt.WebsocketConnectionError) as error:
             raise MqttError(str(error)) from None
         await self._wait_for(self._connected, timeout=timeout)
+        # If _disconnected is already completed after connecting, reset it.
+        if self._disconnected.done():
+            self._disconnected = asyncio.Future()
 
     async def disconnect(self, *, timeout: float | None = None) -> None:
+        """Disconnect from the broker."""
+        # Early out if already disconnected...
+        if self._disconnected.done():
+            disc_exc = self._disconnected.exception()
+            if disc_exc is not None:
+                # ...by raising the error that caused the disconnect
+                raise disc_exc
+            # ...by returning since the disconnect was intentional
+            return
+        # Try to gracefully disconnect from the broker
         rc = self._client.disconnect()
         # Early out on error
         if rc != mqtt.MQTT_ERR_SUCCESS:
             raise MqttCodeError(rc, "Could not disconnect")
         # Wait for acknowledgement
         await self._wait_for(self._disconnected, timeout=timeout)
+        # If _connected is still in the completed state after disconnection, reset it
+        if self._connected.done():
+            self._connected = asyncio.Future()
 
-    async def force_disconnect(self) -> None:
+    def _force_disconnect(self) -> None:
         if not self._disconnected.done():
             self._disconnected.set_result(None)
 
@@ -867,6 +886,10 @@ class Client:
 
     async def __aenter__(self) -> Client:
         """Connect to the broker."""
+        if self._lock.locked():
+            msg = "Does not support reentrant"
+            raise MqttReentrantError(msg)
+        await self._lock.acquire()
         await self.connect()
         return self
 
@@ -876,15 +899,6 @@ class Client:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        """Disconnect from the broker."""
-        # Early out if already disconnected...
-        if self._disconnected.done():
-            disc_exc = self._disconnected.exception()
-            if disc_exc is not None:
-                # ...by raising the error that caused the disconnect
-                raise disc_exc
-            # ...by returning since the disconnect was intentional
-            return
         # Try to gracefully disconnect from the broker
         try:
             await self.disconnect()
@@ -894,7 +908,9 @@ class Client:
                 f'Could not gracefully disconnect due to "{error}". Forcing'
                 " disconnection."
             )
-            await self.force_disconnect()
+        finally:
+            self._force_disconnect()
+            self._lock.release()
 
 
 def _set_client_socket_defaults(
