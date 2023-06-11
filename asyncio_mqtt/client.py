@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import math
 import socket
 import ssl
 import sys
@@ -257,6 +258,7 @@ class Client:
         will: Will | None = None,
         clean_session: bool | None = None,
         transport: str = "tcp",
+        timeout: float | None = None,
         keepalive: int = 60,
         bind_address: str = "",
         bind_port: int = 0,
@@ -371,6 +373,10 @@ class Client:
         self._socket_options = tuple(socket_options)
         self._lock: asyncio.Lock = asyncio.Lock()
 
+        if timeout is None:
+            timeout = 10
+        self.timeout = timeout
+
     @property
     def id(  # noqa: A003 # TODO(jonathan): When doing BREAKING CHANGES rename to avoid shadowing builtin id
         self,
@@ -390,7 +396,7 @@ class Client:
         yield from self._pending_unsubscribes.keys()
         yield from self._pending_publishes.keys()
 
-    async def connect(self, *, timeout: int = 10) -> None:
+    async def connect(self, *, timeout: float | None = None) -> None:
         try:
             loop = asyncio.get_running_loop()
 
@@ -419,7 +425,7 @@ class Client:
         if self._disconnected.done():
             self._disconnected = asyncio.Future()
 
-    async def disconnect(self, *, timeout: int = 10) -> None:
+    async def disconnect(self, *, timeout: float | None = None) -> None:
         """Disconnect from the broker."""
         # Early out if already disconnected...
         if self._disconnected.done():
@@ -452,7 +458,7 @@ class Client:
         options: mqtt.SubscribeOptions | None = None,
         properties: Properties | None = None,
         *args: Any,
-        timeout: int = 10,
+        timeout: float | None = None,
         **kwargs: Any,
     ) -> tuple[int] | list[mqtt.ReasonCodes]:
         result, mid = self._client.subscribe(
@@ -475,7 +481,7 @@ class Client:
         topic: str | list[str],
         properties: Properties | None = None,
         *args: Any,
-        timeout: int = 10,
+        timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
         result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
@@ -497,7 +503,7 @@ class Client:
         retain: bool = False,
         properties: Properties | None = None,
         *args: Any,
-        timeout: int = 10,
+        timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
         info = self._client.publish(
@@ -682,8 +688,12 @@ class Client:
     async def _wait_for(
         self, fut: Awaitable[T], timeout: float | None, **kwargs: Any
     ) -> T:
+        if timeout is None:
+            timeout = self.timeout
+        # Note that asyncio uses `None` to mean "No timeout". We use `math.inf`.
+        timeout_for_asyncio = None if timeout == math.inf else timeout
         try:
-            return await asyncio.wait_for(fut, timeout=timeout, **kwargs)
+            return await asyncio.wait_for(fut, timeout=timeout_for_asyncio, **kwargs)
         except asyncio.TimeoutError:
             msg = "Operation timed out"
             raise MqttError(msg) from None
