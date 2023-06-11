@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import logging
+import math
 import socket
 import ssl
 import sys
@@ -670,8 +671,10 @@ class Client:
     ) -> T:
         if timeout is None:
             timeout = self.timeout
+        # Note that asyncio uses `None` to mean "No timeout". We use `math.inf`.
+        timeout_for_asyncio = None if timeout == math.inf else timeout
         try:
-            return await asyncio.wait_for(fut, timeout=timeout, **kwargs)
+            return await asyncio.wait_for(fut, timeout=timeout_for_asyncio, **kwargs)
         except asyncio.TimeoutError:
             msg = "Operation timed out"
             raise MqttError(msg) from None
