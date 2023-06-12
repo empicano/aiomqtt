@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Removed
-
-- Renamed `master` branch to `main`. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse)
+## [0.17.0] - 2023-06-12
 
 ### Added
 
@@ -20,9 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Make Client a reusable (but not reentrant) context manager. Contributed by [Peanut (@vvanglro)](https://github.com/vvanglro) in [#216](https://github.com/sbtinstruments/asyncio-mqtt/pull/216)
 - Make default timeout configurable. Contributed by [Scott P. (@skewty)](https://github.com/skewty) in [#192](https://github.com/sbtinstruments/asyncio-mqtt/pull/192)
 
+### Changed
+
+- Switch from pip to poetry for dependency management. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#210](https://github.com/sbtinstruments/asyncio-mqtt/pull/210)
+- Rename project from asyncio-mqtt to aiomqtt. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#210](https://github.com/sbtinstruments/asyncio-mqtt/pull/210)
+
+### Removed
+
+- Rename `master` branch to `main`. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse)
+
 ### Fixed
 
-- Consistently use a user-provided logger. Contributed by [Roman Novatorov @rnovatorov](https://github.com/rnovatorov) in [#176](https://github.com/sbtinstruments/asyncio-mqtt/pull/176)
+- Consistently use a user-provided logger. Contributed by [Roman Novatorov (@rnovatorov)](https://github.com/rnovatorov) in [#176](https://github.com/sbtinstruments/asyncio-mqtt/pull/176)
 
 ## [0.16.1]
 
