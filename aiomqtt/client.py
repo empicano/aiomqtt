@@ -571,7 +571,7 @@ class Client:
         *,
         queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
-        topic: str = None,
+        topic: str | None = None,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Return async generator of incoming messages.
 
@@ -647,7 +647,7 @@ class Client:
         *,
         queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
-        topic: str = None,
+        topic: str | None = None,
     ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
         # Queue to hold the incoming messages
         messages: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
