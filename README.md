@@ -5,12 +5,12 @@
     <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/aiomqtt"></a>
     <a href="https://pypi.org/project/aiomqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/aiomqtt.svg"></a>
     <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/aiomqtt"></a>
-    <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml"><img alt="test suite" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml/badge.svg"></a>
+    <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml"><img alt="test" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml/badge.svg"></a>
     <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/docs.yml"><img alt="docs" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/docs.yml/badge.svg"></a>
     <a href="https://codecov.io/gh/sbtinstruments/aiomqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/aiomqtt"></a>
     <a href="https://results.pre-commit.ci/latest/github/sbtinstruments/aiomqtt/main"><img alt="pre-commit.ci status" src="https://results.pre-commit.ci/badge/github/sbtinstruments/aiomqtt/main.svg"></a>
     <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a>
-    <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Code Style: Black" src="https://img.shields.io/badge/code%20style-black-black"></a>
+    <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black"></a>
     <a href="https://github.com/charliermarsh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json"></a>
 </p>
 
