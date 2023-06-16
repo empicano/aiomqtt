@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.17.0] - 2023-06-12
+## [1.0.0] - 2023-06-16
 
 ### Added
 
@@ -30,6 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Consistently use a user-provided logger. Contributed by [Roman Novatorov (@rnovatorov)](https://github.com/rnovatorov) in [#176](https://github.com/sbtinstruments/asyncio-mqtt/pull/176)
+
+## [0.17.0] - 2023-06-12
+
+Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt.
+Problem is that the *old* aiomqtt (by mossblaser) was still in use.
+These users suddenly experienced a breaking change when they updated
+from v0.1.2 to v0.17.0. Our mitigation is to yank v0.17.0 and release
+a v1.0.0 in it's place. It was about time for a v1.0.0 release anyhow!
 
 ## [0.16.1]
 
