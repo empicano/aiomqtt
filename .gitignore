@@ -7,7 +7,7 @@ local_test.py
 .idea/
 .coverage
 coverage.xml
-asyncio_mqtt/_version.py
+aiomqtt/_version.py
 *.DS_Store
 docs/_build
 reports

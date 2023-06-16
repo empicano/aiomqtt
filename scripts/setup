@@ -5,5 +5,8 @@ set -o errexit -o pipefail -o nounset
 # Change into the project's directory
 cd "$(dirname "$0")/.."
 
+python_version=$1
+
 # Install the dependencies
+#poetry env use "python$python_version"
 poetry install --with dev --sync
