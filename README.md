@@ -100,9 +100,7 @@ You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstr
 
 ## Versioning
 
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-Expect API changes until we reach version `1.0.0`. After `1.0.0`, breaking changes will only occur in a major release (e.g., `2.0.0`, `3.0.0`, etc.).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Breaking changes will only occur in major releases (`2.0.0`, `3.0.0`, etc.).
 
 ## Changelog
 

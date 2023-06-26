@@ -28,8 +28,6 @@ jobs:
           installer-parallel: true
       - name: Set up Python
         uses: actions/setup-python@v4 # Uses the Python version in .python-version
-        with:
-          cache: "poetry"
       - name: Setup dynamic versioning
         run: poetry self add "poetry-dynamic-versioning[plugin]"
       - name: Build package
