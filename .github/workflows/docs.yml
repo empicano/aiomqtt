@@ -22,17 +22,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install Poetry
+      - name: Set up Python
+        uses: actions/setup-python@v4 # Uses the Python version in .python-version
+      - name: Install poetry
         uses: snok/install-poetry@v1
         with:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
-      - name: Set up Python
-        uses: actions/setup-python@v4 # Uses the Python version in .python-version
+      - name: Load virtual environment cache
+        id: cache
+        uses: actions/cache@v2
         with:
-          cache: "poetry"
+          path: .venv
+          key: ${{ runner.os }}-${{ hashFiles('poetry.lock') }}
       - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: scripts/setup
       - name: Build documentation
         run: scripts/docs

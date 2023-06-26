@@ -29,19 +29,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install Poetry
-        uses: snok/install-poetry@v1.3.3 # Pinned newest version to make Windows work
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - run: poetry config virtualenvs.prefer-active-python true
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
       - name: Install dependencies
-        run: rm poetry.lock && scripts/setup ${{ matrix.python-version }} # Ignore poetry.lock
+        run: rm poetry.lock && scripts/setup # Ignore poetry.lock
       - name: Run checks
         run: scripts/check --dry
       - name: Test with pytest
