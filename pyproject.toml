@@ -143,6 +143,9 @@ filterwarnings = [
     "error",
     "ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning",
 ]
+markers = [
+    "network: tests that requires network access"
+]
 xfail_strict = true
 
 [tool.coverage.run] # https://coverage.readthedocs.io/en/latest/config.html#run
