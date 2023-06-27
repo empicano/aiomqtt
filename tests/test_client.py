@@ -85,6 +85,7 @@ async def test_topic_matches() -> None:
     assert not topic.matches("$test/group/a/b/c")
 
 
+@pytest.mark.network
 async def test_multiple_messages_generators() -> None:
     """Test that multiple Client.messages() generators can be used at the same time."""
     topic = TOPIC_HEADER + "multiple_messages_generators"
@@ -104,6 +105,7 @@ async def test_multiple_messages_generators() -> None:
             await client.publish(topic)
 
 
+@pytest.mark.network
 async def test_client_filtered_messages() -> None:
     topic_header = TOPIC_HEADER + "filtered_messages/"
     good_topic = topic_header + "good"
@@ -124,6 +126,7 @@ async def test_client_filtered_messages() -> None:
             await client.publish(good_topic, 2)
 
 
+@pytest.mark.network
 async def test_client_unfiltered_messages() -> None:
     topic_header = TOPIC_HEADER + "unfiltered_messages/"
     topic_filtered = topic_header + "filtered"
@@ -150,6 +153,7 @@ async def test_client_unfiltered_messages() -> None:
             await client.publish(topic_unfiltered, 2)
 
 
+@pytest.mark.network
 async def test_client_unsubscribe() -> None:
     topic_header = TOPIC_HEADER + "unsubscribe/"
     topic1 = topic_header + "1"
@@ -187,6 +191,7 @@ async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
     assert len(client.id) == length
 
 
+@pytest.mark.network
 async def test_client_will() -> None:
     topic = TOPIC_HEADER + "will"
     event = anyio.Event()
@@ -208,6 +213,7 @@ async def test_client_will() -> None:
             client._client._sock_close()  # type: ignore[attr-defined]
 
 
+@pytest.mark.network
 async def test_client_tls_context() -> None:
     topic = TOPIC_HEADER + "tls_context"
 
@@ -229,6 +235,7 @@ async def test_client_tls_context() -> None:
             await client.publish(topic)
 
 
+@pytest.mark.network
 async def test_client_tls_params() -> None:
     topic = TOPIC_HEADER + "tls_params"
 
@@ -252,6 +259,7 @@ async def test_client_tls_params() -> None:
             await client.publish(topic)
 
 
+@pytest.mark.network
 async def test_client_username_password() -> None:
     topic = TOPIC_HEADER + "username_password"
 
@@ -269,12 +277,14 @@ async def test_client_username_password() -> None:
             await client.publish(topic)
 
 
+@pytest.mark.network
 async def test_client_logger() -> None:
     logger = logging.getLogger("aiomqtt")
     async with Client(HOSTNAME, logger=logger) as client:
         assert logger is client._client._logger  # type: ignore[attr-defined]
 
 
+@pytest.mark.network
 async def test_client_max_concurrent_outgoing_calls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -322,6 +332,7 @@ async def test_client_max_concurrent_outgoing_calls(
         await client.publish(topic)
 
 
+@pytest.mark.network
 async def test_client_websockets() -> None:
     topic = TOPIC_HEADER + "websockets"
 
@@ -345,6 +356,7 @@ async def test_client_websockets() -> None:
             await client.publish(topic)
 
 
+@pytest.mark.network
 @pytest.mark.parametrize("pending_calls_threshold", [10, 20])
 async def test_client_pending_calls_threshold(
     pending_calls_threshold: int, caplog: pytest.LogCaptureFixture
@@ -368,6 +380,7 @@ async def test_client_pending_calls_threshold(
         ]
 
 
+@pytest.mark.network
 @pytest.mark.parametrize("pending_calls_threshold", [10, 20])
 async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_calls(
     pending_calls_threshold: int,
@@ -388,6 +401,7 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
         assert caplog.record_tuples == []
 
 
+@pytest.mark.network
 async def test_client_not_reentrant() -> None:
     client = Client(HOSTNAME)
 
@@ -397,6 +411,7 @@ async def test_client_not_reentrant() -> None:
                 ...
 
 
+@pytest.mark.network
 async def test_client_reusable() -> None:
     client = Client(HOSTNAME)
 
@@ -407,6 +422,7 @@ async def test_client_reusable() -> None:
         await client.publish("task/b", "task_b")
 
 
+@pytest.mark.network
 async def test_client_connect_disconnect() -> None:
     client = Client(HOSTNAME)
 
@@ -415,6 +431,7 @@ async def test_client_connect_disconnect() -> None:
     await client.disconnect()
 
 
+@pytest.mark.network
 async def test_client_reusable_message() -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
@@ -450,6 +467,7 @@ async def test_client_reusable_message() -> None:
             tg.start_soon(task_a_publisher)
 
 
+@pytest.mark.network
 async def test_client_use_connect_disconnect_multiple_message() -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
@@ -493,6 +511,7 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
     await publish_client.disconnect()
 
 
+@pytest.mark.network
 async def test_client_disconnected_exception() -> None:
     client = Client(HOSTNAME)
     await client.connect()
@@ -501,6 +520,7 @@ async def test_client_disconnected_exception() -> None:
         await client.disconnect()
 
 
+@pytest.mark.network
 async def test_client_disconnected_done() -> None:
     client = Client(HOSTNAME)
     await client.connect()
@@ -508,6 +528,7 @@ async def test_client_disconnected_done() -> None:
     await client.disconnect()
 
 
+@pytest.mark.network
 async def test_client_connecting_disconnected_done() -> None:
     client = Client(HOSTNAME)
     client._disconnected.set_result(None)
