@@ -12,6 +12,13 @@
 ```{toctree}
 :hidden:
 
+introduction
+```
+
+```{toctree}
+:caption: Guides
+:hidden:
+
 connecting-to-the-broker
 publishing-a-message
 subscribing-to-a-topic

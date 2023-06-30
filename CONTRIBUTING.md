@@ -1,6 +1,6 @@
 # Contributing
 
-We're happy about your contributions to aiomqtt!
+We're very happy about contributions to aiomqtt!
 
 ## Development setup
 
@@ -8,8 +8,8 @@ We're happy about your contributions to aiomqtt!
 - Install the Python version noted in `.python-version` via `pyenv`
 - [Install poetry](https://python-poetry.org/docs/#installation)
 - Install the dependencies with `./scripts/setup`
-- You can run black, ruff, and mypy with `./scripts/check`
-- You can run the tests with `./scripts/test`
+- Run black, ruff, and mypy with `./scripts/check`
+- Run the tests with `./scripts/test`
 
 ## The documentation
 

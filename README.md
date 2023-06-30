@@ -8,7 +8,6 @@
     <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml"><img alt="test" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml/badge.svg"></a>
     <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/docs.yml"><img alt="docs" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/docs.yml/badge.svg"></a>
     <a href="https://codecov.io/gh/sbtinstruments/aiomqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/aiomqtt"></a>
-    <a href="https://results.pre-commit.ci/latest/github/sbtinstruments/aiomqtt/main"><img alt="pre-commit.ci status" src="https://results.pre-commit.ci/badge/github/sbtinstruments/aiomqtt/main.svg"></a>
     <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a>
     <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black"></a>
     <a href="https://github.com/charliermarsh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/charliermarsh/ruff/main/assets/badge/v1.json"></a>
@@ -35,16 +34,14 @@ async with Client("test.mosquitto.org") as client:
             print(message.payload)
 ```
 
-aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with a modern, asyncio-based interface.
+aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with an intuitive, idiomatic asyncio interface:
 
 - No more callbacks! 👍
 - No more return codes (welcome to the `MqttError`)
 - Graceful disconnection (forget about `on_unsubscribe`, `on_disconnect`, etc.)
-- Compatible with `async` code
+- Supports MQTT versions 5.0, 3.1.1 and 3.1
 - Fully type-hinted
 - Did we mention no more callbacks?
-
-The whole thing is less than [900 lines of code](https://github.com/sbtinstruments/aiomqtt/blob/main/aiomqtt/client.py).
 
 <!-- pitch end -->
 
@@ -71,16 +68,10 @@ Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Sai
 ```python
 # Change to the "Selector" event loop if platform is Windows
 if sys.platform.lower() == "win32" or os.name.lower() == "nt":
-    # only import if platform/os is win32/nt, otherwise "WindowsSelectorEventLoopPolicy" is not present
-    from asyncio import (
-        set_event_loop_policy,
-        WindowsSelectorEventLoopPolicy
-    )
-    # set the event loop
+    from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 # Run your async application as usual
 asyncio.run(main())
-
 ```
 
 ## License
@@ -94,17 +85,15 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 
 ## Contributing
 
-We're happy about your contributions to the project!
-
-You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
+We're very happy about contributions to the project! You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md) guide.
 
 ## Versioning
 
-This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Breaking changes will only occur in major releases (`2.0.0`, `3.0.0`, etc.).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Breaking changes will only occur in major `X.0.0` releases.
 
 ## Changelog
 
-The changelog lives in the [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md) document. It adheres to the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+The changelog lives in [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md). It follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Related projects
 
