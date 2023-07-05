@@ -13,13 +13,14 @@ author = "Frederik Aalund, Felix Böhm, Jonathan Plasse"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["myst_parser", "sphinx_copybutton"]
+extensions = ["myst_parser", "sphinx_copybutton", "sphinx.ext.napoleon"]
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 pygments_style = "default"
 pygments_dark_style = "dracula"
 myst_enable_extensions = ["strikethrough"]
 myst_heading_anchors = 2
+autodoc_default_options = {"member-order": "bysource"}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

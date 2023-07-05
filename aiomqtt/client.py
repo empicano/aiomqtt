@@ -242,6 +242,13 @@ class Message:
 
 
 class Client:
+    """The async context manager that manages the connection to the broker.
+
+    Args:
+        hostname: The hostname or IP address of the remote broker
+        port: The network port of the remote broker
+    """
+
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
         self,
         hostname: str,
@@ -899,7 +906,7 @@ class Client:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        # Try to gracefully disconnect from the broker
+        """Try to gracefully disconnect from the broker."""
         try:
             await self.disconnect()
         except MqttError as error:

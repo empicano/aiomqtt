@@ -1,6 +1,6 @@
 # Contributing
 
-We're very happy about contributions to aiomqtt!
+We're very happy about contributions to aiomqtt! ✨
 
 ## Development setup
 
