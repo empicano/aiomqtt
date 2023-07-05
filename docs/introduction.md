@@ -4,6 +4,6 @@ This documentation aims to cover everything you need to know to use aiomqtt in y
 
 If you're new to MQTT, we recommend reading the [HiveMQ MQTT essentials](https://www.hivemq.com/mqtt-essentials/) guide. For asyncio, we recommend the [RealPython asyncio walkthrough](https://realpython.com/async-io-python/) as an introduction and the [official asyncio docs](https://docs.python.org/3/library/asyncio.html) as a reference.
 
-Especially first-time readers have a very valuable view of the documentation. You can spot ambiguities and unclear explanations that simply stay hidden from us maintainers! So if you find an error somewhere or you feel there's anything that can improve these docs, please don't hesitate to open an issue or a pull request on GitHub.
+Especially first-time readers have a very valuable view of the documentation. You can spot ambiguities and unclear explanations that simply stay hidden from us maintainers! If you find an error somewhere or if you feel there's anything that can improve these docs, you're a big help if you open an issue or a pull request on GitHub.
 
 Let's dive in! 🤿

@@ -26,7 +26,7 @@ done
 
 # Serve the documentation
 if [ "${reload}" = true ]; then
-  poetry run sphinx-autobuild --port 8145 --open-browser docs docs/_build
+  poetry run sphinx-autobuild --open-browser --delay 0 --port 8145 docs docs/_build
 else
   poetry run sphinx-build -b html docs docs/_build
 fi

@@ -85,7 +85,7 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 
 ## Contributing
 
-We're very happy about contributions to the project! You can get started by reading the [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md) guide.
+We're very happy about contributions to the project! You can get started by reading [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
 
 ## Versioning
 

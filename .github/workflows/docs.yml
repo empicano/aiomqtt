@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "aiomqtt/**"
       - README.md
       - .github/workflows/docs.yml
   pull_request:
     paths:
       - "docs/**"
+      - "aiomqtt/**"
       - README.md
       - .github/workflows/docs.yml
 

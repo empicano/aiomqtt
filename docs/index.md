@@ -23,7 +23,14 @@ connecting-to-the-broker
 publishing-a-message
 subscribing-to-a-topic
 reconnection
-side-by-side-with-web-frameworks
+alongside-fastapi-and-co
+```
+
+```{toctree}
+:caption: API reference
+:hidden:
+
+developer-interface
 ```
 
 ```{toctree}

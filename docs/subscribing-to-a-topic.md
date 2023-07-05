@@ -163,7 +163,7 @@ async def main():
 asyncio.run(main())
 ```
 
-In case task groups are not an option (e.g. because you run aiomqtt [side by side with a web framework](side-by-side-with-web-frameworks.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` but not `await` the created task:
+In case task groups are not an option (e.g. because you run aiomqtt [alongside a web framework](alongside-fastapi-and-co.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` but not `await` the created task:
 
 ```{caution}
 You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only when we `await` the task. In this case, we explicitly don't.

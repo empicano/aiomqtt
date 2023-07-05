@@ -1,4 +1,4 @@
-# Side by side with web frameworks
+# Alongside FastAPI & Co.
 
 MQTT is often used in the context of web servers.
 
