@@ -6,7 +6,6 @@
 .. autoclass:: aiomqtt.Client
     :noindex:
     :members: subscribe, unsubscribe, publish, messages, __aenter__, __aexit__
-    :undoc-members:  # Remove when everything has docstrings
 ```
 
 ## Message

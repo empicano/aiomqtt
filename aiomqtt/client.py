@@ -127,9 +127,16 @@ MAX_TOPIC_LENGTH = 65535
 
 @dataclass(frozen=True)
 class Wildcard:
-    """MQTT wildcard that can only be subscribed to.
+    """MQTT wildcard that can be subscribed to, but not published to.
 
-    A wildcard is similar to a topic, but can optionally contain + and # characters.
+    A wildcard is similar to a topic, but can optionally contain ``+`` and ``#``
+    placeholders.
+
+    Args:
+        value: The wildcard string.
+
+    Attributes:
+        value: The wildcard string.
     """
 
     value: str
@@ -161,7 +168,14 @@ WildcardLike: TypeAlias = "str | Wildcard"
 
 @dataclass(frozen=True)
 class Topic(Wildcard):
-    """MQTT topic that can be published and subscribed to."""
+    """MQTT topic that can be published and subscribed to.
+
+    Args:
+        value: The topic string.
+
+    Attributes:
+        value: The topic string.
+    """
 
     def __post_init__(self) -> None:
         """Validate the topic."""
@@ -178,7 +192,14 @@ class Topic(Wildcard):
             raise ValueError(msg)
 
     def matches(self, wildcard: WildcardLike) -> bool:
-        """Check if the topic matches a given wildcard."""
+        """Check if the topic matches a given wildcard.
+
+        Args:
+            wildcard: The wildcard to match against.
+
+        Returns:
+            True if the topic matches the wildcard, False otherwise.
+        """
         if not isinstance(wildcard, Wildcard):
             wildcard = Wildcard(wildcard)
         # Split topics into levels to compare them one by one
@@ -208,7 +229,33 @@ TopicLike: TypeAlias = "str | Topic"
 
 
 class Message:
-    """Wrap paho-mqtt message class that allows us to use our own Topic class."""
+    """Wraps the paho-mqtt message class to allow using our own matching logic.
+
+    This class is not meant to be instantiated by the user. Instead, it is yielded by
+    the async generator returned from ``Client.messages()``.
+
+    Args:
+        topic: The topic the message was published to.
+        payload: The message payload.
+        qos: The quality of service level of the subscription that matched the message.
+        retain: Whether the message is a retained message.
+        mid: The message ID.
+        properties: (MQTT v5.0 only) The properties associated with the message.
+
+    Attributes:
+        topic (aiomqtt.client.Topic):
+            The topic the message was published to.
+        payload (str | bytes | bytearray | int | float | None):
+            The message payload.
+        qos (int):
+            The quality of service level of the subscription that matched the message.
+        retain (bool):
+            Whether the message is a retained message.
+        mid (int):
+            The message ID.
+        properties (paho.mqtt.properties.Properties | None):
+            (MQTT v5.0 only) The properties associated with the message.
+    """
 
     def __init__(  # noqa: PLR0913
         self,
@@ -245,8 +292,40 @@ class Client:
     """The async context manager that manages the connection to the broker.
 
     Args:
-        hostname: The hostname or IP address of the remote broker
-        port: The network port of the remote broker
+        hostname: The hostname or IP address of the remote broker.
+        port: The network port of the remote broker.
+        username: The username to authenticate with.
+        password: The password to authenticate with.
+        logger: Custom logger instance.
+        client_id: The client ID to use. If ``None``, one will be generated
+            automatically.
+        tls_context: The SSL/TLS context.
+        tls_params: The SSL/TLS configuration to use.
+        proxy: Configure a proxy for the connection.
+        protocol: The version of the MQTT protocol.
+        will: The will message to publish if the client disconnects unexpectedly.
+        clean_session: If ``True``, the broker will remove all information about this
+            client when it disconnects. If ``False``, the client is a persistent client
+            and subscription information and queued messages will be retained when the
+            client disconnects.
+        transport: The transport protocol to use. Either ``"tcp"`` or ``"websockets"``.
+        timeout: The default timeout for all communication with the broker in seconds.
+        keepalive: The keepalive timeout for the client in seconds.
+        bind_address: The IP address of a local network interface to bind this client
+            to.
+        bind_port: The network port to bind this client to.
+        clean_start: (MQTT v5.0 only) Set the clean start flag always, never, or only
+            on the first successful connection to the broker.
+        properties: (MQTT v5.0 only) The properties associated with the client.
+        message_retry_set: Deprecated.
+        socket_options: Options to pass to the underlying socket.
+        max_concurrent_outgoing_calls: The maximum number of concurrent outgoing calls.
+        websocket_path: The path to use for websockets.
+        websocket_headers: The headers to use for websockets.
+        max_inflight_messages: The maximum number of messages with QoS > ``0`` that can
+            be part way through their network flow at once.
+        max_queued_messages: The maximum number of messages in the outgoing message
+            queue. ``0`` means unlimited.
     """
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -468,6 +547,16 @@ class Client:
         timeout: float | None = None,
         **kwargs: Any,
     ) -> tuple[int] | list[mqtt.ReasonCodes]:
+        """Subscribe to a topic or wildcard.
+
+        Args:
+            topic: The topic or wildcard to subscribe to.
+            qos: The requested QoS level for the subscription.
+            options: (MQTT v5.0 only) Optional paho-mqtt subscription options.
+            porperties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            timeout: The maximum time in seconds to wait for the subscription to
+                complete. Use ``math.inf`` to wait indefinitely.
+        """
         result, mid = self._client.subscribe(
             topic, qos, options, properties, *args, **kwargs
         )
@@ -491,6 +580,14 @@ class Client:
         timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
+        """Unsubscribe from a topic or wildcard.
+
+        Args:
+            topic: The topic or wildcard to unsubscribe from.
+            properties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            timeout: The maximum time in seconds to wait for the unsubscription to
+                complete. Use ``math.inf`` to wait indefinitely.
+        """
         result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS:
@@ -513,6 +610,17 @@ class Client:
         timeout: float | None = None,
         **kwargs: Any,
     ) -> None:
+        """Publish a message to the broker.
+
+        Args:
+            topic: The topic to publish to.
+            payload: The message payload.
+            qos: The QoS level to use for publication.
+            retain: If set to ``True``, the message will be retained by the broker.
+            properties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            timeout: The maximum time in seconds to wait for publication to complete.
+                Use ``math.inf`` to wait indefinitely.
+        """
         info = self._client.publish(
             topic, payload, qos, retain, properties, *args, **kwargs
         )  # [2]
@@ -579,11 +687,19 @@ class Client:
         queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
-        """Return async generator of incoming messages.
+        """Async context manager that creates a queue for incoming messages.
 
-        Use queue_maxsize to restrict the queue size. If the queue is full,
-        incoming messages will be discarded (and a warning is logged).
-        If queue_maxsize is less than or equal to zero, the queue size is infinite.
+        Args:
+            queue_class: The class to use for the queue. The default is
+                ``asyncio.Queue``, which returns messages in FIFO order. For LIFO order,
+                you can use ``asyncio.LifoQueue``; For priority order you can subclass
+                ``asyncio.PriorityQueue``.
+            queue_maxsize: Restricts the queue size. If the queue is full, incoming
+                messages will be discarded and a warning logged. If set to ``0`` or
+                less, the queue size is infinite.
+
+        Returns:
+            An async generator that yields messages from the underlying queue.
         """
         callback, generator = self._callback_and_generator(
             queue_class=queue_class, queue_maxsize=queue_maxsize
