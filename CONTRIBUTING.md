@@ -13,7 +13,9 @@ We're very happy about contributions to aiomqtt! ✨
 
 ## The documentation
 
-The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). The Markdown source files are located in the `docs` folder. You can build the documentation with `./scripts/docs --reload`.
+The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). You can build it with `./scripts/docs --reload`.
+
+The Markdown source files are located in the `docs` folder. The reference section is mostly generated from the docstrings in the source code. The docstrings are formatted according to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
 
 ## Making a pull request
 
