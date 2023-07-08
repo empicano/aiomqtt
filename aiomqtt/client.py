@@ -553,9 +553,14 @@ class Client:
             topic: The topic or wildcard to subscribe to.
             qos: The requested QoS level for the subscription.
             options: (MQTT v5.0 only) Optional paho-mqtt subscription options.
-            porperties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            properties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            *args: Additional positional arguments to pass to paho-mqtt's subscribe
+                method.
             timeout: The maximum time in seconds to wait for the subscription to
                 complete. Use ``math.inf`` to wait indefinitely.
+            **kwargs: Additional keyword arguments to pass to paho-mqtt's subscribe
+                method.
+
         """
         result, mid = self._client.subscribe(
             topic, qos, options, properties, *args, **kwargs
@@ -585,8 +590,12 @@ class Client:
         Args:
             topic: The topic or wildcard to unsubscribe from.
             properties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            *args: Additional positional arguments to pass to paho-mqtt's unsubscribe
+                method.
             timeout: The maximum time in seconds to wait for the unsubscription to
                 complete. Use ``math.inf`` to wait indefinitely.
+            **kwargs: Additional keyword arguments to pass to paho-mqtt's unsubscribe
+                method.
         """
         result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
         # Early out on error
@@ -618,8 +627,12 @@ class Client:
             qos: The QoS level to use for publication.
             retain: If set to ``True``, the message will be retained by the broker.
             properties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            *args: Additional positional arguments to pass to paho-mqtt's publish
+                method.
             timeout: The maximum time in seconds to wait for publication to complete.
                 Use ``math.inf`` to wait indefinitely.
+            **kwargs: Additional keyword arguments to pass to paho-mqtt's publish
+                method.
         """
         info = self._client.publish(
             topic, payload, qos, retain, properties, *args, **kwargs
