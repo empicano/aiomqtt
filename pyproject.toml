@@ -126,7 +126,7 @@ parametrize-names-type = "csv"
 ]
 
 [tool.ruff.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
-convention = "pep257"
+convention = "google"
 
 [tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
 python_version = "3.8"

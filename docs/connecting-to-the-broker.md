@@ -19,16 +19,14 @@ The connection to the broker is managed by the `Client` context manager.
 
 This context manager connects to the broker when you enter the `with` statement and disconnects when you exit it again. Similar to e.g. the `with open(file)` context manager, this ensures that the teardown logic is always executed at least, and at most, once -- even in case of an exception.
 
-This way, there's no chance that connections are left open by mistake.
-
 ```{tip}
-If you're used to calling somthing like `connect` and `disconnect` explicitly, working with the client via a context manager might feel a bit strange at first. We will see many examples which will hopefully clear this up.
+If you're used to calling something like `connect` and `disconnect` explicitly, working with the client via a context manager might feel a bit strange at first. We will see a few examples which will hopefully clear this up.
 
 In case your use case does not allow you to use a context manager, you can use the context manager's `__aenter__` and `__aexit__` methods directly, similar to something like `connect` and `disconnect`. Note that you loose the benefits of context managers in this case. We do not recommend this approach; It's a workaround and a bit tricky to get right.
 ```
 
 ```{note}
-Examples use the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Please use the mosquitto test broker in issues or discussions (if possible) to make it easier for others to test your code.
+Examples use the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Please use this broker in issues or discussions (if possible) to make it easier for others to test your code.
 ```
 
 For a list of all available arguments to the client, see the [API reference](#developer-interface).
