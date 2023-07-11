@@ -511,15 +511,19 @@ class Client:
         if self._disconnected.done():
             self._disconnected = asyncio.Future()
 
-    async def disconnect(self, *, timeout: float | None = None) -> None:
-        """Disconnect from the broker."""
-        # Early out if already disconnected...
+    def _early_out_on_disconnected(self)-> bool:
+         # Early out if already disconnected...
         if self._disconnected.done():
-            disc_exc = self._disconnected.exception()
-            if disc_exc is not None:
+            if (disc_exc:= self._disconnected.exception()) is not None:
                 # ...by raising the error that caused the disconnect
                 raise disc_exc
             # ...by returning since the disconnect was intentional
+            return True
+        return False
+
+    async def disconnect(self, *, timeout: float | None = None) -> None:
+        """Disconnect from the broker."""
+        if self._early_out_on_disconnected():
             return
         # Try to gracefully disconnect from the broker
         rc = self._client.disconnect()
@@ -1037,13 +1041,16 @@ class Client:
     ) -> None:
         """Try to gracefully disconnect from the broker."""
         try:
-            await self.disconnect()
-        except MqttError as error:
-            # We tried to be graceful. Now there is no mercy.
-            self._logger.warning(
-                f'Could not gracefully disconnect due to "{error}". Forcing'
-                " disconnection."
-            )
+            if self._early_out_on_disconnected():
+                return
+            try:
+                await self.disconnect()
+            except MqttError as error:
+                # We tried to be graceful. Now there is no mercy.
+                self._logger.warning(
+                    f'Could not gracefully disconnect due to "{error}". Forcing'
+                    " disconnection."
+                )
         finally:
             self._force_disconnect()
             self._lock.release()
