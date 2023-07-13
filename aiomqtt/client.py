@@ -514,7 +514,8 @@ class Client:
     def _early_out_on_disconnected(self)-> bool:
          # Early out if already disconnected...
         if self._disconnected.done():
-            if (disc_exc:= self._disconnected.exception()) is not None:
+            disc_exc = self._disconnected.exception()
+            if disc_exc is not None:
                 # ...by raising the error that caused the disconnect
                 raise disc_exc
             # ...by returning since the disconnect was intentional
