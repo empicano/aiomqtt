@@ -511,8 +511,8 @@ class Client:
         if self._disconnected.done():
             self._disconnected = asyncio.Future()
 
-    def _early_out_on_disconnected(self)-> bool:
-         # Early out if already disconnected...
+    def _early_out_on_disconnected(self) -> bool:
+        # Early out if already disconnected...
         if self._disconnected.done():
             disc_exc = self._disconnected.exception()
             if disc_exc is not None:
