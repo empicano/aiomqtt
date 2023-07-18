@@ -2,10 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Added
+
+- Add reference section generated from docstrings to documentation. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#231](https://github.com/sbtinstruments/asyncio-mqtt/pull/231)
+
+### Fixed
+
+- Don't suppress exceptions in the client's `__aexit__`. Contributed by [Robert Resch (@edenhaus)](https://github.com/edenhaus) in [#232](https://github.com/sbtinstruments/aiomqtt/pull/232)
 
 ## [1.0.0] - 2023-06-16
 
@@ -33,11 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.17.0] - 2023-06-12
 
-Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt.
-Problem is that the *old* aiomqtt (by mossblaser) was still in use.
-These users suddenly experienced a breaking change when they updated
-from v0.1.2 to v0.17.0. Our mitigation is to yank v0.17.0 and release
-a v1.0.0 in it's place. It was about time for a v1.0.0 release anyhow!
+Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is that the _old_ aiomqtt (by mossblaser) was still in use. These users suddenly experienced a breaking change when they updated from v0.1.2 to v0.17.0. Our mitigation is to yank v0.17.0 and release a v1.0.0 in it's place. It was about time for a v1.0.0 release anyhow!
 
 ## [0.16.1]
 
