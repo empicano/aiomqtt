@@ -301,6 +301,7 @@ class Client:
             automatically.
         tls_context: The SSL/TLS context.
         tls_params: The SSL/TLS configuration to use.
+        tls_insecure: Enable/disable server hostname verification when using SSL/TLS.
         proxy: Configure a proxy for the connection.
         protocol: The version of the MQTT protocol.
         will: The will message to publish if the client disconnects unexpectedly.
@@ -339,6 +340,7 @@ class Client:
         client_id: str | None = None,
         tls_context: ssl.SSLContext | None = None,
         tls_params: TLSParameters | None = None,
+        tls_insecure: bool | None = None,
         proxy: ProxySettings | None = None,
         protocol: ProtocolVersion | None = None,
         will: Will | None = None,
@@ -441,6 +443,9 @@ class Client:
                 ciphers=tls_params.ciphers,
                 keyfile_password=tls_params.keyfile_password,
             )
+
+        if tls_insecure is not None:
+            self._client.tls_insecure_set(tls_insecure)
 
         if proxy is not None:
             self._client.proxy_set(**proxy.proxy_args)
