@@ -6,13 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2023-08-03
+
 ### Added
 
+- Expose paho's `tls_insecure` argument. Contributed by [Bob Steers (@steersbob)](https://github.com/steersbob) in [#234](https://github.com/sbtinstruments/asyncio-mqtt/pull/234)
 - Add reference section generated from docstrings to documentation. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#231](https://github.com/sbtinstruments/asyncio-mqtt/pull/231)
 
 ### Fixed
 
 - Don't suppress exceptions in the client's `__aexit__`. Contributed by [Robert Resch (@edenhaus)](https://github.com/edenhaus) in [#232](https://github.com/sbtinstruments/aiomqtt/pull/232)
+- Match `topic/subtopic` with `topic/subtopic/#` wildcard according to MQTT documentation. Contributed by [Bob Steers (@steersbob)](https://github.com/steersbob) in [#241](https://github.com/sbtinstruments/asyncio-mqtt/pull/241)
 
 ## [1.0.0] - 2023-06-16
 
