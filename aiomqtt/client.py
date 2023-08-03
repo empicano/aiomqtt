@@ -211,7 +211,7 @@ class Topic(Wildcard):
 
         def recurse(x: list[str], y: list[str]) -> bool:
             if not x:
-                if not y:
+                if not y or y[0] == "#":
                     return True
                 return False
             if not y:
