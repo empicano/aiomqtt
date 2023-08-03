@@ -2,10 +2,7 @@
 
 Network connections are inherently unstable and can fail at any time. Especially for long-running applications, this can be a challenge.
 
-To make an application resilient against connection failures, we have to be able to:
-
-1. detect failures in the first place, and
-1. recover from them.
+To make an application resilient against connection failures, we have to be able to detect failures and recover from them.
 
 The `Client` context is designed to be [reusable (but not reentrant)](https://docs.python.org/3/library/contextlib.html#reusable-context-managers). This means that we can wrap our code in a `try`/`except`-block, listen for `MqttError`s, and reconnect like so:
 

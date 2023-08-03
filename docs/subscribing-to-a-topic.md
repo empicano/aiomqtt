@@ -1,6 +1,6 @@
 # Subscribing to a topic
 
-To receive messages for a topic, we need to subscribe to it and listen for messages. A minimal working example that listens for messages to the `temperature/#` wildcard looks like this:
+To receive messages for a topic, we need to subscribe to it and listen for messages. This is a minimal working example that listens for messages to the `temperature/#` wildcard:
 
 ```python
 import asyncio
@@ -20,43 +20,13 @@ asyncio.run(main())
 
 Now you can use the [minimal publisher example](publishing-a-message.md) to publish a message to `temperature/outside` and see it appear in the console.
 
-````{important}
-Messages are handled _one after another_. If a message takes a long time to handle, other [messages are queued](#the-message-queue) and handled only after the first one is done.
-
-You can handle messages in parallel by using an `asyncio.TaskGroup` like so:
-
-```python
-import asyncio
-import aiomqtt
-
-
-async def handle(message):
-    await asyncio.sleep(5)  # Simulate some I/O-bound work
-    print(message.payload)
-
-
-async def main():
-    async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async with asyncio.TaskGroup() as tg:
-                async for message in messages:
-                    tg.create_task(process(message))
-
-
-asyncio.run(main())
-```
-
-Note that this only makes sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
-````
-
 ```{tip}
 You can set the [Quality of Service](publishing-a-message.md#quality-of-service-qos) of the subscription by passing the `qos` parameter to `subscribe()`.
 ```
 
 ## Filtering messages
 
-Imagine we measure temperature and humidity on the outside and inside, and our topics look like this: `temperature/outside`. We want to receive all types of measurements but handle them differently.
+Imagine that we measure temperature and humidity on the outside and inside, and our topics have the structure `temperature/outside`. We want to receive all types of measurements but handle them differently.
 
 aiomqtt provides `Topic.matches()` to make this easy:
 
@@ -86,9 +56,15 @@ asyncio.run(main())
 In our example, messages to `temperature/outside` are handled twice!
 ```
 
+```{tip}
+For details on the `+` and `#` wildcards and what topics they match, see the [OASIS specification](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Toc3901241).
+```
+
 ## The message queue
 
-Messages are buffered in a queue internally. The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to `messages()` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
+Messages are buffered in a queue internally and handled one after another.
+
+The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to `messages()` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
 
 If you want to queue based on priority, you can subclass `asyncio.PriorityQueue`. This queue returns messages in priority order (lowest priority first). In case of ties, messages with lower message identifiers are returned first.
 
@@ -122,15 +98,43 @@ async def main():
 asyncio.run(main())
 ```
 
-```{note}
+```{tip}
 By default, the size of the queue is unlimited. You can limit it by passing the `queue_maxsize` parameter to `messages()`.
 ```
+
+````{important}
+If a message takes a long time to handle, it blocks the handling of other messages. You can handle messages in parallel by using an `asyncio.TaskGroup` like so:
+
+```python
+import asyncio
+import aiomqtt
+
+
+async def handle(message):
+    await asyncio.sleep(5)  # Simulate some I/O-bound work
+    print(message.payload)
+
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        async with client.messages() as messages:
+            await client.subscribe("temperature/#")
+            async with asyncio.TaskGroup() as tg:
+                async for message in messages:
+                    tg.create_task(handle(message))
+
+
+asyncio.run(main())
+```
+
+Note that this only makes sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
+````
 
 ## Listening without blocking
 
 When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish. Waiting for messages through the `messages()` generator blocks the execution of everything that comes afterward.
 
-In case you want to run other code after starting your listener, this is not practical.
+In case you want to run other code after starting your listener, this is not very practical.
 
 You can use `asyncio.TaskGroup` (or `asyncio.gather` for Python `<3.11`) to safely run other tasks alongside the MQTT listener:
 
@@ -163,7 +167,7 @@ async def main():
 asyncio.run(main())
 ```
 
-In case task groups are not an option (e.g. because you run aiomqtt [alongside a web framework](alongside-fastapi-and-co.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` but not `await` the created task:
+In case task groups are not an option (e.g. because you run aiomqtt [alongside a web framework](alongside-fastapi-and-co.md)) you can start the listener in a fire-and-forget way. The idea is to use asyncio's `create_task` without awaiting the created task:
 
 ```{caution}
 You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only when we `await` the task. In this case, we explicitly don't.

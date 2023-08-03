@@ -17,14 +17,14 @@
 
 Write code like this:
 
-**Publisher**
+**Publish**
 
 ```python
 async with Client("test.mosquitto.org") as client:
     await client.publish("humidity/outside", payload=0.38)
 ```
 
-**Subscriber**
+**Subscribe**
 
 ```python
 async with Client("test.mosquitto.org") as client:
@@ -63,7 +63,7 @@ If you can't wait for the latest version and want to install directly from GitHu
 
 ### Note for Windows users
 
-Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by aiomqtt. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
+Since Python `3.8`, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by aiomqtt. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
 
 ```python
 # Change to the "Selector" event loop if platform is Windows
