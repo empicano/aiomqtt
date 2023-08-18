@@ -709,6 +709,7 @@ class Client:
         *,
         queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
+        topic: str | None = None,
     ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
         """Async context manager that creates a queue for incoming messages.
 
@@ -725,7 +726,7 @@ class Client:
             An async generator that yields messages from the underlying queue.
         """
         callback, generator = self._callback_and_generator(
-            queue_class=queue_class, queue_maxsize=queue_maxsize
+            queue_class=queue_class, queue_maxsize=queue_maxsize, topic=topic
         )
         try:
             # Add to the list of callbacks to call when a message is received
@@ -792,6 +793,7 @@ class Client:
         *,
         queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
+        topic: str | None = None,
     ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
         # Queue to hold the incoming messages
         messages: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
@@ -799,7 +801,11 @@ class Client:
         def _callback(message: Message) -> None:
             """Put the new message in the queue."""
             try:
-                messages.put_nowait(message)
+                if topic:
+                    if message.topic.matches(topic):
+                        messages.put_nowait(message)
+                else:
+                    messages.put_nowait(message)
             except asyncio.QueueFull:
                 self._logger.warning("Message queue is full. Discarding message.")
 
