@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Safety first
+set -o errexit -o pipefail -o nounset
+# Change into the project's directory
+cd "$(dirname "$0")/.."
+
+# Path to our Mosquitto configuration
+MOSQUITTO_CONFIGURATION="$(pwd)/scripts/mosquitto.conf"
+# Start a Mosquitto MQTT broker via docker
+docker run -it --rm --name mosquitto -p 127.0.0.1:1883:1883 -v "${MOSQUITTO_CONFIGURATION}:/mosquitto/config/mosquitto.conf" eclipse-mosquitto:latest

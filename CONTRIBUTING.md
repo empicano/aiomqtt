@@ -10,6 +10,7 @@ We're very happy about contributions to aiomqtt! ✨
 - Install the dependencies with `./scripts/setup`
 - Run black, ruff, and mypy with `./scripts/check`
 - Run the tests with `./scripts/test`
+- Spin up a local mosquitto broker via Docker with `./scripts/develop`
 
 ## The documentation
 
