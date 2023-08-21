@@ -1039,7 +1039,11 @@ class Client:
             msg = "Does not support reentrant"
             raise MqttReentrantError(msg)
         await self._lock.acquire()
-        await self.connect()
+        try:
+            await self.connect()
+        except Exception:
+            self._lock.release()
+            raise
         return self
 
     async def __aexit__(
