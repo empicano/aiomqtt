@@ -55,7 +55,7 @@ aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com
 
 ## Installation
 
-aiomqtt can be installed via `pip install aiomqtt`. It requires Python `3.7+` to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
+aiomqtt can be installed via `pip install aiomqtt`. It requires Python `3.8+` to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
 If you can't wait for the latest version and want to install directly from GitHub, use:
 

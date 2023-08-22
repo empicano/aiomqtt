@@ -19,7 +19,7 @@ classifiers = [
 "Issue tracker" = "https://github.com/sbtinstruments/aiomqtt/issues"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 paho-mqtt = "^1.6.0"
 typing-extensions = {version = "^4.4.0", markers = "python_version < '3.10'"}
 
@@ -52,11 +52,11 @@ requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.black] # https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#configuration-via-a-file
-target-version = ["py37", "py38", "py39", "py310", "py311"]
+target-version = ["py38", "py39", "py310", "py311"]
 
 [tool.ruff]
 required-version = "0.0.270"
-target-version = "py37"
+target-version = "py38"
 select = [
     "F",   # Pyflakes
     "E",   # pycodestyle
@@ -136,7 +136,6 @@ show_error_codes = true
 show_error_context = true
 junit_xml = "reports/mypy.xml"
 pretty = true
-no_strict_concatenate = true   # TODO(jonathan): remove when dropping python 3.7
 
 [tool.pytest.ini_options] # https://docs.pytest.org/en/latest/reference/reference.html#ini-options-ref
 filterwarnings = [
