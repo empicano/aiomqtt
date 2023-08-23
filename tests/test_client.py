@@ -541,7 +541,6 @@ async def test_client_connecting_disconnected_done() -> None:
 @pytest.mark.network
 async def test_client_aenter_connect_error_lock_release() -> None:
     client = Client(hostname="aenter_connect_error_lock_release")
-    with pytest.raises(MqttError):  # noqa: PT012
-        async with client:
-            ...
+    with pytest.raises(MqttError):
+        await client.__aenter__()
     assert not client._lock.locked()
