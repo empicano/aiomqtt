@@ -112,7 +112,7 @@ def _outgoing_call(
     method: Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]]
 ) -> Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]]:
     @functools.wraps(method)
-    async def decorated(self: ClientT, *args: P.args, **kwargs: P.kwargs) -> T:
+    async def decorated(self: ClientT, /, *args: P.args, **kwargs: P.kwargs) -> T:
         if not self._outgoing_calls_sem:
             return await method(self, *args, **kwargs)
 
@@ -549,6 +549,7 @@ class Client:
     @_outgoing_call
     async def subscribe(  # noqa: PLR0913
         self,
+        /,
         topic: SubscribeTopic,
         qos: int = 0,
         options: mqtt.SubscribeOptions | None = None,
@@ -589,6 +590,7 @@ class Client:
     @_outgoing_call
     async def unsubscribe(
         self,
+        /,
         topic: str | list[str],
         properties: Properties | None = None,
         *args: Any,
@@ -620,6 +622,7 @@ class Client:
     @_outgoing_call
     async def publish(  # noqa: PLR0913
         self,
+        /,
         topic: str,
         payload: PayloadType = None,
         qos: int = 0,
