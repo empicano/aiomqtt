@@ -13,7 +13,7 @@ from anyio import TASK_STATUS_IGNORED
 from anyio.abc import TaskStatus
 
 from aiomqtt import Client, ProtocolVersion, TLSParameters, Topic, Wildcard, Will
-from aiomqtt.error import MqttReentrantError
+from aiomqtt.error import MqttError, MqttReentrantError
 from aiomqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
@@ -536,3 +536,11 @@ async def test_client_connecting_disconnected_done() -> None:
     client._disconnected.set_result(None)
     await client.connect()
     await client.disconnect()
+
+
+@pytest.mark.network
+async def test_client_aenter_connect_error_lock_release() -> None:
+    client = Client(hostname="aenter_connect_error_lock_release")
+    with pytest.raises(MqttError):
+        await client.__aenter__()
+    assert not client._lock.locked()
