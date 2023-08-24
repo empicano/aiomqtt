@@ -488,6 +488,22 @@ class Client:
         yield from self._pending_publishes.keys()
 
     async def connect(self, *, timeout: float | None = None) -> None:
+        self._logger.warning(
+            "The manual `connect` and `disconnect` methods are deprecated and will be"
+            " removed in a future version. The preferred way to connect and disconnect"
+            " the client is to use the context manager interface via `async with`."
+            " In case you're forced to connect and disconnect manually, you can call"
+            " the context manager's `__aenter__` and `__aexit__` methods directly as a"
+            " workaround instead. `__aenter__` is equivalent to `connect`. `__aexit__`"
+            " is equivalent to `disconnect` except that it forces disconnection instead"
+            " of throwing an exception in case the client cannot disconnect normally."
+            " `__aexit__` expects three arguments: `exc_type`, `exc`, and `tb`. These"
+            " arguments describe the exception that caused the context manager to exit,"
+            " if any. You can pass `None` to all of these arguments in a manual call to"
+            " `__aexit__`. Note that with calling `__aenter__` and `__aexit__`"
+            " directly, you are using internal functionality that may break without"
+            " prior notice."
+        )
         try:
             loop = asyncio.get_running_loop()
 
@@ -529,6 +545,22 @@ class Client:
 
     async def disconnect(self, *, timeout: float | None = None) -> None:
         """Disconnect from the broker."""
+        self._logger.warning(
+            "The manual `connect` and `disconnect` methods are deprecated and will be"
+            " removed in a future version. The preferred way to connect and disconnect"
+            " the client is to use the context manager interface via `async with`."
+            " In case you're forced to connect and disconnect manually, you can call"
+            " the context manager's `__aenter__` and `__aexit__` methods directly as a"
+            " workaround instead. `__aenter__` is equivalent to `connect`. `__aexit__`"
+            " is equivalent to `disconnect` except that it forces disconnection instead"
+            " of throwing an exception in case the client cannot disconnect normally."
+            " `__aexit__` expects three arguments: `exc_type`, `exc`, and `tb`. These"
+            " arguments describe the exception that caused the context manager to exit,"
+            " if any. You can pass `None` to all of these arguments in a manual call to"
+            " `__aexit__`. Note that with calling `__aenter__` and `__aexit__`"
+            " directly, you are using internal functionality that may break without"
+            " prior notice."
+        )
         if self._early_out_on_disconnected():
             return
         # Try to gracefully disconnect from the broker
@@ -541,10 +573,6 @@ class Client:
         # If _connected is still in the completed state after disconnection, reset it
         if self._connected.done():
             self._connected = asyncio.Future()
-
-    def _force_disconnect(self) -> None:
-        if not self._disconnected.done():
-            self._disconnected.set_result(None)
 
     @_outgoing_call
     async def subscribe(  # noqa: PLR0913
@@ -1036,14 +1064,36 @@ class Client:
     async def __aenter__(self) -> Client:
         """Connect to the broker."""
         if self._lock.locked():
-            msg = "Does not support reentrant"
+            msg = "The client context manager is reusable, but not reentrant."
             raise MqttReentrantError(msg)
         await self._lock.acquire()
         try:
-            await self.connect()
-        except Exception:
+            loop = asyncio.get_running_loop()
+            # [3] Run connect() within an executor thread, since it blocks on socket
+            # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
+            await loop.run_in_executor(
+                None,
+                self._client.connect,
+                self._hostname,
+                self._port,
+                self._keepalive,
+                self._bind_address,
+                self._bind_port,
+                self._clean_start,
+                self._properties,
+            )
+            client_socket = self._client.socket()
+            _set_client_socket_defaults(client_socket, self._socket_options)
+        # paho.mqtt.Client.connect may raise one of several exceptions.
+        # We convert all of them to the common MqttError for user convenience.
+        # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
+        except (OSError, mqtt.WebsocketConnectionError) as error:
             self._lock.release()
-            raise
+            raise MqttError(str(error)) from None
+        await self._wait_for(self._connected, timeout=None)
+        # Reset `_disconnected` if it's already in completed state after connecting
+        if self._disconnected.done():
+            self._disconnected = asyncio.Future()
         return self
 
     async def __aexit__(
@@ -1052,22 +1102,26 @@ class Client:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        """Try to gracefully disconnect from the broker."""
-        try:
-            if self._early_out_on_disconnected():
-                return
-            try:
-                await self.disconnect()
-            except MqttError as error:
-                # We tried to be graceful. Now there is no mercy.
-                self._logger.warning(
-                    f'Could not gracefully disconnect due to "{error}". Forcing'
-                    " disconnection."
-                )
-        finally:
-            self._force_disconnect()
-            if self._lock.locked():
-                self._lock.release()
+        """Disconnect from the broker."""
+        if self._early_out_on_disconnected():
+            return
+        # Try to gracefully disconnect from the broker
+        rc = self._client.disconnect()
+        if rc == mqtt.MQTT_ERR_SUCCESS:
+            # Wait for acknowledgement
+            await self._wait_for(self._disconnected, timeout=None)
+            # Reset `_connected` if it's still in completed state after disconnecting
+            if self._connected.done():
+                self._connected = asyncio.Future()
+        else:
+            self._logger.warning(
+                f"Could not gracefully disconnect: {rc}. Forcing disconnection."
+            )
+        # Force disconnection if we cannot gracefully disconnect
+        if not self._disconnected.done():
+            self._disconnected.set_result(None)
+        if self._lock.locked():
+            self._lock.release()
 
 
 def _set_client_socket_defaults(
