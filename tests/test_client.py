@@ -81,6 +81,7 @@ async def test_topic_matches() -> None:
     assert not topic.matches("abc")
     assert not topic.matches("a/b")
     assert not topic.matches("a/b/c/d")
+    assert not topic.matches("a/b/c/d/#")
     assert not topic.matches("a/b/z")
     assert not topic.matches("a/b/c/+")
     assert not topic.matches("$share/a/b/c")
