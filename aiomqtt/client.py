@@ -491,18 +491,16 @@ class Client:
         self._logger.warning(
             "The manual `connect` and `disconnect` methods are deprecated and will be"
             " removed in a future version. The preferred way to connect and disconnect"
-            " the client is to use the context manager interface via `async with`."
-            " In case you're forced to connect and disconnect manually, you can call"
-            " the context manager's `__aenter__` and `__aexit__` methods directly as a"
-            " workaround instead. `__aenter__` is equivalent to `connect`. `__aexit__`"
-            " is equivalent to `disconnect` except that it forces disconnection instead"
-            " of throwing an exception in case the client cannot disconnect normally."
+            " the client is to use the context manager interface via `async with`. In"
+            " case your use case needs to connect and disconnect manually, you can call"
+            " the context manager's `__aenter__` and `__aexit__` methods as an escape"
+            " hatch instead. `__aenter__` is equivalent to `connect`. `__aexit__` is"
+            " equivalent to `disconnect` except that it forces disconnection instead"
+            " of throwing an exception in case the client cannot disconnect cleanly."
             " `__aexit__` expects three arguments: `exc_type`, `exc`, and `tb`. These"
             " arguments describe the exception that caused the context manager to exit,"
             " if any. You can pass `None` to all of these arguments in a manual call to"
-            " `__aexit__`. Note that with calling `__aenter__` and `__aexit__`"
-            " directly, you are using internal functionality that may break without"
-            " prior notice."
+            " `__aexit__`."
         )
         try:
             loop = asyncio.get_running_loop()
@@ -548,18 +546,16 @@ class Client:
         self._logger.warning(
             "The manual `connect` and `disconnect` methods are deprecated and will be"
             " removed in a future version. The preferred way to connect and disconnect"
-            " the client is to use the context manager interface via `async with`."
-            " In case you're forced to connect and disconnect manually, you can call"
-            " the context manager's `__aenter__` and `__aexit__` methods directly as a"
-            " workaround instead. `__aenter__` is equivalent to `connect`. `__aexit__`"
-            " is equivalent to `disconnect` except that it forces disconnection instead"
-            " of throwing an exception in case the client cannot disconnect normally."
+            " the client is to use the context manager interface via `async with`. In"
+            " case your use case needs to connect and disconnect manually, you can call"
+            " the context manager's `__aenter__` and `__aexit__` methods as an escape"
+            " hatch instead. `__aenter__` is equivalent to `connect`. `__aexit__` is"
+            " equivalent to `disconnect` except that it forces disconnection instead"
+            " of throwing an exception in case the client cannot disconnect cleanly."
             " `__aexit__` expects three arguments: `exc_type`, `exc`, and `tb`. These"
             " arguments describe the exception that caused the context manager to exit,"
             " if any. You can pass `None` to all of these arguments in a manual call to"
-            " `__aexit__`. Note that with calling `__aenter__` and `__aexit__`"
-            " directly, you are using internal functionality that may break without"
-            " prior notice."
+            " `__aexit__`."
         )
         if self._early_out_on_disconnected():
             return
@@ -1103,7 +1099,12 @@ class Client:
         tb: TracebackType | None,
     ) -> None:
         """Disconnect from the broker."""
-        if self._early_out_on_disconnected():
+        if self._disconnected.done():
+            # Return early if the client is already disconnected
+            self._lock.release()
+            if (exc := self._disconnected.exception()) is not None:
+                # If the disconnect wasn't intentional, raise the error that caused it
+                raise exc
             return
         # Try to gracefully disconnect from the broker
         rc = self._client.disconnect()
