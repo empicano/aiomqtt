@@ -88,15 +88,6 @@ async def test_topic_matches() -> None:
     assert not topic.matches("$test/group/a/b/c")
 
 
-async def test__aexit__() -> None:
-    """Test that it's possible to call __aexit__ without prior __aenter__.
-
-    This should also cover the case of an unsucessful __aenter__.
-    """
-    client = Client(HOSTNAME)
-    await client.__aexit__(None, None, None)
-
-
 @pytest.mark.network
 async def test_multiple_messages_generators() -> None:
     """Test that multiple Client.messages() generators can be used at the same time."""
@@ -415,21 +406,20 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
 
 @pytest.mark.network
 async def test_client_not_reentrant() -> None:
+    """Test that the client raises an error when we try to reenter."""
     client = Client(HOSTNAME)
-
     with pytest.raises(MqttReentrantError):  # noqa: PT012
         async with client:
             async with client:
-                ...
+                pass
 
 
 @pytest.mark.network
 async def test_client_reusable() -> None:
+    """Test that an instance of the client context manager can be reused."""
     client = Client(HOSTNAME)
-
     async with client:
         await client.publish("task/a", "task_a")
-
     async with client:
         await client.publish("task/b", "task_b")
 
@@ -549,8 +539,35 @@ async def test_client_connecting_disconnected_done() -> None:
 
 
 @pytest.mark.network
-async def test_client_aenter_connect_error_lock_release() -> None:
+async def test_client_aenter_error_lock_release() -> None:
+    """Test that the client's reusability lock is released on error in __aenter__."""
     client = Client(hostname="aenter_connect_error_lock_release")
     with pytest.raises(MqttError):
         await client.__aenter__()
     assert not client._lock.locked()
+
+
+@pytest.mark.network
+async def test_aexit_without_prior_aenter() -> None:
+    """Test that __aexit__ without prior (or unsuccessful) __aenter__ runs cleanly."""
+    client = Client(HOSTNAME)
+    await client.__aexit__(None, None, None)
+
+
+@pytest.mark.network
+async def test_aexit_client_is_already_disconnected_sucess() -> None:
+    """Test that __aexit__ exits cleanly if client is already cleanly disconnected."""
+    client = Client(HOSTNAME)
+    await client.__aenter__()
+    client._disconnected.set_result(None)
+    await client.__aexit__(None, None, None)
+
+
+@pytest.mark.network
+async def test_aexit_client_is_already_disconnected_failure() -> None:
+    """Test that __aexit__ reraises if client is already disconnected with an error."""
+    client = Client(HOSTNAME)
+    await client.__aenter__()
+    client._disconnected.set_exception(RuntimeError)
+    with pytest.raises(RuntimeError):
+        await client.__aexit__(None, None, None)
