@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.2.0] - 2023-09-03
+
+### Changed
+
+- Drop support for Python 3.7. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#246](https://github.com/sbtinstruments/aiomqtt/pull/246)
+
+### Fixed
+
+- Fix `__aenter__` failing to release lock when initial connection fails. Contributed by [Peanut (@vvanglro)](https://github.com/vvanglro) in [#245](https://github.com/sbtinstruments/aiomqtt/pull/245)
+
 ## [1.1.0] - 2023-08-03
 
 ### Added
