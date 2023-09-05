@@ -18,7 +18,7 @@ from aiomqtt.types import PayloadType
 
 pytestmark = pytest.mark.anyio
 
-HOSTNAME = "test.mosquitto.org"
+HOSTNAME = "localhost"
 OS_PY_VERSION = sys.platform + "_" + ".".join(map(str, sys.version_info[:2]))
 TOPIC_HEADER = OS_PY_VERSION + "/tests/aiomqtt/"
 
@@ -81,14 +81,15 @@ async def test_topic_matches() -> None:
     assert not topic.matches("abc")
     assert not topic.matches("a/b")
     assert not topic.matches("a/b/c/d")
+    assert not topic.matches("a/b/c/d/#")
     assert not topic.matches("a/b/z")
     assert not topic.matches("a/b/c/+")
     assert not topic.matches("$share/a/b/c")
-    assert not topic.matches("$test/group/a/b/c")
+    assert not topic.matches("$example/group/a/b/c")
 
 
 @pytest.mark.network
-async def test_multiple_messages_generators() -> None:
+async def test_multiple_messages_generators(mosquitto) -> None:
     """Test that multiple Client.messages() generators can be used at the same time."""
     topic = TOPIC_HEADER + "multiple_messages_generators"
 
@@ -108,7 +109,7 @@ async def test_multiple_messages_generators() -> None:
 
 
 @pytest.mark.network
-async def test_client_filtered_messages() -> None:
+async def test_client_filtered_messages(mosquitto) -> None:
     topic_header = TOPIC_HEADER + "filtered_messages/"
     good_topic = topic_header + "good"
     bad_topic = topic_header + "bad"
@@ -129,7 +130,7 @@ async def test_client_filtered_messages() -> None:
 
 
 @pytest.mark.network
-async def test_client_unfiltered_messages() -> None:
+async def test_client_unfiltered_messages(mosquitto) -> None:
     topic_header = TOPIC_HEADER + "unfiltered_messages/"
     topic_filtered = topic_header + "filtered"
     topic_unfiltered = topic_header + "unfiltered"
@@ -156,7 +157,7 @@ async def test_client_unfiltered_messages() -> None:
 
 
 @pytest.mark.network
-async def test_client_unsubscribe() -> None:
+async def test_client_unsubscribe(mosquitto) -> None:
     topic_header = TOPIC_HEADER + "unsubscribe/"
     topic1 = topic_header + "1"
     topic2 = topic_header + "2"
@@ -194,7 +195,7 @@ async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
 
 
 @pytest.mark.network
-async def test_client_will() -> None:
+async def test_client_will(mosquitto) -> None:
     topic = TOPIC_HEADER + "will"
     event = anyio.Event()
 
@@ -216,7 +217,7 @@ async def test_client_will() -> None:
 
 
 @pytest.mark.network
-async def test_client_tls_context() -> None:
+async def test_client_tls_context(mosquitto) -> None:
     topic = TOPIC_HEADER + "tls_context"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
@@ -238,7 +239,7 @@ async def test_client_tls_context() -> None:
 
 
 @pytest.mark.network
-async def test_client_tls_params() -> None:
+async def test_client_tls_params(mosquitto) -> None:
     topic = TOPIC_HEADER + "tls_params"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
@@ -262,7 +263,7 @@ async def test_client_tls_params() -> None:
 
 
 @pytest.mark.network
-async def test_client_username_password() -> None:
+async def test_client_username_password(mosquitto) -> None:
     topic = TOPIC_HEADER + "username_password"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
@@ -280,7 +281,7 @@ async def test_client_username_password() -> None:
 
 
 @pytest.mark.network
-async def test_client_logger() -> None:
+async def test_client_logger(mosquitto) -> None:
     logger = logging.getLogger("aiomqtt")
     async with Client(HOSTNAME, logger=logger) as client:
         assert logger is client._client._logger  # type: ignore[attr-defined]
@@ -288,6 +289,7 @@ async def test_client_logger() -> None:
 
 @pytest.mark.network
 async def test_client_max_concurrent_outgoing_calls(
+    mosquitto,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     topic = TOPIC_HEADER + "max_concurrent_outgoing_calls"
@@ -335,7 +337,7 @@ async def test_client_max_concurrent_outgoing_calls(
 
 
 @pytest.mark.network
-async def test_client_websockets() -> None:
+async def test_client_websockets(mosquitto) -> None:
     topic = TOPIC_HEADER + "websockets"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
@@ -361,7 +363,7 @@ async def test_client_websockets() -> None:
 @pytest.mark.network
 @pytest.mark.parametrize("pending_calls_threshold", [10, 20])
 async def test_client_pending_calls_threshold(
-    pending_calls_threshold: int, caplog: pytest.LogCaptureFixture
+    mosquitto, pending_calls_threshold: int, caplog: pytest.LogCaptureFixture
 ) -> None:
     topic = TOPIC_HEADER + "pending_calls_threshold"
 
@@ -385,6 +387,7 @@ async def test_client_pending_calls_threshold(
 @pytest.mark.network
 @pytest.mark.parametrize("pending_calls_threshold", [10, 20])
 async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_calls(
+    mosquitto,
     pending_calls_threshold: int,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -404,7 +407,7 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
 
 
 @pytest.mark.network
-async def test_client_not_reentrant() -> None:
+async def test_client_not_reentrant(mosquitto) -> None:
     client = Client(HOSTNAME)
 
     with pytest.raises(MqttReentrantError):  # noqa: PT012
@@ -414,7 +417,7 @@ async def test_client_not_reentrant() -> None:
 
 
 @pytest.mark.network
-async def test_client_reusable() -> None:
+async def test_client_reusable(mosquitto) -> None:
     client = Client(HOSTNAME)
 
     async with client:
@@ -425,7 +428,7 @@ async def test_client_reusable() -> None:
 
 
 @pytest.mark.network
-async def test_client_connect_disconnect() -> None:
+async def test_client_connect_disconnect(mosquitto) -> None:
     client = Client(HOSTNAME)
 
     await client.connect()
@@ -434,7 +437,7 @@ async def test_client_connect_disconnect() -> None:
 
 
 @pytest.mark.network
-async def test_client_reusable_message() -> None:
+async def test_client_reusable_message(mosquitto) -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
 
@@ -470,7 +473,7 @@ async def test_client_reusable_message() -> None:
 
 
 @pytest.mark.network
-async def test_client_use_connect_disconnect_multiple_message() -> None:
+async def test_client_use_connect_disconnect_multiple_message(mosquitto) -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
 
@@ -514,7 +517,7 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
 
 
 @pytest.mark.network
-async def test_client_disconnected_exception() -> None:
+async def test_client_disconnected_exception(mosquitto) -> None:
     client = Client(HOSTNAME)
     await client.connect()
     client._disconnected.set_exception(RuntimeError)
@@ -523,7 +526,7 @@ async def test_client_disconnected_exception() -> None:
 
 
 @pytest.mark.network
-async def test_client_disconnected_done() -> None:
+async def test_client_disconnected_done(mosquitto) -> None:
     client = Client(HOSTNAME)
     await client.connect()
     client._disconnected.set_result(None)
@@ -531,7 +534,7 @@ async def test_client_disconnected_done() -> None:
 
 
 @pytest.mark.network
-async def test_client_connecting_disconnected_done() -> None:
+async def test_client_connecting_disconnected_done(mosquitto) -> None:
     client = Client(HOSTNAME)
     client._disconnected.set_result(None)
     await client.connect()
@@ -539,8 +542,8 @@ async def test_client_connecting_disconnected_done() -> None:
 
 
 @pytest.mark.network
-async def test_client_aenter_connect_error_lock_release() -> None:
-    client = Client(hostname="aenter_connect_error_lock_release")
+async def test_client_aenter_connect_error_lock_release(mosquitto) -> None:
+    client = Client(hostname="example")
     with pytest.raises(MqttError):
         await client.__aenter__()
     assert not client._lock.locked()
