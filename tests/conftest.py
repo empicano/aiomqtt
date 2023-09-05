@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import collections.abc
 import pathlib
 import sys
 import typing
 
-import docker
+import docker  # type: ignore[import]
 import pytest
 
 
@@ -18,7 +19,7 @@ def anyio_backend() -> tuple[str, dict[str, typing.Any]]:
 
 
 @pytest.fixture(scope="session")
-def mosquitto() -> dict[str, typing.Any]:
+def mosquitto() -> collections.abc.Iterator[dict[str, typing.Any]]:
     client = docker.from_env()
     configuration = pathlib.Path(__file__).parent / "mosquitto.conf"
     container = client.containers.run(
