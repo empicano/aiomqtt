@@ -1066,7 +1066,8 @@ class Client:
                 )
         finally:
             self._force_disconnect()
-            self._lock.release()
+            if self._lock.locked():
+                self._lock.release()
 
 
 def _set_client_socket_defaults(
