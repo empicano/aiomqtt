@@ -87,6 +87,12 @@ async def test_topic_matches() -> None:
     assert not topic.matches("$test/group/a/b/c")
 
 
+async def test__aexit__():
+    """Test that it's possible to call __aexit__ without __aenter__, e.g. in case of unsucessful __aenter__"""
+    client = Client(HOSTNAME)
+    await client.__aexit__(None, None, None)
+
+
 @pytest.mark.network
 async def test_multiple_messages_generators() -> None:
     """Test that multiple Client.messages() generators can be used at the same time."""
