@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.2.1] - 2023-09-19
+
+### Changed
+
+- Deprecate `connect` and `disconnect` in favor of direct calls to `__aenter__` and `__aexit__`. (@empicano in #247)
+
+### Fixed
+
+- Release lock in `__aexit__` only if acquired (@spacemanspiff2007 in #249)
+
 ## [1.2.0] - 2023-09-03
 
 ### Changed
