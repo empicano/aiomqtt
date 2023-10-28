@@ -26,10 +26,10 @@ done
 
 # Run checks
 if [ "${dry}" = true ]; then
-  poetry run black --check --diff aiomqtt tests
   poetry run ruff check aiomqtt tests
+  poetry run ruff format --check --diff aiomqtt tests
 else
-  poetry run black aiomqtt tests
-  poetry run ruff --fix aiomqtt tests
+  poetry run ruff check --fix aiomqtt tests
+  poetry run ruff format aiomqtt tests
 fi
 poetry run mypy aiomqtt tests

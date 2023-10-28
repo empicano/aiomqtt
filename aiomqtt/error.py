@@ -52,6 +52,6 @@ _CONNECT_RC_STRINGS: dict[int, str] = {
     # 4: Connection refused - bad username or password
     4: "Bad username or password",
     # 5: Connection refused - not authorised
-    5: "Not authorised"
+    5: "Not authorised",
     # 6-255: Currently unused.
 }
