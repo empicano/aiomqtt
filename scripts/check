@@ -32,4 +32,4 @@ else
   poetry run ruff check --fix aiomqtt tests
   poetry run ruff format aiomqtt tests
 fi
-poetry run mypy aiomqtt tests
+poetry run mypy aiomqtt tests --junit-xml="reports/mypy.xml"
