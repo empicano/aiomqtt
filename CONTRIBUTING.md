@@ -7,7 +7,7 @@ We're very happy about contributions to aiomqtt! ✨
 - Clone the aiomqtt repository
 - Install the Python version noted in `.python-version` via `pyenv`
 - Install poetry; Then run `./scripts/setup` to install the dependencies and aiomqtt itself
-- Run black, ruff, and mypy with `./scripts/check`
+- Run ruff, and mypy with `./scripts/check`
 - Run the tests with `./scripts/test`
 
 During development, it's often useful to have a local MQTT broker running. You can spin up a local mosquitto broker with Docker via `./scripts/develop`. You can connect to this broker with `aiomqtt.Client("localhost", port=1883)`.
