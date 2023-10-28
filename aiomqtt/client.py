@@ -31,10 +31,14 @@ from paho.mqtt.properties import Properties
 from .error import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
 from .types import PayloadType, T
 
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 11):
+    from typing import Concatenate, ParamSpec, Self, TypeAlias
+elif sys.version_info >= (3, 10):
     from typing import Concatenate, ParamSpec, TypeAlias
+
+    from typing_extensions import Self
 else:
-    from typing_extensions import Concatenate, ParamSpec, TypeAlias
+    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
 
 
 MAX_TOPIC_LENGTH = 65535
@@ -778,7 +782,7 @@ class Client:
                 messages.put_nowait(message)
             except asyncio.QueueFull:
                 self._logger.warning(
-                    f"[{log_context}] Message queue is full. Discarding message."
+                    "[%s] Message queue is full. Discarding message.", log_context
                 )
 
         # The generator that we give to the caller
@@ -881,7 +885,7 @@ class Client:
             # Log a warning if there is a concerning number of pending calls
             pending = len(list(self._pending_calls))
             if pending > self.pending_calls_threshold:
-                self._logger.warning(f"There are {pending} pending publish calls.")
+                self._logger.warning("There are %d pending publish calls.", pending)
             # Back to the caller (run whatever is inside the with statement)
             yield
         finally:
@@ -961,7 +965,7 @@ class Client:
                 fut.set_result(granted_qos)
         except KeyError:
             self._logger.exception(
-                f'Unexpected message ID "{mid}" in on_subscribe callback'
+                'Unexpected message ID "%d" in on_subscribe callback', mid
             )
 
     def _on_unsubscribe(  # noqa: PLR0913
@@ -976,7 +980,7 @@ class Client:
             self._pending_unsubscribes.pop(mid).set()
         except KeyError:
             self._logger.exception(
-                f'Unexpected message ID "{mid}" in on_unsubscribe callback'
+                'Unexpected message ID "%d" in on_unsubscribe callback', mid
             )
 
     def _on_message(
@@ -1057,7 +1061,7 @@ class Client:
         while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:
             await asyncio.sleep(1)
 
-    async def __aenter__(self) -> Client:
+    async def __aenter__(self) -> Self:
         """Connect to the broker."""
         if self._lock.locked():
             msg = "The client context manager is reusable, but not reentrant"
@@ -1114,7 +1118,7 @@ class Client:
                 self._connected = asyncio.Future()
         else:
             self._logger.warning(
-                f"Could not gracefully disconnect: {rc}. Forcing disconnection."
+                "Could not gracefully disconnect: %d. Forcing disconnection.", rc
             )
         # Force disconnection if we cannot gracefully disconnect
         if not self._disconnected.done():
