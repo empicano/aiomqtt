@@ -474,13 +474,16 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
     custom_client = Client(HOSTNAME)
     publish_client = Client(HOSTNAME)
 
+    topic_a = TOPIC_HEADER + "task/a"
+    topic_b = TOPIC_HEADER + "task/b"
+
     await custom_client.connect()
     await publish_client.connect()
 
     async def task_a_customer(
         task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
     ) -> None:
-        await custom_client.subscribe("a/b/c")
+        await custom_client.subscribe(topic_a)
         async with custom_client.messages() as messages:
             task_status.started()
             async for message in messages:
@@ -491,7 +494,7 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
         task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
     ) -> None:
         num = 0
-        await custom_client.subscribe("qwer")
+        await custom_client.subscribe(topic_b)
         async with custom_client.messages() as messages:
             task_status.started()
             async for message in messages:
@@ -506,8 +509,8 @@ async def test_client_use_connect_disconnect_multiple_message() -> None:
     async with anyio.create_task_group() as tg:
         await tg.start(task_a_customer)
         await tg.start(task_b_customer)
-        tg.start_soon(task_publisher, "a/b/c", "task_a")
-        tg.start_soon(task_publisher, "qwer", "task_b")
+        tg.start_soon(task_publisher, topic_a, "task_a")
+        tg.start_soon(task_publisher, topic_b, "task_b")
 
     await custom_client.disconnect()
     await publish_client.disconnect()
