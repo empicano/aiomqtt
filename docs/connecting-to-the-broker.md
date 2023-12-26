@@ -20,13 +20,13 @@ The connection to the broker is managed by the `Client` context manager. This co
 Context managers make it easier to manage resources like network connections or files by ensuring that their teardown logic is always executed -- even in case of an exception.
 
 ```{tip}
-If your use case does not allow you to use a context manager, you can use the client's `__aenter__` and `__aexit__` methods directly as a workaround, similar to how you would use manual `connect` and `disconnect` methods.
-
-With this approach you need to make sure that `___aexit___` is also called in case of an exception. Avoid this workaround if you can, it's a bit tricky to get right.
+If your use case does not allow you to use a context manager, you can use the client's `__aenter__` and `__aexit__` methods directly as a workaround, similar to how you would use manual `connect` and `disconnect` methods. With this approach you need to make sure that `___aexit___` is also called in case of an exception. Avoid this workaround if you can, it's a bit tricky to get right.
 ```
 
 ```{note}
-Examples use the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. All examples in this documentation are self-contained and runnable as-is.
+Examples use the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Alternatively, our [contribution guide](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md) contains an explanation of how to spin up a local mosquitto broker with Docker.
+
+All examples in this documentation are self-contained and runnable as-is.
 ```
 
 For a list of all available arguments to the client, see the [API reference](#developer-interface).

@@ -99,9 +99,9 @@ The changelog lives in [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/
 
 Is aiomqtt not what you're looking for? There are a few other clients you can try:
 
-- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python): Synchronous.
-- [micropython-mqtt](https://github.com/peterhinch/micropython-mqtt): Asynchronous client for microcontrollers in MicroPython.
-- [gmqtt](https://github.com/wialon/gmqtt): Asynchronous.
-- [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt): Asynchronous wrapper around gmqtt; Simplifies integration with FastAPI.
-- [amqtt](https://github.com/Yakifo/amqtt): Asynchronous; Includes a broker.
-- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt): Asynchronous wrapper around paho-mqtt; Based on trio instead of asyncio.
+- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python): Synchronous client
+- [micropython-mqtt](https://github.com/peterhinch/micropython-mqtt): Asynchronous client for microcontrollers in MicroPython
+- [gmqtt](https://github.com/wialon/gmqtt): Asynchronous client
+- [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt): Asynchronous wrapper around gmqtt; Simplifies integration with FastAPI
+- [amqtt](https://github.com/Yakifo/amqtt): Asynchronous client; Includes a broker
+- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt): Asynchronous wrapper around paho-mqtt; Based on trio instead of asyncio

@@ -40,5 +40,6 @@ developer-interface
 GitHub <https://github.com/sbtinstruments/aiomqtt>
 Issue tracker <https://github.com/sbtinstruments/aiomqtt/issues>
 Discussions <https://github.com/sbtinstruments/aiomqtt/discussions>
+Contributing <https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md>
 PyPI <https://pypi.org/project/aiomqtt/>
 ```
