@@ -51,3 +51,7 @@ async def publish():
 ```{note}
 This is a combination of some concepts addressed in more detail in other sections: The connection is shared between the listener task and the routes, as explained in [](connecting-to-the-broker.md#sharing-the-connection). We don't immediately await the listener task in order to avoid blocking other code, as explained in [](subscribing-to-a-topic.md#listening-without-blocking).
 ```
+
+```{tip}
+With Starlette you can yield the initialized client to [the lifespan's state](https://www.starlette.io/lifespan/) instead of using global variables.
+```

@@ -21,12 +21,12 @@ asyncio.run(main())
 Now you can use the [minimal publisher example](publishing-a-message.md) to publish a message to `temperature/outside` and see it appear in the console.
 
 ```{tip}
-You can set the [Quality of Service](publishing-a-message.md#quality-of-service-qos) of the subscription by passing the `qos` parameter to `subscribe()`.
+You can set the [Quality of Service](publishing-a-message.md#quality-of-service-qos) of the subscription by passing the `qos` parameter to `Client.subscribe()`.
 ```
 
 ## Filtering messages
 
-Imagine that we measure temperature and humidity on the outside and inside, and our topics have the structure `temperature/outside`. We want to receive all types of measurements but handle them differently.
+Imagine that we measure temperature and humidity on the outside and inside. We want to receive all types of measurements but handle them differently.
 
 aiomqtt provides `Topic.matches()` to make this easy:
 
@@ -62,13 +62,13 @@ For details on the `+` and `#` wildcards and what topics they match, see the [OA
 
 ## The message queue
 
-Messages are buffered in a queue internally and handled one after another.
+Messages are queued and returned sequentially from `Client.messages()`.
 
-The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to `messages()` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
+The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other types of asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to `Client.messages()` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
 
-If you want to queue based on priority, you can subclass `asyncio.PriorityQueue`. This queue returns messages in priority order (lowest priority first). In case of ties, messages with lower message identifiers are returned first.
+You can subclass `asyncio.PriorityQueue` to queue based on priority. Messages are returned ascendingly by their priority values. In the case of ties, messages with lower message identifiers are returned first.
 
-Let's say we measure temperature and humidity again, but we want to prioritize humidity messages:
+Let's say we measure temperature and humidity again, but we want to prioritize humidity:
 
 ```python
 import asyncio
@@ -99,11 +99,14 @@ asyncio.run(main())
 ```
 
 ```{tip}
-By default, the size of the queue is unlimited. You can limit it by passing the `queue_maxsize` parameter to `messages()`.
+By default, the size of the queue is unlimited. You can set a limit by passing the `queue_maxsize` parameter to `Client.messages()`.
 ```
 
-````{important}
-If a message takes a long time to handle, it blocks the handling of other messages. You can handle messages in parallel by using an `asyncio.TaskGroup` like so:
+## Processing concurrently
+
+Messages are queued and returned sequentially from `Client.messages()`. If a message takes a long time to handle, it blocks the handling of other messages.
+
+You can handle messages concurrently by using an `asyncio.TaskGroup` like so:
 
 ```python
 import asyncio
@@ -121,18 +124,72 @@ async def main():
             await client.subscribe("temperature/#")
             async with asyncio.TaskGroup() as tg:
                 async for message in messages:
-                    tg.create_task(handle(message))
+                    tg.create_task(handle(message))  # Spawn new coroutine
 
 
 asyncio.run(main())
 ```
 
-Note that this only makes sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
-````
+```{important}
+Coroutines only make sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
+```
+
+The code snippet above handles each message in a new coroutine. Sometimes, we want to handle messages from different topics concurrently, but sequentially inside a single topic.
+
+The idea here is to implement a "distributor" that sorts incoming messages into multiple asyncio queues. Each queue is then processed by a different coroutine. Let's see how this works for our temperature and humidity messages:
+
+```python
+import asyncio
+import aiomqtt
+
+
+async def temperature_consumer():
+    while True:
+        message = await temperature_queue.get()
+        print(f"[temperature/#] {message.payload}")
+
+
+async def humidity_consumer():
+    while True:
+        message = await humidity_queue.get()
+        print(f"[humidity/#] {message.payload}")
+
+
+temperature_queue = asyncio.Queue()
+humidity_queue = asyncio.Queue()
+
+
+async def distributor(client):
+    async with client.messages() as messages:
+        await client.subscribe("temperature/#")
+        await client.subscribe("humidity/#")
+        # Sort messages into the appropriate queues
+        async for message in messages:
+            if message.topic.matches("temperature/#"):
+                temperature_queue.put_nowait(message)
+            elif message.topic.matches("humidity/#"):
+                humidity_queue.put_nowait(message)
+
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        # Use a task group to manage and await all tasks
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(distributor(client))
+            tg.create_task(temperature_consumer())
+            tg.create_task(humidity_consumer())
+
+
+asyncio.run(main())
+```
+
+```{tip}
+You can combine this idea with the one [from the previous section](#the-message-queue) to e.g. handle temperature in FIFO and humidity in LIFO order.
+```
 
 ## Listening without blocking
 
-When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish. Waiting for messages through the `messages()` generator blocks the execution of everything that comes afterward.
+When you run the minimal example for subscribing and listening for messages, you'll notice that the program doesn't finish. Waiting for messages through the `Client.messages()` generator blocks the execution of everything that comes afterward.
 
 In case you want to run other code after starting your listener, this is not very practical.
 
@@ -144,6 +201,7 @@ import aiomqtt
 
 
 async def sleep(seconds):
+    # Some other task that needs to run concurrently
     await asyncio.sleep(seconds)
     print(f"Slept for {seconds} seconds!")
 
@@ -172,7 +230,7 @@ In case task groups are not an option (e.g. because you run aiomqtt [alongside a
 ```{caution}
 You need to be a bit careful with this approach. Exceptions raised in asyncio tasks are propagated only when we `await` the task. In this case, we explicitly don't.
 
-This means that you need to handle all possible exceptions _inside_ the fire-and-forget task. Any unhandled exceptions will be silently ignored until the program exits.
+You need to handle all possible exceptions _inside_ the fire-and-forget task. Unhandled exceptions will be silently ignored until the program exits.
 ```
 
 ```python
@@ -213,7 +271,7 @@ You [need to keep a reference to the task](https://docs.python.org/3/library/asy
 
 ## Stop listening
 
-You might want to have a listener task running alongside other code, and then stop it when you're done. You can use [`Task.cancel()`](https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel) for this:
+You might want to have a listener task running alongside other code, and then stop it when you're done. You can use [`asyncio.Task.cancel()`](https://docs.python.org/3/library/asyncio-task.html#asyncio.Task.cancel) for this:
 
 ```python
 import asyncio

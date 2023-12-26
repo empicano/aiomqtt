@@ -34,7 +34,7 @@ async with Client("test.mosquitto.org") as client:
             print(message.payload)
 ```
 
-aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with an intuitive, idiomatic asyncio interface:
+aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with an idiomatic asyncio interface:
 
 - No more callbacks! 👍
 - No more return codes (welcome to the `MqttError`)
@@ -55,9 +55,9 @@ aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com
 
 ## Installation
 
-aiomqtt can be installed via `pip install aiomqtt`. It requires Python `3.8+` to run. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
+aiomqtt can be installed via `pip install aiomqtt`. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
-If you can't wait for the latest version and want to install directly from GitHub, use:
+If you can't wait for the latest version, you can install aiomqtt directly from GitHub with:
 
 `pip install git+https://github.com/sbtinstruments/aiomqtt`
 
@@ -85,7 +85,7 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 
 ## Contributing
 
-We're very happy about contributions to the project! You can get started by reading [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
+We're very happy about contributions to aiomqtt! ✨ You can get started by reading [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
 
 ## Versioning
 
@@ -99,9 +99,9 @@ The changelog lives in [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/
 
 Is aiomqtt not what you're looking for? There are a few other clients you can try:
 
-- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) — Own protocol implementation. Synchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eclipse/paho.mqtt.python) ![license](https://img.shields.io/github/license/eclipse/paho.mqtt.python)
-- [gmqtt](https://github.com/wialon/gmqtt) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/wialon/gmqtt) ![license](https://img.shields.io/github/license/wialon/gmqtt)
-- [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt) — Asynchronous wrapper around gmqtt. Simplifies integration in your FastAPI application.<br>![GitHub stars](https://img.shields.io/github/stars/sabuhish/fastapi-mqtt) ![license](https://img.shields.io/github/license/sabuhish/fastapi-mqtt)
-- [amqtt](https://github.com/Yakifo/amqtt) — Own protocol implementation. Asynchronous. Includes a broker.<br>![GitHub stars](https://img.shields.io/github/stars/Yakifo/amqtt) ![license](https://img.shields.io/github/license/Yakifo/amqtt)
-- [mqttools](https://github.com/eerimoq/mqttools) — Own protocol implementation. Asynchronous.<br>![GitHub stars](https://img.shields.io/github/stars/eerimoq/mqttools) ![license](https://img.shields.io/github/license/eerimoq/mqttools)
-- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt) — Asynchronous wrapper around paho-mqtt (similar to aiomqtt). Based on trio instead of asyncio.<br>![GitHub stars](https://img.shields.io/github/stars/bkanuka/trio-paho-mqtt) ![license](https://img.shields.io/github/license/bkanuka/trio-paho-mqtt)
+- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python): Synchronous.
+- [micropython-mqtt](https://github.com/peterhinch/micropython-mqtt): Asynchronous client for microcontrollers in MicroPython.
+- [gmqtt](https://github.com/wialon/gmqtt): Asynchronous.
+- [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt): Asynchronous wrapper around gmqtt; Simplifies integration with FastAPI.
+- [amqtt](https://github.com/Yakifo/amqtt): Asynchronous; Includes a broker.
+- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt): Asynchronous wrapper around paho-mqtt; Based on trio instead of asyncio.

@@ -1,4 +1,4 @@
-# Contributing
+# How to contribute
 
 We're very happy about contributions to aiomqtt! ✨
 
@@ -6,11 +6,10 @@ We're very happy about contributions to aiomqtt! ✨
 
 - Clone the aiomqtt repository
 - Install the Python version noted in `.python-version` via `pyenv`
-- [Install poetry](https://python-poetry.org/docs/#installation)
-- Install the dependencies with `./scripts/setup`
+- Install poetry; Then run `./scripts/setup` to install the dependencies and aiomqtt itself
 - Run black, ruff, and mypy with `./scripts/check`
 - Run the tests with `./scripts/test`
-- Spin up a local mosquitto broker via Docker with `./scripts/develop`
+- Spin up a local mosquitto broker via Docker with `./scripts/develop`; You can connect to this broker via `aiomqtt.Client("localhost", port=1883)`
 
 ## The documentation
 
@@ -20,8 +19,8 @@ The Markdown source files are located in the `docs` folder. The reference sectio
 
 ## Making a pull request
 
-The branch to contribute to is `main`. You can create a draft pull request if your contribution is not yet ready to merge. Please check if your changes call for updates to the documentation and don't forget to add your name and contribution to the `CHANGELOG.md`!
+Please check if your changes call for updates to the documentation and don't forget to add your name and contribution to the `CHANGELOG.md`! You can create a draft pull request if your contribution is not yet ready to merge.
 
 ### Visual Studio Code
 
-If you're using VSCode, you can find workspace settings and recommended extensions in the `.vscode` folder.
+You can find workspace settings and recommended extensions in the `.vscode` folder.
