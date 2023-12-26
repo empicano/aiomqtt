@@ -20,7 +20,7 @@ pytestmark = pytest.mark.anyio
 
 HOSTNAME = "test.mosquitto.org"
 OS_PY_VERSION = sys.platform + "_" + ".".join(map(str, sys.version_info[:2]))
-TOPIC_HEADER = OS_PY_VERSION + "/tests/aiomqtt/"
+TOPIC_PREFIX = OS_PY_VERSION + "/tests/aiomqtt/"
 
 
 async def test_topic_validation() -> None:
@@ -91,7 +91,7 @@ async def test_topic_matches() -> None:
 @pytest.mark.network
 async def test_multiple_messages_generators() -> None:
     """Test that multiple Client.messages() generators can be used at the same time."""
-    topic = TOPIC_HEADER + "multiple_messages_generators"
+    topic = TOPIC_PREFIX + "multiple_messages_generators"
 
     async def handler(tg: anyio.abc.TaskGroup) -> None:
         async with client.messages() as messages:
@@ -109,7 +109,7 @@ async def test_multiple_messages_generators() -> None:
 
 @pytest.mark.network
 async def test_client_filtered_messages() -> None:
-    topic_header = TOPIC_HEADER + "filtered_messages/"
+    topic_header = TOPIC_PREFIX + "filtered_messages/"
     good_topic = topic_header + "good"
     bad_topic = topic_header + "bad"
 
@@ -129,7 +129,7 @@ async def test_client_filtered_messages() -> None:
 
 @pytest.mark.network
 async def test_client_unfiltered_messages() -> None:
-    topic_header = TOPIC_HEADER + "unfiltered_messages/"
+    topic_header = TOPIC_PREFIX + "unfiltered_messages/"
     topic_filtered = topic_header + "filtered"
     topic_unfiltered = topic_header + "unfiltered"
 
@@ -155,7 +155,7 @@ async def test_client_unfiltered_messages() -> None:
 
 @pytest.mark.network
 async def test_client_unsubscribe() -> None:
-    topic_header = TOPIC_HEADER + "unsubscribe/"
+    topic_header = TOPIC_PREFIX + "unsubscribe/"
     topic1 = topic_header + "1"
     topic2 = topic_header + "2"
 
@@ -192,7 +192,7 @@ async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
 
 @pytest.mark.network
 async def test_client_will() -> None:
-    topic = TOPIC_HEADER + "will"
+    topic = TOPIC_PREFIX + "will"
     event = anyio.Event()
 
     async def launch_client() -> None:
@@ -214,7 +214,7 @@ async def test_client_will() -> None:
 
 @pytest.mark.network
 async def test_client_tls_context() -> None:
-    topic = TOPIC_HEADER + "tls_context"
+    topic = TOPIC_PREFIX + "tls_context"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
         async with client.filtered_messages(topic) as messages:
@@ -235,7 +235,7 @@ async def test_client_tls_context() -> None:
 
 @pytest.mark.network
 async def test_client_tls_params() -> None:
-    topic = TOPIC_HEADER + "tls_params"
+    topic = TOPIC_PREFIX + "tls_params"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
         async with client.filtered_messages(topic) as messages:
@@ -258,7 +258,7 @@ async def test_client_tls_params() -> None:
 
 @pytest.mark.network
 async def test_client_username_password() -> None:
-    topic = TOPIC_HEADER + "username_password"
+    topic = TOPIC_PREFIX + "username_password"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
         async with client.filtered_messages(topic) as messages:
@@ -286,7 +286,7 @@ async def test_client_logger() -> None:
 async def test_client_max_concurrent_outgoing_calls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    topic = TOPIC_HEADER + "max_concurrent_outgoing_calls"
+    topic = TOPIC_PREFIX + "max_concurrent_outgoing_calls"
 
     class MockPahoClient(mqtt.Client):
         def subscribe(
@@ -332,7 +332,7 @@ async def test_client_max_concurrent_outgoing_calls(
 
 @pytest.mark.network
 async def test_client_websockets() -> None:
-    topic = TOPIC_HEADER + "websockets"
+    topic = TOPIC_PREFIX + "websockets"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
         async with client.filtered_messages(topic) as messages:
@@ -358,7 +358,7 @@ async def test_client_websockets() -> None:
 async def test_client_pending_calls_threshold(
     pending_calls_threshold: int, caplog: pytest.LogCaptureFixture
 ) -> None:
-    topic = TOPIC_HEADER + "pending_calls_threshold"
+    topic = TOPIC_PREFIX + "pending_calls_threshold"
 
     async with Client(HOSTNAME) as client:
         client.pending_calls_threshold = pending_calls_threshold
@@ -384,7 +384,7 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     topic = (
-        TOPIC_HEADER + "no_pending_calls_warnings_with_max_concurrent_outgoing_calls"
+        TOPIC_PREFIX + "no_pending_calls_warnings_with_max_concurrent_outgoing_calls"
     )
 
     async with Client(HOSTNAME, max_concurrent_outgoing_calls=1) as client:
@@ -399,32 +399,24 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
 
 
 @pytest.mark.network
-async def test_client_not_reentrant() -> None:
-    """Test that the client raises an error when we try to reenter."""
+async def test_client_is_reusable() -> None:
+    """Test that a client context manager instance is reusable."""
+    topic = TOPIC_PREFIX + "test_client_is_reusable"
     client = Client(HOSTNAME)
-    with pytest.raises(MqttReentrantError):  # noqa: PT012
-        async with client:
+    async with client:
+        await client.publish(topic, "foo")
+    async with client:
+        await client.publish(topic, "bar")
+
+
+@pytest.mark.network
+async def test_client_is_not_reentrant() -> None:
+    """Test that a client context manager instance is not reentrant."""
+    client = Client(HOSTNAME)
+    async with client:
+        with pytest.raises(MqttReentrantError):
             async with client:
                 pass
-
-
-@pytest.mark.network
-async def test_client_reusable() -> None:
-    """Test that an instance of the client context manager can be reused."""
-    client = Client(HOSTNAME)
-    async with client:
-        await client.publish("task/a", "task_a")
-    async with client:
-        await client.publish("task/b", "task_b")
-
-
-@pytest.mark.network
-async def test_client_connect_disconnect() -> None:
-    client = Client(HOSTNAME)
-
-    await client.connect()
-    await client.publish("connect", "connect")
-    await client.disconnect()
 
 
 @pytest.mark.network
@@ -463,81 +455,9 @@ async def test_client_reusable_message() -> None:
 
 
 @pytest.mark.network
-async def test_client_use_connect_disconnect_multiple_message() -> None:
-    custom_client = Client(HOSTNAME)
-    publish_client = Client(HOSTNAME)
-
-    topic_a = TOPIC_HEADER + "task/a"
-    topic_b = TOPIC_HEADER + "task/b"
-
-    await custom_client.connect()
-    await publish_client.connect()
-
-    async def task_a_customer(
-        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
-    ) -> None:
-        await custom_client.subscribe(topic_a)
-        async with custom_client.messages() as messages:
-            task_status.started()
-            async for message in messages:
-                assert message.payload == b"task_a"
-                return
-
-    async def task_b_customer(
-        task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
-    ) -> None:
-        num = 0
-        await custom_client.subscribe(topic_b)
-        async with custom_client.messages() as messages:
-            task_status.started()
-            async for message in messages:
-                assert message.payload in {b"task_a", b"task_b"}
-                num += 1
-                if num == 2:  # noqa: PLR2004
-                    return
-
-    async def task_publisher(topic: str, payload: PayloadType) -> None:
-        await publish_client.publish(topic, payload)
-
-    async with anyio.create_task_group() as tg:
-        await tg.start(task_a_customer)
-        await tg.start(task_b_customer)
-        tg.start_soon(task_publisher, topic_a, "task_a")
-        tg.start_soon(task_publisher, topic_b, "task_b")
-
-    await custom_client.disconnect()
-    await publish_client.disconnect()
-
-
-@pytest.mark.network
-async def test_client_disconnected_exception() -> None:
-    client = Client(HOSTNAME)
-    await client.connect()
-    client._disconnected.set_exception(RuntimeError)
-    with pytest.raises(RuntimeError):
-        await client.disconnect()
-
-
-@pytest.mark.network
-async def test_client_disconnected_done() -> None:
-    client = Client(HOSTNAME)
-    await client.connect()
-    client._disconnected.set_result(None)
-    await client.disconnect()
-
-
-@pytest.mark.network
-async def test_client_connecting_disconnected_done() -> None:
-    client = Client(HOSTNAME)
-    client._disconnected.set_result(None)
-    await client.connect()
-    await client.disconnect()
-
-
-@pytest.mark.network
-async def test_client_aenter_error_lock_release() -> None:
-    """Test that the client's reusability lock is released on error in __aenter__."""
-    client = Client(hostname="aenter_connect_error_lock_release")
+async def test_aenter_error_lock_release() -> None:
+    """Test that the client's reusability lock is released on error in ``aenter``."""
+    client = Client(hostname="invalid")
     with pytest.raises(MqttError):
         await client.__aenter__()
     assert not client._lock.locked()
@@ -545,7 +465,7 @@ async def test_client_aenter_error_lock_release() -> None:
 
 @pytest.mark.network
 async def test_aexit_without_prior_aenter() -> None:
-    """Test that __aexit__ without prior (or unsuccessful) __aenter__ runs cleanly."""
+    """Test that ``aexit`` without prior (or unsuccessful) ``aenter`` runs cleanly."""
     client = Client(HOSTNAME)
     await client.__aexit__(None, None, None)
 
@@ -559,14 +479,14 @@ async def test_aexit_consecutive_calls() -> None:
 
 @pytest.mark.network
 async def test_aexit_client_is_already_disconnected_success() -> None:
-    """Test that __aexit__ exits cleanly if client is already cleanly disconnected."""
+    """Test that ``aexit`` runs cleanly if client is already cleanly disconnected."""
     async with Client(HOSTNAME) as client:
         client._disconnected.set_result(None)
 
 
 @pytest.mark.network
 async def test_aexit_client_is_already_disconnected_failure() -> None:
-    """Test that __aexit__ reraises if client is already disconnected with an error."""
+    """Test that ``aexit`` reraises if client is already disconnected with an error."""
     client = Client(HOSTNAME)
     await client.__aenter__()
     client._disconnected.set_exception(RuntimeError)
