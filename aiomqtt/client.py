@@ -69,7 +69,6 @@ class Will:
     properties: mqtt.Properties | None = None
 
 
-# TLS set parameter class
 @dataclass(frozen=True)
 class TLSParameters:
     ca_certs: str | None = None
@@ -81,7 +80,6 @@ class TLSParameters:
     keyfile_password: str | None = None
 
 
-# Proxy parameters class
 class ProxySettings:
     def __init__(  # noqa: PLR0913
         self,
@@ -132,7 +130,8 @@ class Wildcard:
     """MQTT wildcard that can be subscribed to, but not published to.
 
     A wildcard is similar to a topic, but can optionally contain ``+`` and ``#``
-    placeholders.
+    placeholders. You can access the ``value`` attribute directly to perform ``str``
+    operations on a wildcard.
 
     Args:
         value: The wildcard string.
@@ -392,6 +391,7 @@ class Client:
             [mqtt.Client, Any, mqtt.MQTTMessage], None
         ] | None = None
 
+        # TODO(felix): This does not seem to be used anywhere. Remove?
         self._outgoing_calls_sem: asyncio.Semaphore | None
         if max_concurrent_outgoing_calls is not None:
             self._outgoing_calls_sem = asyncio.Semaphore(max_concurrent_outgoing_calls)
@@ -606,50 +606,6 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @asynccontextmanager
-    async def filtered_messages(
-        self, topic_filter: str, *, queue_maxsize: int = 0
-    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
-        """Return async generator of messages that match the given filter."""
-        self._logger.warning(
-            "filtered_messages() is deprecated and will be removed in a future version."
-            " Use messages() together with Topic.matches() instead."
-        )
-        callback, generator = self._deprecated_callback_and_generator(
-            log_context=f'topic_filter="{topic_filter}"', queue_maxsize=queue_maxsize
-        )
-        try:
-            self._client.message_callback_add(topic_filter, callback)
-            # Back to the caller (run whatever is inside the with statement)
-            yield generator
-        finally:
-            # We are exiting the with statement. Remove the topic filter.
-            self._client.message_callback_remove(topic_filter)
-
-    @asynccontextmanager
-    async def unfiltered_messages(
-        self, *, queue_maxsize: int = 0
-    ) -> AsyncGenerator[AsyncGenerator[mqtt.MQTTMessage, None], None]:
-        """Return async generator of all messages that are not caught in filters."""
-        self._logger.warning(
-            "unfiltered_messages() is deprecated and will be removed in a future"
-            " version. Use messages() instead."
-        )
-        # Early out
-        if self._unfiltered_messages_callback is not None:
-            msg = "Only a single unfiltered_messages generator can be used at a time"
-            raise RuntimeError(msg)
-        callback, generator = self._deprecated_callback_and_generator(
-            log_context="unfiltered", queue_maxsize=queue_maxsize
-        )
-        try:
-            self._unfiltered_messages_callback = callback
-            # Back to the caller (run whatever is inside the with statement)
-            yield generator
-        finally:
-            # We are exiting the with statement. Unset the callback.
-            self._unfiltered_messages_callback = None
-
-    @asynccontextmanager
     async def messages(
         self,
         *,
@@ -681,57 +637,6 @@ class Client:
         finally:
             # We are exiting the with statement. Remove the callback from the list.
             self._on_message_callbacks.remove(callback)
-
-    def _deprecated_callback_and_generator(
-        self, *, log_context: str, queue_maxsize: int = 0
-    ) -> tuple[
-        Callable[[mqtt.Client, Any, mqtt.MQTTMessage], None],
-        AsyncGenerator[mqtt.MQTTMessage, None],
-    ]:
-        # Queue to hold the incoming messages
-        messages: asyncio.Queue[mqtt.MQTTMessage] = asyncio.Queue(maxsize=queue_maxsize)
-
-        # Callback for the underlying API
-        def _put_in_queue(
-            client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
-        ) -> None:
-            try:
-                messages.put_nowait(message)
-            except asyncio.QueueFull:
-                self._logger.warning(
-                    "[%s] Message queue is full. Discarding message.", log_context
-                )
-
-        # The generator that we give to the caller
-        async def _message_generator() -> AsyncGenerator[mqtt.MQTTMessage, None]:
-            # Forward all messages from the queue
-            while True:
-                # Wait until we either:
-                #  1. Receive a message
-                #  2. Disconnect from the broker
-                get: asyncio.Task[mqtt.MQTTMessage] = self._loop.create_task(
-                    messages.get()
-                )
-                try:
-                    done, _ = await asyncio.wait(
-                        (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
-                    )
-                except asyncio.CancelledError:
-                    # If the asyncio.wait is cancelled, we must make sure
-                    # to also cancel the underlying tasks.
-                    get.cancel()
-                    raise
-                if get in done:
-                    # We received a message. Return the result.
-                    yield get.result()
-                else:
-                    # We got disconnected from the broker. Cancel the "get" task.
-                    get.cancel()
-                    # Stop the generator with the following exception
-                    msg = "Disconnected during message iteration"
-                    raise MqttError(msg)
-
-        return _put_in_queue, _message_generator()
 
     def _callback_and_generator(
         self,

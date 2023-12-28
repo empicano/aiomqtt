@@ -91,94 +91,49 @@ async def test_topic_matches() -> None:
 @pytest.mark.network
 async def test_multiple_messages_generators() -> None:
     """Test that multiple Client.messages() generators can be used at the same time."""
-    topic = TOPIC_PREFIX + "multiple_messages_generators"
+    topic = TOPIC_PREFIX + "test_multiple_messages_generators"
 
-    async def handler(tg: anyio.abc.TaskGroup) -> None:
+    async def handle(tg: anyio.abc.TaskGroup) -> None:
         async with client.messages() as messages:
             async for message in messages:
-                assert str(message.topic) == topic
+                assert message.topic.value == topic
                 tg.cancel_scope.cancel()
 
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handler, tg)
-        tg.start_soon(handler, tg)
+        tg.start_soon(handle, tg)
+        tg.start_soon(handle, tg)
         await anyio.wait_all_tasks_blocked()
         await client.publish(topic)
 
 
 @pytest.mark.network
-async def test_client_filtered_messages() -> None:
-    topic_header = TOPIC_PREFIX + "filtered_messages/"
-    good_topic = topic_header + "good"
-    bad_topic = topic_header + "bad"
-
-    async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.filtered_messages(good_topic) as messages:
-            async for message in messages:
-                assert message.topic == good_topic
-                tg.cancel_scope.cancel()
-
-    async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
-        await client.subscribe(topic_header + "#")
-        tg.start_soon(handle_messages, tg)
-        await anyio.wait_all_tasks_blocked()
-        await client.publish(bad_topic, 2)
-        await client.publish(good_topic, 2)
-
-
-@pytest.mark.network
-async def test_client_unfiltered_messages() -> None:
-    topic_header = TOPIC_PREFIX + "unfiltered_messages/"
-    topic_filtered = topic_header + "filtered"
-    topic_unfiltered = topic_header + "unfiltered"
-
-    async def handle_unfiltered_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.unfiltered_messages() as messages:
-            async for message in messages:
-                assert message.topic == topic_unfiltered
-                tg.cancel_scope.cancel()
-
-    async def handle_filtered_messages() -> None:
-        async with client.filtered_messages(topic_filtered) as messages:
-            async for message in messages:
-                assert message.topic == topic_filtered
-
-    async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
-        await client.subscribe(topic_header + "#")
-        tg.start_soon(handle_filtered_messages)
-        tg.start_soon(handle_unfiltered_messages, tg)
-        await anyio.wait_all_tasks_blocked()
-        await client.publish(topic_filtered, 2)
-        await client.publish(topic_unfiltered, 2)
-
-
-@pytest.mark.network
 async def test_client_unsubscribe() -> None:
-    topic_header = TOPIC_PREFIX + "unsubscribe/"
-    topic1 = topic_header + "1"
-    topic2 = topic_header + "2"
+    """Test that messages are no longer received after unsubscribing from a topic."""
+    topic_1 = TOPIC_PREFIX + "test_client_unsubscribe/1"
+    topic_2 = TOPIC_PREFIX + "test_client_unsubscribe/2"
 
-    async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.unfiltered_messages() as messages:
+    async def handle(tg: anyio.abc.TaskGroup) -> None:
+        async with client.messages() as messages:
             is_first_message = True
             async for message in messages:
                 if is_first_message:
-                    assert message.topic == topic1
+                    assert message.topic.value == topic_1
                     is_first_message = False
                 else:
-                    assert message.topic == topic2
+                    assert message.topic.value == topic_2
                     tg.cancel_scope.cancel()
 
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
-        await client.subscribe(topic1)
-        await client.subscribe(topic2)
-        tg.start_soon(handle_messages, tg)
+        await client.subscribe(topic_1)
+        await client.subscribe(topic_2)
+        tg.start_soon(handle, tg)
         await anyio.wait_all_tasks_blocked()
-        await client.publish(topic1, 2)
-        await client.unsubscribe(topic1)
-        await client.publish(topic1, 2)
-        await client.publish(topic2, 2)
+        await client.publish(topic_1, None)
+        await client.unsubscribe(topic_1)
+        await client.publish(topic_1, None)
+        # Test that other subscriptions still receive messages
+        await client.publish(topic_2, None)
 
 
 @pytest.mark.parametrize(
@@ -192,7 +147,7 @@ async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
 
 @pytest.mark.network
 async def test_client_will() -> None:
-    topic = TOPIC_PREFIX + "will"
+    topic = TOPIC_PREFIX + "test_client_will"
     event = anyio.Event()
 
     async def launch_client() -> None:
@@ -200,9 +155,9 @@ async def test_client_will() -> None:
             async with Client(HOSTNAME) as client:
                 await client.subscribe(topic)
                 event.set()
-                async with client.filtered_messages(topic) as messages:
+                async with client.messages() as messages:
                     async for message in messages:
-                        assert message.topic == topic
+                        assert message.topic.value == topic
                         cs.cancel()
 
     async with anyio.create_task_group() as tg:
@@ -214,12 +169,12 @@ async def test_client_will() -> None:
 
 @pytest.mark.network
 async def test_client_tls_context() -> None:
-    topic = TOPIC_PREFIX + "tls_context"
+    topic = TOPIC_PREFIX + "test_client_tls_context"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.filtered_messages(topic) as messages:
+        async with client.messages() as messages:
             async for message in messages:
-                assert message.topic == topic
+                assert message.topic.value == topic
                 tg.cancel_scope.cancel()
 
     async with Client(
@@ -238,9 +193,9 @@ async def test_client_tls_params() -> None:
     topic = TOPIC_PREFIX + "tls_params"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.filtered_messages(topic) as messages:
+        async with client.messages() as messages:
             async for message in messages:
-                assert message.topic == topic
+                assert message.topic.value == topic
                 tg.cancel_scope.cancel()
 
     async with Client(
@@ -261,9 +216,9 @@ async def test_client_username_password() -> None:
     topic = TOPIC_PREFIX + "username_password"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.filtered_messages(topic) as messages:
+        async with client.messages() as messages:
             async for message in messages:
-                assert message.topic == topic
+                assert message.topic.value == topic
                 tg.cancel_scope.cancel()
 
     async with Client(
@@ -335,9 +290,9 @@ async def test_client_websockets() -> None:
     topic = TOPIC_PREFIX + "websockets"
 
     async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.filtered_messages(topic) as messages:
+        async with client.messages() as messages:
             async for message in messages:
-                assert message.topic == topic
+                assert message.topic.value == topic
                 tg.cancel_scope.cancel()
 
     async with Client(
