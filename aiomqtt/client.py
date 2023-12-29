@@ -114,7 +114,7 @@ ClientT = TypeVar("ClientT", bound="Client")
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
 def _outgoing_call(
-    method: Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]]
+    method: Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]],
 ) -> Callable[Concatenate[ClientT, P], Coroutine[Any, Any, T]]:
     @functools.wraps(method)
     async def decorated(self: ClientT, /, *args: P.args, **kwargs: P.kwargs) -> T:

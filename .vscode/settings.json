@@ -4,5 +4,6 @@
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true
+  "python.testing.pytestEnabled": true,
+  "mypy-type-checker.importStrategy": "fromEnvironment"
 }
