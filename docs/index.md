@@ -27,7 +27,7 @@ alongside-fastapi-and-co
 ```
 
 ```{toctree}
-:caption: API reference
+:caption: reference
 :hidden:
 
 developer-interface

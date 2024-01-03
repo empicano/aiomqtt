@@ -17,10 +17,9 @@ async def main():
     while True:
         try:
             async with client:
-                async with client.messages() as messages:
-                    await client.subscribe("humidity/#")
-                    async for message in messages:
-                        print(message.payload)
+                await client.subscribe("humidity/#")
+                async for message in client.messages:
+                    print(message.payload)
         except aiomqtt.MqttError:
             print(f"Connection lost; Reconnecting in {interval} seconds ...")
             await asyncio.sleep(interval)
