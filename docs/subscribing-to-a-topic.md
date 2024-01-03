@@ -9,10 +9,9 @@ import aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async for message in messages:
-                print(message.payload)
+        await client.subscribe("temperature/#")
+        async for message in client.messages:
+            print(message.payload)
 
 
 asyncio.run(main())
@@ -37,16 +36,15 @@ import aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            await client.subscribe("humidity/#")
-            async for message in messages:
-                if message.topic.matches("humidity/inside"):
-                    print(f"[humidity/outside] {message.payload}")
-                if message.topic.matches("+/outside"):
-                    print(f"[+/inside] {message.payload}")
-                if message.topic.matches("temperature/#"):
-                    print(f"[temperature/#] {message.payload}")
+        await client.subscribe("temperature/#")
+        await client.subscribe("humidity/#")
+        async for message in client.messages:
+            if message.topic.matches("humidity/inside"):
+                print(f"[humidity/outside] {message.payload}")
+            if message.topic.matches("+/outside"):
+                print(f"[+/inside] {message.payload}")
+            if message.topic.matches("temperature/#"):
+                print(f"[temperature/#] {message.payload}")
 
 
 asyncio.run(main())
@@ -62,9 +60,9 @@ For details on the `+` and `#` wildcards and what topics they match, see the [OA
 
 ## The message queue
 
-Messages are queued and returned sequentially from `Client.messages()`.
+Messages are queued and returned sequentially from `Client.messages`.
 
-The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other types of asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to `Client.messages()` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
+The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other types of asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to the `Client` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
 
 You can subclass `asyncio.PriorityQueue` to queue based on priority. Messages are returned ascendingly by their priority values. In the case of ties, messages with lower message identifiers are returned first.
 
@@ -87,12 +85,13 @@ class CustomPriorityQueue(asyncio.PriorityQueue):
 
 
 async def main():
-    async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages(queue_class=CustomPriorityQueue) as messages:
-            await client.subscribe("temperature/#")
-            await client.subscribe("humidity/#")
-            async for message in messages:
-                print(message.payload)
+    async with aiomqtt.Client(
+        "test.mosquitto.org", queue_class=CustomPriorityQueue
+    ) as client:
+        await client.subscribe("temperature/#")
+        await client.subscribe("humidity/#")
+        async for message in client.messages:
+            print(message.payload)
 
 
 asyncio.run(main())
@@ -104,7 +103,7 @@ By default, the size of the queue is unlimited. You can set a limit by passing t
 
 ## Processing concurrently
 
-Messages are queued and returned sequentially from `Client.messages()`. If a message takes a long time to handle, it blocks the handling of other messages.
+Messages are queued and returned sequentially from `Client.messages`. If a message takes a long time to handle, it blocks the handling of other messages.
 
 You can handle messages concurrently by using an `asyncio.TaskGroup` like so:
 
@@ -120,11 +119,11 @@ async def handle(message):
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async with asyncio.TaskGroup() as tg:
-                async for message in messages:
-                    tg.create_task(handle(message))  # Spawn new coroutine
+        await client.subscribe("temperature/#")
+        # Use a task group to manage and await all tasks
+        async with asyncio.TaskGroup() as tg:
+            async for message in client.messages:
+                tg.create_task(handle(message))  # Spawn new coroutine
 
 
 asyncio.run(main())
@@ -133,6 +132,8 @@ asyncio.run(main())
 ```{important}
 Coroutines only make sense if your message handling is I/O-bound. If it's CPU-bound, you should spawn multiple processes instead.
 ```
+
+## Multiple queues
 
 The code snippet above handles each message in a new coroutine. Sometimes, we want to handle messages from different topics concurrently, but sequentially inside a single topic.
 
@@ -160,19 +161,18 @@ humidity_queue = asyncio.Queue()
 
 
 async def distributor(client):
-    async with client.messages() as messages:
-        await client.subscribe("temperature/#")
-        await client.subscribe("humidity/#")
-        # Sort messages into the appropriate queues
-        async for message in messages:
-            if message.topic.matches("temperature/#"):
-                temperature_queue.put_nowait(message)
-            elif message.topic.matches("humidity/#"):
-                humidity_queue.put_nowait(message)
+    # Sort messages into the appropriate queues
+    async for message in client.messages:
+        if message.topic.matches("temperature/#"):
+            temperature_queue.put_nowait(message)
+        elif message.topic.matches("humidity/#"):
+            humidity_queue.put_nowait(message)
 
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
+        await client.subscribe("temperature/#")
+        await client.subscribe("humidity/#")
         # Use a task group to manage and await all tasks
         async with asyncio.TaskGroup() as tg:
             tg.create_task(distributor(client))
@@ -208,13 +208,13 @@ async def sleep(seconds):
 
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async for message in messages:
-                print(message.payload)
+        await client.subscribe("temperature/#")
+        async for message in client.messages:
+            print(message.payload)
 
 
 async def main():
+    # Use a task group to manage and await all tasks
     async with asyncio.TaskGroup() as tg:
         tg.create_task(sleep(2))
         tg.create_task(listen())  # Start the listener task
@@ -240,10 +240,9 @@ import aiomqtt
 
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async for message in messages:
-                print(message.payload)
+        await client.subscribe("temperature/#")
+        async for message in client.messages:
+            print(message.payload)
 
 
 background_tasks = set()
@@ -280,10 +279,9 @@ import aiomqtt
 
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async for message in messages:
-                print(message.payload)
+        await client.subscribe("temperature/#")
+        async for message in client.messages:
+            print(message.payload)
 
 
 async def main():
@@ -315,10 +313,9 @@ import aiomqtt
 
 async def listen():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        async with client.messages() as messages:
-            await client.subscribe("temperature/#")
-            async for message in messages:
-                print(message.payload)
+        await client.subscribe("temperature/#")
+        async for message in client.messages:
+            print(message.payload)
 
 
 async def main():

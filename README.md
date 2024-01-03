@@ -28,10 +28,9 @@ async with Client("test.mosquitto.org") as client:
 
 ```python
 async with Client("test.mosquitto.org") as client:
-    async with client.messages() as messages:
-        await client.subscribe("humidity/#")
-        async for message in messages:
-            print(message.payload)
+    await client.subscribe("humidity/#")
+    async for message in client.messages:
+        print(message.payload)
 ```
 
 aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with an idiomatic asyncio interface:

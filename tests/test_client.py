@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
+import pathlib
 import ssl
 import sys
-from pathlib import Path
 
 import anyio
 import anyio.abc
@@ -89,40 +89,20 @@ async def test_topic_matches() -> None:
 
 
 @pytest.mark.network
-async def test_multiple_messages_generators() -> None:
-    """Test that multiple Client.messages() generators can be used at the same time."""
-    topic = TOPIC_PREFIX + "test_multiple_messages_generators"
-
-    async def handle(tg: anyio.abc.TaskGroup) -> None:
-        async with client.messages() as messages:
-            async for message in messages:
-                assert message.topic.value == topic
-                tg.cancel_scope.cancel()
-
-    async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
-        await client.subscribe(topic)
-        tg.start_soon(handle, tg)
-        tg.start_soon(handle, tg)
-        await anyio.wait_all_tasks_blocked()
-        await client.publish(topic)
-
-
-@pytest.mark.network
 async def test_client_unsubscribe() -> None:
     """Test that messages are no longer received after unsubscribing from a topic."""
     topic_1 = TOPIC_PREFIX + "test_client_unsubscribe/1"
     topic_2 = TOPIC_PREFIX + "test_client_unsubscribe/2"
 
     async def handle(tg: anyio.abc.TaskGroup) -> None:
-        async with client.messages() as messages:
-            is_first_message = True
-            async for message in messages:
-                if is_first_message:
-                    assert message.topic.value == topic_1
-                    is_first_message = False
-                else:
-                    assert message.topic.value == topic_2
-                    tg.cancel_scope.cancel()
+        is_first_message = True
+        async for message in client.messages:
+            if is_first_message:
+                assert message.topic.value == topic_1
+                is_first_message = False
+            else:
+                assert message.topic.value == topic_2
+                tg.cancel_scope.cancel()
 
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic_1)
@@ -155,10 +135,9 @@ async def test_client_will() -> None:
             async with Client(HOSTNAME) as client:
                 await client.subscribe(topic)
                 event.set()
-                async with client.messages() as messages:
-                    async for message in messages:
-                        assert message.topic.value == topic
-                        cs.cancel()
+                async for message in client.messages:
+                    assert message.topic.value == topic
+                    cs.cancel()
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(launch_client)
@@ -171,11 +150,10 @@ async def test_client_will() -> None:
 async def test_client_tls_context() -> None:
     topic = TOPIC_PREFIX + "test_client_tls_context"
 
-    async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.messages() as messages:
-            async for message in messages:
-                assert message.topic.value == topic
-                tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup) -> None:
+        async for message in client.messages:
+            assert message.topic.value == topic
+            tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME,
@@ -183,7 +161,7 @@ async def test_client_tls_context() -> None:
         tls_context=ssl.SSLContext(protocol=ssl.PROTOCOL_TLS),
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handle_messages, tg)
+        tg.start_soon(handle, tg)
         await anyio.wait_all_tasks_blocked()
         await client.publish(topic)
 
@@ -192,21 +170,20 @@ async def test_client_tls_context() -> None:
 async def test_client_tls_params() -> None:
     topic = TOPIC_PREFIX + "tls_params"
 
-    async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.messages() as messages:
-            async for message in messages:
-                assert message.topic.value == topic
-                tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup) -> None:
+        async for message in client.messages:
+            assert message.topic.value == topic
+            tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME,
         8883,
         tls_params=TLSParameters(
-            ca_certs=str(Path.cwd() / "tests" / "mosquitto.org.crt")
+            ca_certs=str(pathlib.Path.cwd() / "tests" / "mosquitto.org.crt")
         ),
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handle_messages, tg)
+        tg.start_soon(handle, tg)
         await anyio.wait_all_tasks_blocked()
         await client.publish(topic)
 
@@ -215,17 +192,16 @@ async def test_client_tls_params() -> None:
 async def test_client_username_password() -> None:
     topic = TOPIC_PREFIX + "username_password"
 
-    async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.messages() as messages:
-            async for message in messages:
-                assert message.topic.value == topic
-                tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup) -> None:
+        async for message in client.messages:
+            assert message.topic.value == topic
+            tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME, username="", password=""
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handle_messages, tg)
+        tg.start_soon(handle, tg)
         await anyio.wait_all_tasks_blocked()
         await client.publish(topic)
 
@@ -289,11 +265,10 @@ async def test_client_max_concurrent_outgoing_calls(
 async def test_client_websockets() -> None:
     topic = TOPIC_PREFIX + "websockets"
 
-    async def handle_messages(tg: anyio.abc.TaskGroup) -> None:
-        async with client.messages() as messages:
-            async for message in messages:
-                assert message.topic.value == topic
-                tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup) -> None:
+        async for message in client.messages:
+            assert message.topic.value == topic
+            tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME,
@@ -301,11 +276,12 @@ async def test_client_websockets() -> None:
         transport="websockets",
         websocket_path="/",
         websocket_headers={"foo": "bar"},
-    ) as client, anyio.create_task_group() as tg:
+    ) as client:
         await client.subscribe(topic)
-        tg.start_soon(handle_messages, tg)
-        await anyio.wait_all_tasks_blocked()
-        await client.publish(topic)
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(handle, tg)
+            await anyio.wait_all_tasks_blocked()
+            await client.publish(topic)
 
 
 @pytest.mark.network
@@ -382,10 +358,10 @@ async def test_client_reusable_message() -> None:
     async def task_a_customer(
         task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
     ) -> None:
-        async with custom_client, custom_client.messages() as messages:
+        async with custom_client:
             await custom_client.subscribe("task/a")
             task_status.started()
-            async for message in messages:
+            async for message in custom_client.messages:
                 assert message.payload == b"task_a"
                 return
 
@@ -447,3 +423,19 @@ async def test_aexit_client_is_already_disconnected_failure() -> None:
     client._disconnected.set_exception(RuntimeError)
     with pytest.raises(RuntimeError):
         await client.__aexit__(None, None, None)
+
+
+@pytest.mark.network
+async def test_messages_generator_is_reusable() -> None:
+    """Test that the messages generator is reusable and returns no duplicates."""
+    topic = TOPIC_PREFIX + "test_messages_generator_is_reusable"
+    async with Client(HOSTNAME) as client:
+        await client.subscribe(topic)
+        await client.publish(topic, "foo")
+        await client.publish(topic, "bar")
+        async for message in client.messages:
+            assert message.payload == b"foo"
+            break
+        async for message in client.messages:
+            assert message.payload == b"bar"
+            break

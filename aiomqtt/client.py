@@ -2,15 +2,15 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import dataclasses
+import enum
 import functools
 import logging
 import math
 import socket
 import ssl
 import sys
-from contextlib import asynccontextmanager, contextmanager
-from dataclasses import dataclass
-from enum import IntEnum
 from types import TracebackType
 from typing import (
     Any,
@@ -52,7 +52,7 @@ WebSocketHeaders: TypeAlias = (
 )
 
 
-class ProtocolVersion(IntEnum):
+class ProtocolVersion(enum.IntEnum):
     """Map paho-mqtt protocol versions to an Enum for use in type hints."""
 
     V31 = mqtt.MQTTv31
@@ -60,16 +60,7 @@ class ProtocolVersion(IntEnum):
     V5 = mqtt.MQTTv5
 
 
-@dataclass(frozen=True)
-class Will:
-    topic: str
-    payload: PayloadType | None = None
-    qos: int = 0
-    retain: bool = False
-    properties: mqtt.Properties | None = None
-
-
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class TLSParameters:
     ca_certs: str | None = None
     certfile: str | None = None
@@ -125,7 +116,7 @@ def _outgoing_call(
     return decorated
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class Wildcard:
     """MQTT wildcard that can be subscribed to, but not published to.
 
@@ -167,7 +158,7 @@ class Wildcard:
 WildcardLike: TypeAlias = "str | Wildcard"
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class Topic(Wildcard):
     """MQTT topic that can be published and subscribed to.
 
@@ -290,6 +281,15 @@ class Message:
         return self.mid < other.mid
 
 
+@dataclasses.dataclass(frozen=True)
+class Will:
+    topic: str
+    payload: PayloadType | None = None
+    qos: int = 0
+    retain: bool = False
+    properties: mqtt.Properties | None = None
+
+
 class Client:
     """The async context manager that manages the connection to the broker.
 
@@ -301,6 +301,13 @@ class Client:
         logger: Custom logger instance.
         client_id: The client ID to use. If ``None``, one will be generated
             automatically.
+        queue_class: The class to use for the queue. The default is
+            ``asyncio.Queue``, which stores messages in FIFO order. For LIFO order,
+            you can use ``asyncio.LifoQueue``; For priority order you can subclass
+            ``asyncio.PriorityQueue``.
+        queue_maxsize: Restricts the queue size. If the queue is full, incoming
+            messages will be discarded and a warning logged. If set to ``0`` or
+            less, the queue size is infinite.
         tls_context: The SSL/TLS context.
         tls_params: The SSL/TLS configuration to use.
         tls_insecure: Enable/disable server hostname verification when using SSL/TLS.
@@ -329,6 +336,10 @@ class Client:
             be part way through their network flow at once.
         max_queued_messages: The maximum number of messages in the outgoing message
             queue. ``0`` means unlimited.
+
+    Attributes:
+        messages (typing.AsyncGenerator[aiomqtt.client.Message, None]):
+            Async generator that yields messages from the underlying message queue.
     """
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -340,6 +351,8 @@ class Client:
         password: str | None = None,
         logger: logging.Logger | None = None,
         client_id: str | None = None,
+        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_maxsize: int = 0,
         tls_context: ssl.SSLContext | None = None,
         tls_params: TLSParameters | None = None,
         tls_insecure: bool | None = None,
@@ -385,13 +398,10 @@ class Client:
         self.pending_calls_threshold: int = 10
         self._misc_task: asyncio.Task[None] | None = None
 
-        # List of all callbacks to call when a message is received
-        self._on_message_callbacks: list[Callable[[Message], None]] = []
-        self._unfiltered_messages_callback: Callable[
-            [mqtt.Client, Any, mqtt.MQTTMessage], None
-        ] | None = None
+        # Queue that holds incoming messages
+        self._queue: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
+        self.messages: AsyncGenerator[Message, None] = self._messages()
 
-        # TODO(felix): This does not seem to be used anywhere. Remove?
         self._outgoing_calls_sem: asyncio.Semaphore | None
         if max_concurrent_outgoing_calls is not None:
             self._outgoing_calls_sem = asyncio.Semaphore(max_concurrent_outgoing_calls)
@@ -605,82 +615,31 @@ class Client:
             # Wait for confirmation
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
-    @asynccontextmanager
-    async def messages(
-        self,
-        *,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
-        queue_maxsize: int = 0,
-    ) -> AsyncGenerator[AsyncGenerator[Message, None], None]:
-        """Async context manager that creates a queue for incoming messages.
-
-        Args:
-            queue_class: The class to use for the queue. The default is
-                ``asyncio.Queue``, which returns messages in FIFO order. For LIFO order,
-                you can use ``asyncio.LifoQueue``; For priority order you can subclass
-                ``asyncio.PriorityQueue``.
-            queue_maxsize: Restricts the queue size. If the queue is full, incoming
-                messages will be discarded and a warning logged. If set to ``0`` or
-                less, the queue size is infinite.
-
-        Returns:
-            An async generator that yields messages from the underlying queue.
-        """
-        callback, generator = self._callback_and_generator(
-            queue_class=queue_class, queue_maxsize=queue_maxsize
-        )
-        try:
-            # Add to the list of callbacks to call when a message is received
-            self._on_message_callbacks.append(callback)
-            # Back to the caller (run whatever is inside the with statement)
-            yield generator
-        finally:
-            # We are exiting the with statement. Remove the callback from the list.
-            self._on_message_callbacks.remove(callback)
-
-    def _callback_and_generator(
-        self,
-        *,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
-        queue_maxsize: int = 0,
-    ) -> tuple[Callable[[Message], None], AsyncGenerator[Message, None]]:
-        # Queue to hold the incoming messages
-        messages: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
-
-        def _callback(message: Message) -> None:
-            """Put the new message in the queue."""
+    async def _messages(self) -> AsyncGenerator[Message, None]:
+        """Async generator that yields messages from the underlying message queue."""
+        while True:
+            # Wait until we either:
+            #  1. Receive a message
+            #  2. Disconnect from the broker
+            task = self._loop.create_task(self._queue.get())
             try:
-                messages.put_nowait(message)
-            except asyncio.QueueFull:
-                self._logger.warning("Message queue is full. Discarding message.")
-
-        async def _generator() -> AsyncGenerator[Message, None]:
-            """Forward all messages from the message queue."""
-            while True:
-                # Wait until we either:
-                #  1. Receive a message
-                #  2. Disconnect from the broker
-                get: asyncio.Task[Message] = self._loop.create_task(messages.get())
-                try:
-                    done, _ = await asyncio.wait(
-                        (get, self._disconnected), return_when=asyncio.FIRST_COMPLETED
-                    )
-                except asyncio.CancelledError:
-                    # If the asyncio.wait is cancelled, we must make sure
-                    # to also cancel the underlying tasks.
-                    get.cancel()
-                    raise
-                if get in done:
-                    # We received a message. Return the result.
-                    yield get.result()
-                else:
-                    # We got disconnected from the broker. Cancel the "get" task.
-                    get.cancel()
-                    # Stop the generator with the following exception
-                    msg = "Disconnected during message iteration"
-                    raise MqttError(msg)
-
-        return _callback, _generator()
+                done, _ = await asyncio.wait(
+                    (task, self._disconnected), return_when=asyncio.FIRST_COMPLETED
+                )
+            except asyncio.CancelledError:
+                # If the asyncio.wait is cancelled, we must make sure
+                # to also cancel the underlying tasks.
+                task.cancel()
+                raise
+            if task in done:
+                # We received a message. Return the result.
+                yield task.result()
+            else:
+                # We were disconnected from the broker
+                task.cancel()
+                # Stop the generator with an exception
+                msg = "Disconnected during message iteration"
+                raise MqttError(msg)
 
     async def _wait_for(
         self, fut: Awaitable[T], timeout: float | None, **kwargs: Any
@@ -695,7 +654,7 @@ class Client:
             msg = "Operation timed out"
             raise MqttError(msg) from None
 
-    @contextmanager
+    @contextlib.contextmanager
     def _pending_call(
         self, mid: int, value: T, pending_dict: dict[int, T]
     ) -> Iterator[None]:
@@ -808,13 +767,13 @@ class Client:
     def _on_message(
         self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
     ) -> None:
-        # Call the deprecated unfiltered_messages callback
-        if self._unfiltered_messages_callback is not None:
-            self._unfiltered_messages_callback(client, userdata, message)
         # Convert the paho.mqtt message into our own Message type
         m = Message._from_paho_message(message)  # noqa: SLF001
-        for callback in self._on_message_callbacks:
-            callback(m)
+        # Put the message in the message queue
+        try:
+            self._queue.put_nowait(m)
+        except asyncio.QueueFull:
+            self._logger.warning("Message queue is full. Discarding message.")
 
     def _on_publish(self, client: mqtt.Client, userdata: Any, mid: int) -> None:
         try:

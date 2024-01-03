@@ -12,10 +12,8 @@ import fastapi
 
 
 async def listen(client):
-    async with client.messages() as messages:
-        await client.subscribe("humidity/#")
-        async for message in messages:
-            print(message.payload)
+    async for message in client.messages:
+        print(message.payload)
 
 
 client = None
@@ -28,6 +26,7 @@ async def lifespan(app):
         # Make client globally available
         client = c
         # Listen for MQTT messages in (unawaited) asyncio task
+        await client.subscribe("humidity/#")
         loop = asyncio.get_event_loop()
         task = loop.create_task(listen(client))
         yield
