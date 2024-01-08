@@ -1103,7 +1103,8 @@ class Client:
         """Disconnect from the broker."""
         if self._disconnected.done():
             # Return early if the client is already disconnected
-            self._lock.release()
+            if self._lock.locked():
+                self._lock.release()
             if (exc := self._disconnected.exception()) is not None:
                 # If the disconnect wasn't intentional, raise the error that caused it
                 raise exc
