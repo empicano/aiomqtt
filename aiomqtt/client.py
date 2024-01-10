@@ -225,7 +225,7 @@ class Message:
     """Wraps the paho-mqtt message class to allow using our own matching logic.
 
     This class is not meant to be instantiated by the user. Instead, it is yielded by
-    the async generator returned from ``Client.messages()``.
+    the async generator ``Client.messages``.
 
     Args:
         topic: The topic the message was published to.
@@ -299,8 +299,7 @@ class Client:
         username: The username to authenticate with.
         password: The password to authenticate with.
         logger: Custom logger instance.
-        client_id: The client ID to use. If ``None``, one will be generated
-            automatically.
+        identifier: The client identifier. Generated automatically if ``None``.
         queue_class: The class to use for the queue. The default is
             ``asyncio.Queue``, which stores messages in FIFO order. For LIFO order,
             you can use ``asyncio.LifoQueue``; For priority order you can subclass
@@ -350,7 +349,7 @@ class Client:
         username: str | None = None,
         password: str | None = None,
         logger: logging.Logger | None = None,
-        client_id: str | None = None,
+        identifier: str | None = None,
         queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
         queue_maxsize: int = 0,
         tls_context: ssl.SSLContext | None = None,
@@ -402,6 +401,7 @@ class Client:
         self._queue: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
         self.messages: AsyncGenerator[Message, None] = self._messages()
 
+        # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: asyncio.Semaphore | None
         if max_concurrent_outgoing_calls is not None:
             self._outgoing_calls_sem = asyncio.Semaphore(max_concurrent_outgoing_calls)
@@ -412,7 +412,7 @@ class Client:
             protocol = ProtocolVersion.V311
 
         self._client: mqtt.Client = mqtt.Client(
-            client_id=client_id,
+            client_id=identifier,
             protocol=protocol,
             clean_session=clean_session,
             transport=transport,
@@ -481,14 +481,11 @@ class Client:
         self.timeout = timeout
 
     @property
-    def id(  # noqa: A003 # TODO(jonathan): When doing BREAKING CHANGES rename to avoid shadowing builtin id
-        self,
-    ) -> str:
-        """Return the client ID.
+    def identifier(self) -> str:
+        """Return the client identifier.
 
-        Note that paho-mqtt stores the client ID as `bytes` internally.
-        We assume that the client ID is a UTF8-encoded string and decode
-        it first.
+        Note that paho-mqtt stores the client ID as `bytes` internally. We assume that
+        the client ID is a UTF8-encoded string and decode it first.
         """
         return cast(bytes, self._client._client_id).decode()  # type: ignore[attr-defined] # noqa: SLF001
 

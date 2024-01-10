@@ -122,7 +122,7 @@ async def test_client_unsubscribe() -> None:
 )
 async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
     client = Client(HOSTNAME, protocol=protocol)
-    assert len(client.id) == length
+    assert len(client.identifier) == length
 
 
 @pytest.mark.network
@@ -330,7 +330,7 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
 
 
 @pytest.mark.network
-async def test_client_is_reusable() -> None:
+async def test_client_context_is_reusable() -> None:
     """Test that a client context manager instance is reusable."""
     topic = TOPIC_PREFIX + "test_client_is_reusable"
     client = Client(HOSTNAME)
@@ -341,7 +341,7 @@ async def test_client_is_reusable() -> None:
 
 
 @pytest.mark.network
-async def test_client_is_not_reentrant() -> None:
+async def test_client_context_is_not_reentrant() -> None:
     """Test that a client context manager instance is not reentrant."""
     client = Client(HOSTNAME)
     async with client:
