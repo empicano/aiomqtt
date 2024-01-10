@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+- Release reusability correctly to allow consecutive calls to `__aexit__` (@spacemanspiff2007 in #263)
+
 ## [1.2.1] - 2023-09-19
 
 ### Changed

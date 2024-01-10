@@ -551,12 +551,17 @@ async def test_aexit_without_prior_aenter() -> None:
 
 
 @pytest.mark.network
-async def test_aexit_client_is_already_disconnected_sucess() -> None:
+async def test_aexit_consecutive_calls() -> None:
+    """Test that ``aexit`` runs cleanly when it was already called before."""
+    async with Client(HOSTNAME) as client:
+        await client.__aexit__(None, None, None)
+
+
+@pytest.mark.network
+async def test_aexit_client_is_already_disconnected_success() -> None:
     """Test that __aexit__ exits cleanly if client is already cleanly disconnected."""
-    client = Client(HOSTNAME)
-    await client.__aenter__()
-    client._disconnected.set_result(None)
-    await client.__aexit__(None, None, None)
+    async with Client(HOSTNAME) as client:
+        client._disconnected.set_result(None)
 
 
 @pytest.mark.network
