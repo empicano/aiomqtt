@@ -326,7 +326,6 @@ class Client:
         clean_start: (MQTT v5.0 only) Set the clean start flag always, never, or only
             on the first successful connection to the broker.
         properties: (MQTT v5.0 only) The properties associated with the client.
-        message_retry_set: Deprecated.
         socket_options: Options to pass to the underlying socket.
         max_concurrent_outgoing_calls: The maximum number of concurrent outgoing calls.
         websocket_path: The path to use for websockets.
@@ -366,7 +365,6 @@ class Client:
         bind_port: int = 0,
         clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         properties: Properties | None = None,
-        message_retry_set: int = 20,
         socket_options: Iterable[SocketOption] | None = None,
         max_concurrent_outgoing_calls: int | None = None,
         websocket_path: str | None = None,
@@ -471,7 +469,6 @@ class Client:
                 will.topic, will.payload, will.qos, will.retain, will.properties
             )
 
-        self._client.message_retry_set(message_retry_set)
         if socket_options is None:
             socket_options = ()
         self._socket_options = tuple(socket_options)
