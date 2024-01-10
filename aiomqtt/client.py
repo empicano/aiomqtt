@@ -1124,6 +1124,7 @@ class Client:
         # Force disconnection if we cannot gracefully disconnect
         if not self._disconnected.done():
             self._disconnected.set_result(None)
+        # Release the reusability lock
         if self._lock.locked():
             self._lock.release()
 
