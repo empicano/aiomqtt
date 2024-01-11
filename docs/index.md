@@ -31,6 +31,7 @@ alongside-fastapi-and-co
 :hidden:
 
 developer-interface
+migration-guide-v2
 ```
 
 ```{toctree}
@@ -39,7 +40,7 @@ developer-interface
 
 GitHub <https://github.com/sbtinstruments/aiomqtt>
 Issue tracker <https://github.com/sbtinstruments/aiomqtt/issues>
-Discussions <https://github.com/sbtinstruments/aiomqtt/discussions>
+Changelog <https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md>
 Contributing <https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md>
 PyPI <https://pypi.org/project/aiomqtt/>
 ```
