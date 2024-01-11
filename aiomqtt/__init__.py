@@ -1,17 +1,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from .client import (
     Client,
-    Message,
     ProtocolVersion,
     ProxySettings,
     TLSParameters,
-    Topic,
-    TopicLike,
-    Wildcard,
-    WildcardLike,
     Will,
 )
-from .error import MqttCodeError, MqttError
+from .exceptions import MqttCodeError, MqttError, MqttReentrantError
+from .message import Message
+from .topic import Topic, TopicLike, Wildcard, WildcardLike
 
 __all__ = [
     "__version__",
@@ -27,5 +24,6 @@ __all__ = [
     "WildcardLike",
     "Will",
     "MqttCodeError",
+    "MqttReentrantError",
     "MqttError",
 ]
