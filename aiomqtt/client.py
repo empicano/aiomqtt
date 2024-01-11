@@ -300,17 +300,10 @@ class Client:
         password: The password to authenticate with.
         logger: Custom logger instance.
         identifier: The client identifier. Generated automatically if ``None``.
-        queue_class: The class to use for the queue. The default is
+        queue_type: The class to use for the queue. The default is
             ``asyncio.Queue``, which stores messages in FIFO order. For LIFO order,
             you can use ``asyncio.LifoQueue``; For priority order you can subclass
             ``asyncio.PriorityQueue``.
-        queue_maxsize: Restricts the queue size. If the queue is full, incoming
-            messages will be discarded and a warning logged. If set to ``0`` or
-            less, the queue size is infinite.
-        tls_context: The SSL/TLS context.
-        tls_params: The SSL/TLS configuration to use.
-        tls_insecure: Enable/disable server hostname verification when using SSL/TLS.
-        proxy: Configure a proxy for the connection.
         protocol: The version of the MQTT protocol.
         will: The will message to publish if the client disconnects unexpectedly.
         clean_session: If ``True``, the broker will remove all information about this
@@ -325,19 +318,28 @@ class Client:
         bind_port: The network port to bind this client to.
         clean_start: (MQTT v5.0 only) Set the clean start flag always, never, or only
             on the first successful connection to the broker.
-        properties: (MQTT v5.0 only) The properties associated with the client.
-        socket_options: Options to pass to the underlying socket.
-        max_concurrent_outgoing_calls: The maximum number of concurrent outgoing calls.
-        websocket_path: The path to use for websockets.
-        websocket_headers: The headers to use for websockets.
+        max_queued_incoming_messages: Restricts the incoming message queue size. If the
+            queue is full, incoming messages will be discarded and a warning logged.
+            If set to ``0`` or less, the queue size is infinite.
+        max_queued_outgoing_messages: The maximum number of messages in the outgoing
+            message queue. ``0`` means unlimited.
         max_inflight_messages: The maximum number of messages with QoS > ``0`` that can
             be part way through their network flow at once.
-        max_queued_messages: The maximum number of messages in the outgoing message
-            queue. ``0`` means unlimited.
+        max_concurrent_outgoing_calls: The maximum number of concurrent outgoing calls.
+        properties: (MQTT v5.0 only) The properties associated with the client.
+        tls_context: The SSL/TLS context.
+        tls_params: The SSL/TLS configuration to use.
+        tls_insecure: Enable/disable server hostname verification when using SSL/TLS.
+        proxy: Configure a proxy for the connection.
+        socket_options: Options to pass to the underlying socket.
+        websocket_path: The path to use for websockets.
+        websocket_headers: The headers to use for websockets.
 
     Attributes:
         messages (typing.AsyncGenerator[aiomqtt.client.Message, None]):
             Async generator that yields messages from the underlying message queue.
+        identifier (str):
+            The client identifier.
     """
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -349,12 +351,7 @@ class Client:
         password: str | None = None,
         logger: logging.Logger | None = None,
         identifier: str | None = None,
-        queue_class: type[asyncio.Queue[Message]] = asyncio.Queue,
-        queue_maxsize: int = 0,
-        tls_context: ssl.SSLContext | None = None,
-        tls_params: TLSParameters | None = None,
-        tls_insecure: bool | None = None,
-        proxy: ProxySettings | None = None,
+        queue_type: type[asyncio.Queue[Message]] = asyncio.Queue,
         protocol: ProtocolVersion | None = None,
         will: Will | None = None,
         clean_session: bool | None = None,
@@ -364,13 +361,18 @@ class Client:
         bind_address: str = "",
         bind_port: int = 0,
         clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
-        properties: Properties | None = None,
-        socket_options: Iterable[SocketOption] | None = None,
+        max_queued_incoming_messages: int = 0,
+        max_queued_outgoing_messages: int | None = None,
+        max_inflight_messages: int | None = None,
         max_concurrent_outgoing_calls: int | None = None,
+        properties: Properties | None = None,
+        tls_context: ssl.SSLContext | None = None,
+        tls_params: TLSParameters | None = None,
+        tls_insecure: bool | None = None,
+        proxy: ProxySettings | None = None,
+        socket_options: Iterable[SocketOption] | None = None,
         websocket_path: str | None = None,
         websocket_headers: WebSocketHeaders | None = None,
-        max_inflight_messages: int | None = None,
-        max_queued_messages: int | None = None,
     ) -> None:
         self._hostname = hostname
         self._port = port
@@ -396,7 +398,9 @@ class Client:
         self._misc_task: asyncio.Task[None] | None = None
 
         # Queue that holds incoming messages
-        self._queue: asyncio.Queue[Message] = queue_class(maxsize=queue_maxsize)
+        self._queue: asyncio.Queue[Message] = queue_type(
+            maxsize=max_queued_incoming_messages
+        )
         self.messages: AsyncGenerator[Message, None] = self._messages()
 
         # Semaphore to limit the number of concurrent outgoing calls
@@ -409,6 +413,7 @@ class Client:
         if protocol is None:
             protocol = ProtocolVersion.V311
 
+        # Create the underlying paho-mqtt client instance
         self._client: mqtt.Client = mqtt.Client(
             client_id=identifier,
             protocol=protocol,
@@ -422,6 +427,7 @@ class Client:
         self._client.on_unsubscribe = self._on_unsubscribe
         self._client.on_message = self._on_message
         self._client.on_publish = self._on_publish
+
         # Callbacks for custom event loop
         self._client.on_socket_open = self._on_socket_open
         self._client.on_socket_close = self._on_socket_close
@@ -430,8 +436,8 @@ class Client:
 
         if max_inflight_messages is not None:
             self._client.max_inflight_messages_set(max_inflight_messages)
-        if max_queued_messages is not None:
-            self._client.max_queued_messages_set(max_queued_messages)
+        if max_queued_outgoing_messages is not None:
+            self._client.max_queued_messages_set(max_queued_outgoing_messages)
 
         if logger is None:
             logger = MQTT_LOGGER
