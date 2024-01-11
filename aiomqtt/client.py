@@ -26,30 +26,33 @@ from typing import (
 )
 
 import paho.mqtt.client as mqtt
-from paho.mqtt.properties import Properties
 
-from .error import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
-from .types import PayloadType, T
+from .exceptions import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
+from .message import Message
+from .types import (
+    P,
+    PayloadType,
+    SocketOption,
+    SubscribeTopic,
+    T,
+    WebSocketHeaders,
+    _PahoSocket,
+)
 
 if sys.version_info >= (3, 11):
-    from typing import Concatenate, ParamSpec, Self, TypeAlias
+    from typing import Concatenate, Self
 elif sys.version_info >= (3, 10):
-    from typing import Concatenate, ParamSpec, TypeAlias
+    from typing import Concatenate
 
     from typing_extensions import Self
 else:
-    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
+    from typing_extensions import Concatenate, Self
 
 
-MAX_TOPIC_LENGTH = 65535
 MQTT_LOGGER = logging.getLogger("mqtt")
 MQTT_LOGGER.setLevel(logging.WARNING)
 
-_PahoSocket: TypeAlias = "socket.socket | ssl.SSLSocket | mqtt.WebsocketWrapper | Any"
-
-WebSocketHeaders: TypeAlias = (
-    "dict[str, str] | Callable[[dict[str, str]], dict[str, str]]"
-)
+ClientT = TypeVar("ClientT", bound="Client")
 
 
 class ProtocolVersion(enum.IntEnum):
@@ -90,15 +93,6 @@ class ProxySettings:
         }
 
 
-# See the overloads of `socket.setsockopt` for details.
-SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"
-
-SubscribeTopic: TypeAlias = "str | tuple[str, mqtt.SubscribeOptions] | list[tuple[str, mqtt.SubscribeOptions]] | list[tuple[str, int]]"
-
-P = ParamSpec("P")
-ClientT = TypeVar("ClientT", bound="Client")
-
-
 # TODO(frederik): Simplify the logic that surrounds `self._outgoing_calls_sem` with
 # `nullcontext` when we support Python 3.10 (`nullcontext` becomes async-aware in
 # 3.10). See: https://docs.python.org/3/library/contextlib.html#contextlib.nullcontext
@@ -114,171 +108,6 @@ def _outgoing_call(
             return await method(self, *args, **kwargs)
 
     return decorated
-
-
-@dataclasses.dataclass(frozen=True)
-class Wildcard:
-    """MQTT wildcard that can be subscribed to, but not published to.
-
-    A wildcard is similar to a topic, but can optionally contain ``+`` and ``#``
-    placeholders. You can access the ``value`` attribute directly to perform ``str``
-    operations on a wildcard.
-
-    Args:
-        value: The wildcard string.
-
-    Attributes:
-        value: The wildcard string.
-    """
-
-    value: str
-
-    def __str__(self) -> str:
-        return self.value
-
-    def __post_init__(self) -> None:
-        """Validate the wildcard."""
-        if not isinstance(self.value, str):
-            msg = "Wildcard must be of type str"
-            raise TypeError(msg)
-        if (
-            len(self.value) == 0
-            or len(self.value) > MAX_TOPIC_LENGTH
-            or "#/" in self.value
-            or any(
-                "+" in level or "#" in level
-                for level in self.value.split("/")
-                if len(level) > 1
-            )
-        ):
-            msg = f"Invalid wildcard: {self.value}"
-            raise ValueError(msg)
-
-
-WildcardLike: TypeAlias = "str | Wildcard"
-
-
-@dataclasses.dataclass(frozen=True)
-class Topic(Wildcard):
-    """MQTT topic that can be published and subscribed to.
-
-    Args:
-        value: The topic string.
-
-    Attributes:
-        value: The topic string.
-    """
-
-    def __post_init__(self) -> None:
-        """Validate the topic."""
-        if not isinstance(self.value, str):
-            msg = "Topic must be of type str"
-            raise TypeError(msg)
-        if (
-            len(self.value) == 0
-            or len(self.value) > MAX_TOPIC_LENGTH
-            or "+" in self.value
-            or "#" in self.value
-        ):
-            msg = f"Invalid topic: {self.value}"
-            raise ValueError(msg)
-
-    def matches(self, wildcard: WildcardLike) -> bool:
-        """Check if the topic matches a given wildcard.
-
-        Args:
-            wildcard: The wildcard to match against.
-
-        Returns:
-            True if the topic matches the wildcard, False otherwise.
-        """
-        if not isinstance(wildcard, Wildcard):
-            wildcard = Wildcard(wildcard)
-        # Split topics into levels to compare them one by one
-        topic_levels = self.value.split("/")
-        wildcard_levels = str(wildcard).split("/")
-        if wildcard_levels[0] == "$share":
-            # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
-            wildcard_levels = wildcard_levels[2:]
-
-        def recurse(tl: list[str], wl: list[str]) -> bool:
-            """Recursively match topic levels with wildcard levels."""
-            if not tl:
-                if not wl or wl[0] == "#":
-                    return True
-                return False
-            if not wl:
-                return False
-            if wl[0] == "#":
-                return True
-            if tl[0] == wl[0] or wl[0] == "+":
-                return recurse(tl[1:], wl[1:])
-            return False
-
-        return recurse(topic_levels, wildcard_levels)
-
-
-TopicLike: TypeAlias = "str | Topic"
-
-
-class Message:
-    """Wraps the paho-mqtt message class to allow using our own matching logic.
-
-    This class is not meant to be instantiated by the user. Instead, it is yielded by
-    the async generator ``Client.messages``.
-
-    Args:
-        topic: The topic the message was published to.
-        payload: The message payload.
-        qos: The quality of service level of the subscription that matched the message.
-        retain: Whether the message is a retained message.
-        mid: The message ID.
-        properties: (MQTT v5.0 only) The properties associated with the message.
-
-    Attributes:
-        topic (aiomqtt.client.Topic):
-            The topic the message was published to.
-        payload (str | bytes | bytearray | int | float | None):
-            The message payload.
-        qos (int):
-            The quality of service level of the subscription that matched the message.
-        retain (bool):
-            Whether the message is a retained message.
-        mid (int):
-            The message ID.
-        properties (paho.mqtt.properties.Properties | None):
-            (MQTT v5.0 only) The properties associated with the message.
-    """
-
-    def __init__(  # noqa: PLR0913
-        self,
-        topic: TopicLike,
-        payload: PayloadType,
-        qos: int,
-        retain: bool,
-        mid: int,
-        properties: Properties | None,
-    ) -> None:
-        self.topic = Topic(topic) if not isinstance(topic, Topic) else topic
-        self.payload = payload
-        self.qos = qos
-        self.retain = retain
-        self.mid = mid
-        self.properties = properties
-
-    @classmethod
-    def _from_paho_message(cls, message: mqtt.MQTTMessage) -> Message:
-        return cls(
-            topic=message.topic,
-            payload=message.payload,
-            qos=message.qos,
-            retain=message.retain,
-            mid=message.mid,
-            properties=message.properties if hasattr(message, "properties") else None,
-        )
-
-    def __lt__(self, other: Message) -> bool:
-        return self.mid < other.mid
 
 
 @dataclasses.dataclass(frozen=True)
@@ -365,7 +194,7 @@ class Client:
         max_queued_outgoing_messages: int | None = None,
         max_inflight_messages: int | None = None,
         max_concurrent_outgoing_calls: int | None = None,
-        properties: Properties | None = None,
+        properties: mqtt.Properties | None = None,
         tls_context: ssl.SSLContext | None = None,
         tls_params: TLSParameters | None = None,
         tls_insecure: bool | None = None,
@@ -506,7 +335,7 @@ class Client:
         topic: SubscribeTopic,
         qos: int = 0,
         options: mqtt.SubscribeOptions | None = None,
-        properties: Properties | None = None,
+        properties: mqtt.Properties | None = None,
         *args: Any,
         timeout: float | None = None,
         **kwargs: Any,
@@ -545,7 +374,7 @@ class Client:
         self,
         /,
         topic: str | list[str],
-        properties: Properties | None = None,
+        properties: mqtt.Properties | None = None,
         *args: Any,
         timeout: float | None = None,
         **kwargs: Any,
@@ -580,7 +409,7 @@ class Client:
         payload: PayloadType = None,
         qos: int = 0,
         retain: bool = False,
-        properties: Properties | None = None,
+        properties: mqtt.Properties | None = None,
         *args: Any,
         timeout: float | None = None,
         **kwargs: Any,

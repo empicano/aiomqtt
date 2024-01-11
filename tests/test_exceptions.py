@@ -2,7 +2,7 @@ import paho.mqtt.client as mqtt
 import pytest
 from paho.mqtt.packettypes import PacketTypes
 
-from aiomqtt.error import _CONNECT_RC_STRINGS, MqttCodeError, MqttConnectError
+from aiomqtt.exceptions import _CONNECT_RC_STRINGS, MqttCodeError, MqttConnectError
 
 
 @pytest.mark.parametrize(
