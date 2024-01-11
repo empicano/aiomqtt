@@ -1,6 +1,6 @@
 # Subscribing to a topic
 
-To receive messages for a topic, we need to subscribe to it and listen for messages. This is a minimal working example that listens for messages to the `temperature/#` wildcard:
+To receive messages for a topic, we need to subscribe to it. Incoming messages are queued internally. You can use the `Client.message` generator to iterate over incoming messages. This is a minimal working example that listens for messages to the `temperature/#` wildcard:
 
 ```python
 import asyncio
@@ -40,9 +40,9 @@ async def main():
         await client.subscribe("humidity/#")
         async for message in client.messages:
             if message.topic.matches("humidity/inside"):
-                print(f"[humidity/outside] {message.payload}")
+                print(f"[humidity/inside] {message.payload}")
             if message.topic.matches("+/outside"):
-                print(f"[+/inside] {message.payload}")
+                print(f"[+/outside] {message.payload}")
             if message.topic.matches("temperature/#"):
                 print(f"[temperature/#] {message.payload}")
 
@@ -60,7 +60,7 @@ For details on the `+` and `#` wildcards and what topics they match, see the [OA
 
 ## The message queue
 
-Messages are queued and returned sequentially from `Client.messages`.
+Messages are queued internally and returned sequentially from `Client.messages`.
 
 The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other types of asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to the `Client` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
 
@@ -103,7 +103,7 @@ By default, the size of the queue is unlimited. You can set a limit by passing t
 
 ## Processing concurrently
 
-Messages are queued and returned sequentially from `Client.messages`. If a message takes a long time to handle, it blocks the handling of other messages.
+Messages are queued internally and returned sequentially from `Client.messages`. If a message takes a long time to handle, it blocks the handling of other messages.
 
 You can handle messages concurrently by using an `asyncio.TaskGroup` like so:
 
