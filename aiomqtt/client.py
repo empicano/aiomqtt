@@ -148,10 +148,11 @@ class Client:
         clean_start: (MQTT v5.0 only) Set the clean start flag always, never, or only
             on the first successful connection to the broker.
         max_queued_incoming_messages: Restricts the incoming message queue size. If the
-            queue is full, incoming messages will be discarded and a warning logged.
-            If set to ``0`` or less, the queue size is infinite.
-        max_queued_outgoing_messages: The maximum number of messages in the outgoing
-            message queue. ``0`` means unlimited.
+            queue is full, further incoming messages are discarded. ``0`` or less means
+            unlimited (the default).
+        max_queued_outgoing_messages: Resticts the outgoing message queue size. If the
+            queue is full, further outgoing messages are discarded. ``0`` means
+            unlimited (the default).
         max_inflight_messages: The maximum number of messages with QoS > ``0`` that can
             be part way through their network flow at once.
         max_concurrent_outgoing_calls: The maximum number of concurrent outgoing calls.
@@ -180,7 +181,7 @@ class Client:
         password: str | None = None,
         logger: logging.Logger | None = None,
         identifier: str | None = None,
-        queue_type: type[asyncio.Queue[Message]] = asyncio.Queue,
+        queue_type: type[asyncio.Queue[Message]] | None = None,
         protocol: ProtocolVersion | None = None,
         will: Will | None = None,
         clean_session: bool | None = None,
@@ -190,7 +191,7 @@ class Client:
         bind_address: str = "",
         bind_port: int = 0,
         clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
-        max_queued_incoming_messages: int = 0,
+        max_queued_incoming_messages: int | None = None,
         max_queued_outgoing_messages: int | None = None,
         max_inflight_messages: int | None = None,
         max_concurrent_outgoing_calls: int | None = None,
@@ -227,10 +228,12 @@ class Client:
         self._misc_task: asyncio.Task[None] | None = None
 
         # Queue that holds incoming messages
-        self._queue: asyncio.Queue[Message] = queue_type(
-            maxsize=max_queued_incoming_messages
-        )
-        self.messages: AsyncGenerator[Message, None] = self._messages()
+        if queue_type is None:
+            queue_type = cast("type[asyncio.Queue[Message]]", asyncio.Queue)
+        if max_queued_incoming_messages is None:
+            max_queued_incoming_messages = 0
+        self._queue = queue_type(maxsize=max_queued_incoming_messages)
+        self.messages = self._messages()
 
         # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: asyncio.Semaphore | None
