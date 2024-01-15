@@ -22,6 +22,7 @@ from aiomqtt import (
 )
 from aiomqtt.types import PayloadType
 
+# This is the same as marking all tests in this file with @pytest.mark.anyio
 pytestmark = pytest.mark.anyio
 
 HOSTNAME = "test.mosquitto.org"

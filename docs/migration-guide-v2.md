@@ -36,8 +36,10 @@ import aiomqtt
 async def main():
     client = aiomqtt.Client("test.mosquitto.org")
     await client.__aenter__()
-    await client.publish("temperature/outside", payload=28.4)
-    await client.__aexit__(None, None, None)
+    try:
+        await client.publish("temperature/outside", payload=28.4)
+    finally:
+        await client.__aexit__(None, None, None)
 
 
 asyncio.run(main())

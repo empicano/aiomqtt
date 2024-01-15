@@ -4,10 +4,8 @@ import pytest
 
 from aiomqtt import Topic, Wildcard
 
-pytestmark = pytest.mark.anyio
 
-
-async def test_topic_validation() -> None:
+def test_topic_validation() -> None:
     """Test that Topic raises Exceptions for invalid topics."""
     with pytest.raises(TypeError):
         Topic(True)  # type: ignore[arg-type]
@@ -29,7 +27,7 @@ async def test_topic_validation() -> None:
         Topic("a" * 65536)
 
 
-async def test_wildcard_validation() -> None:
+def test_wildcard_validation() -> None:
     """Test that Wildcard raises Exceptions for invalid wildcards."""
     with pytest.raises(TypeError):
         Wildcard(True)  # type: ignore[arg-type]
@@ -51,7 +49,7 @@ async def test_wildcard_validation() -> None:
         Wildcard("a" * 65536)
 
 
-async def test_topic_matches() -> None:
+def test_topic_matches() -> None:
     """Test that Topic.matches() does and doesn't match some test wildcards."""
     topic = Topic("a/b/c")
     assert topic.matches("a/b/c")
