@@ -6,7 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.0.0] - 2024-01-15
+
+### Added
+
+- Test for Python 3.12 (@JonathanPlasse in #256)
+- Add migration guide (@empicano in #262)
+
+### Changed
+
+- Switch to client-wide queue (@empicano in #262)
+- Switch from black to Ruff and update dev dependencies (@JonathanPlasse in #255)
+- Rename `Client.id` attribute to `identifier` (@empicano in #262)
+
+### Fixed
+
 - Release reusability correctly to allow consecutive calls to `__aexit__` (@spacemanspiff2007 in #263)
+
+### Removed
+
+- Remove deprecated `connect`/`disconnect` methods (@empicano in #262)
+- Remove deprecated `filtered_messages` and `unfiltered_messages` methods (@empicano in #262)
+- Remove deprecated `message_retry_set` client argument (@empicano in #262)
 
 ## [1.2.1] - 2023-09-19
 
