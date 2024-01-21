@@ -184,7 +184,7 @@ asyncio.run(main())
 ```
 
 ```{tip}
-You can combine this idea with the one [from the previous section](#the-message-queue) to e.g. handle temperature in FIFO and humidity in LIFO order.
+You can use [different queue types](#the-message-queue) for these queues to e.g. handle temperature in FIFO and humidity in LIFO order.
 ```
 
 ## Listening without blocking

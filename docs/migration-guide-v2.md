@@ -55,7 +55,25 @@ asyncio.run(main())
 
 The `filtered_messages`, `unfiltered_messages`, and `messages` methods have been removed and replaced with a single client-wide message queue.
 
-A minimal example of printing all messages (unfiltered) looks like this:
+For previous versions, a minimal example of printing all messages (unfiltered) looked like this:
+
+```python
+import asyncio
+import aiomqtt
+
+
+async def main():
+    async with aiomqtt.Client("test.mosquitto.org") as client:
+        await client.subscribe("temperature/#")
+        async with client.messages() as messages:
+            async for message in messages:
+                print(message.payload)
+
+
+asyncio.run(main())
+```
+
+We now no longer need the line `async with client.messages() as messages:`, but instead access the message generator directly with `client.messages`:
 
 ```python
 import asyncio
