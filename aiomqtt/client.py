@@ -233,7 +233,7 @@ class Client:
         if max_queued_incoming_messages is None:
             max_queued_incoming_messages = 0
         self._queue = queue_type(maxsize=max_queued_incoming_messages)
-        self.messages = self._messages()
+        self.messages: AsyncGenerator[Message, None] | None = None
 
         # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: asyncio.Semaphore | None
@@ -705,6 +705,8 @@ class Client:
         # Reset `_disconnected` if it's already in completed state after connecting
         if self._disconnected.done():
             self._disconnected = asyncio.Future()
+
+        self.messages = self._messages()
         return self
 
     async def __aexit__(
@@ -714,6 +716,9 @@ class Client:
         tb: TracebackType | None,
     ) -> None:
         """Disconnect from the broker."""
+
+        self.messages = None
+        
         if self._disconnected.done():
             # Return early if the client is already disconnected
             if self._lock.locked():
