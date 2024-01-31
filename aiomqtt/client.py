@@ -716,9 +716,8 @@ class Client:
         tb: TracebackType | None,
     ) -> None:
         """Disconnect from the broker."""
-
         self.messages = None
-        
+
         if self._disconnected.done():
             # Return early if the client is already disconnected
             if self._lock.locked():
