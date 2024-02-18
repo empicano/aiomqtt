@@ -62,7 +62,7 @@ For details on the `+` and `#` wildcards and what topics they match, see the [OA
 
 Messages are queued internally and returned sequentially from `Client.messages`.
 
-The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other types of asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_class` to the `Client` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
+The default queue is `asyncio.Queue` which returns messages on a FIFO ("first in first out") basis. You can pass [other types of asyncio queues](https://docs.python.org/3/library/asyncio-queue.html) as `queue_type` to the `Client` to modify the order in which messages are returned, e.g. `asyncio.LifoQueue`.
 
 You can subclass `asyncio.PriorityQueue` to queue based on priority. Messages are returned ascendingly by their priority values. In the case of ties, messages with lower message identifiers are returned first.
 
@@ -86,7 +86,7 @@ class CustomPriorityQueue(asyncio.PriorityQueue):
 
 async def main():
     async with aiomqtt.Client(
-        "test.mosquitto.org", queue_class=CustomPriorityQueue
+        "test.mosquitto.org", queue_type=CustomPriorityQueue
     ) as client:
         await client.subscribe("temperature/#")
         await client.subscribe("humidity/#")
@@ -98,7 +98,7 @@ asyncio.run(main())
 ```
 
 ```{tip}
-By default, the size of the queue is unlimited. You can set a limit by passing the `queue_maxsize` parameter to `Client.messages()`.
+By default, the size of the queue is unlimited. You can set a limit through the client's `max_queued_incoming_messages` argument.
 ```
 
 ## Processing concurrently
