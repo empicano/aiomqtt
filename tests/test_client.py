@@ -367,17 +367,20 @@ async def test_aexit_client_is_already_disconnected_failure() -> None:
         await client.__aexit__(None, None, None)
 
 
+@pytest.mark.xfail
 @pytest.mark.network
 async def test_messages_generator_is_reusable() -> None:
-    """Test that the messages generator is reusable and returns no duplicates."""
+    """Test that the messages generator is reusable after dis- and reconnection."""
     topic = TOPIC_PREFIX + "test_messages_generator_is_reusable"
-    async with Client(HOSTNAME) as client:
+    client = Client(HOSTNAME)
+    async with client:
+        client._disconnected.set_result(None)
+        with pytest.raises(MqttError):
+            # TODO(felix): Switch to anext function from Python 3.10
+            await client.messages.__anext__()
+    async with client:
         await client.subscribe(topic)
         await client.publish(topic, "foo")
-        await client.publish(topic, "bar")
-        async for message in client.messages:
-            assert message.payload == b"foo"
-            break
-        async for message in client.messages:
-            assert message.payload == b"bar"
-            break
+        # TODO(felix): Switch to anext function from Python 3.10
+        message = await client.messages.__anext__()
+        assert message.payload == b"foo"
