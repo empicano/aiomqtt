@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.0.1] - 2024-03-13
+
+## Fixed
+
+- Configure `poetry-dynamic-versioning` to replace `__version__` and `__version_tuple__` variables (@vvanglro in #273)
+- Reset internal state when connection attempt in `__aenter__` times out (@empicano in #285)
+
 ## [2.0.0] - 2024-01-15
 
 ### Added
