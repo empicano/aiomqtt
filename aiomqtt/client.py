@@ -701,7 +701,13 @@ class Client:
         except (OSError, mqtt.WebsocketConnectionError) as exc:
             self._lock.release()
             raise MqttError(str(exc)) from None
-        await self._wait_for(self._connected, timeout=None)
+        try:
+            await self._wait_for(self._connected, timeout=None)
+        except MqttError:
+            # Reset internal state if the connection attempt times out
+            self._lock.release()
+            self._connected = asyncio.Future()
+            raise
         # Reset `_disconnected` if it's already in completed state after connecting
         if self._disconnected.done():
             self._disconnected = asyncio.Future()

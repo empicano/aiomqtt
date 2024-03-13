@@ -328,12 +328,23 @@ async def test_client_reusable_message() -> None:
 
 
 @pytest.mark.network
-async def test_aenter_error_lock_release() -> None:
-    """Test that the client's reusability lock is released on error in ``aenter``."""
+async def test_aenter_lock_release_connection_failure() -> None:
+    """Test that reusability lock is released on connection failure in ``aenter``."""
     client = Client(hostname="invalid")
     with pytest.raises(MqttError):
         await client.__aenter__()
     assert not client._lock.locked()
+    assert not client._connected.done()
+
+
+@pytest.mark.network
+async def test_aenter_lock_release_connection_timeout() -> None:
+    """Test that reusability lock is released on connection timeout in ``aenter``."""
+    client = Client(HOSTNAME, timeout=0)
+    with pytest.raises(MqttError):
+        await client.__aenter__()
+    assert not client._lock.locked()
+    assert not client._connected.done()
 
 
 @pytest.mark.network
