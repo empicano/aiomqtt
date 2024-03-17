@@ -531,6 +531,7 @@ class Client:
         if rc == mqtt.CONNACK_ACCEPTED:
             self._connected.set_result(None)
         else:
+            # We received a negative CONNACK response
             self._connected.set_exception(MqttConnectError(rc))
 
     def _on_disconnect(
@@ -572,6 +573,7 @@ class Client:
         granted_qos: tuple[int] | list[mqtt.ReasonCodes],
         properties: mqtt.Properties | None = None,
     ) -> None:
+        """Called when we receive a SUBACK message from the broker."""
         try:
             fut = self._pending_subscribes.pop(mid)
             if not fut.done():
@@ -589,6 +591,7 @@ class Client:
         properties: mqtt.Properties | None = None,
         reason_codes: list[mqtt.ReasonCodes] | mqtt.ReasonCodes | None = None,
     ) -> None:
+        """Called when we receive an UNSUBACK message from the broker."""
         try:
             self._pending_unsubscribes.pop(mid).set()
         except KeyError:
@@ -704,7 +707,7 @@ class Client:
         try:
             await self._wait_for(self._connected, timeout=None)
         except MqttError:
-            # Reset internal state if the connection attempt times out
+            # Reset state if connection attempt times out or CONNACK returns negative
             self._lock.release()
             self._connected = asyncio.Future()
             raise

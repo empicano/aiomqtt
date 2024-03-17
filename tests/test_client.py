@@ -328,8 +328,8 @@ async def test_client_reusable_message() -> None:
 
 
 @pytest.mark.network
-async def test_aenter_lock_release_connection_failure() -> None:
-    """Test that reusability lock is released on connection failure in ``aenter``."""
+async def test_aenter_state_reset_connect_failure() -> None:
+    """Test that internal state is reset on CONNECT failure in ``aenter``."""
     client = Client(hostname="invalid")
     with pytest.raises(MqttError):
         await client.__aenter__()
@@ -338,9 +338,19 @@ async def test_aenter_lock_release_connection_failure() -> None:
 
 
 @pytest.mark.network
-async def test_aenter_lock_release_connection_timeout() -> None:
-    """Test that reusability lock is released on connection timeout in ``aenter``."""
+async def test_aenter_state_reset_connack_timeout() -> None:
+    """Test that internal state is reset on CONNACK timeout in ``aenter``."""
     client = Client(HOSTNAME, timeout=0)
+    with pytest.raises(MqttError):
+        await client.__aenter__()
+    assert not client._lock.locked()
+    assert not client._connected.done()
+
+
+@pytest.mark.network
+async def test_aenter_state_reset_connack_negative() -> None:
+    """Test that internal state is reset on negative CONNACK in ``aenter``."""
+    client = Client(HOSTNAME, username="invalid")
     with pytest.raises(MqttError):
         await client.__aenter__()
     assert not client._lock.locked()
