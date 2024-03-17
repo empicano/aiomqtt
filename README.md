@@ -77,7 +77,7 @@ asyncio.run(main())
 
 This project is licensed under the [BSD 3-clause License](https://opensource.org/licenses/BSD-3-Clause).
 
-Note that the underlying paho-mqtt library is dual-licensed. One of the licenses is the [Eclipse Distribution License v1.0](https://www.eclipse.org/org/documents/edl-v10.php), which is almost identical to the BSD 3-clause License. The differences are:
+Note that the underlying paho-mqtt library is dual-licensed. One of the licenses is the [Eclipse Distribution License v1.0](https://www.eclipse.org/org/documents/edl-v10.php), which is almost identical to the BSD 3-clause License. The only differences are:
 
 - One use of "COPYRIGHT OWNER" (EDL) instead of "COPYRIGHT HOLDER" (BSD)
 - One use of "Eclipse Foundation, Inc." (EDL) instead of "copyright holder" (BSD)

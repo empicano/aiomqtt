@@ -1,6 +1,6 @@
 # Subscribing to a topic
 
-To receive messages for a topic, we need to subscribe to it. Incoming messages are queued internally. You can use the `Client.message` generator to iterate over incoming messages. This is a minimal working example that listens for messages to the `temperature/#` wildcard:
+To receive messages for a topic, we need to subscribe to it. Incoming messages are queued internally. You can use the `Client.messages` generator to iterate over incoming messages. This is a minimal working example that listens for messages to the `temperature/#` wildcard:
 
 ```python
 import asyncio
@@ -27,7 +27,7 @@ You can set the [Quality of Service](publishing-a-message.md#quality-of-service-
 
 Imagine that we measure temperature and humidity on the outside and inside. We want to receive all types of measurements but handle them differently.
 
-aiomqtt provides `Topic.matches()` to make this easy:
+You can filter messages with `Topic.matches()`. Similar to `Client.subscribe()`, `Topic.matches()` also accepts wildcards (e.g. `temperature/#`):
 
 ```python
 import asyncio
@@ -40,11 +40,11 @@ async def main():
         await client.subscribe("humidity/#")
         async for message in client.messages:
             if message.topic.matches("humidity/inside"):
-                print(f"[humidity/inside] {message.payload}")
+                print("A:", message.payload)
             if message.topic.matches("+/outside"):
-                print(f"[+/outside] {message.payload}")
+                print("B:", message.payload)
             if message.topic.matches("temperature/#"):
-                print(f"[temperature/#] {message.payload}")
+                print("C:", message.payload)
 
 
 asyncio.run(main())
@@ -304,7 +304,7 @@ asyncio.run(main())
 
 ## Stop listening after timeout
 
-For use cases where you only want to listen to messages for a certain amount of time, Python `3.11` introduced a neat feature called [timeouts](https://docs.python.org/3/library/asyncio-task.html#timeouts):
+For use cases where you only want to listen to messages for a certain amount of time, we can use [asyncio's timeouts](https://docs.python.org/3/library/asyncio-task.html#timeouts), which were introduced in Python `3.11`:
 
 ```python
 import asyncio
