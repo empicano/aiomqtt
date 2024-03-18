@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 import paho.mqtt.client as mqtt
+from paho.mqtt.reasoncodes import ReasonCodes
 
 
 class MqttError(Exception):
@@ -11,12 +12,12 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc: int | mqtt.ReasonCodes | None, *args: Any) -> None:
+    def __init__(self, rc: int | ReasonCodes | None, *args: Any) -> None:
         super().__init__(*args)
         self.rc = rc
 
     def __str__(self) -> str:
-        if isinstance(self.rc, mqtt.ReasonCodes):
+        if isinstance(self.rc, ReasonCodes):
             return f"[code:{self.rc.value}] {self.rc!s}"
         if isinstance(self.rc, int):
             return f"[code:{self.rc}] {mqtt.error_string(self.rc)}"
@@ -24,8 +25,8 @@ class MqttCodeError(MqttError):
 
 
 class MqttConnectError(MqttCodeError):
-    def __init__(self, rc: int | mqtt.ReasonCodes) -> None:
-        if isinstance(rc, mqtt.ReasonCodes):
+    def __init__(self, rc: int | ReasonCodes) -> None:
+        if isinstance(rc, ReasonCodes):
             super().__init__(rc)
             return
         msg = "Connection refused"
