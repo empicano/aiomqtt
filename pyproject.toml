@@ -20,7 +20,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-paho-mqtt = {git = "https://github.com/JonathanPlasse/paho.mqtt.python.git", rev = "fix-type-annotations"}
+paho-mqtt = "^2.0.0"
 typing-extensions = {version = "^4.4.0", markers = "python_version < '3.10'"}
 
 [tool.poetry.group.dev]

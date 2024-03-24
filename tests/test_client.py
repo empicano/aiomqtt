@@ -185,7 +185,7 @@ async def test_client_max_concurrent_outgoing_calls(
         ) -> tuple[MQTTErrorCode, int | None]:
             assert client._outgoing_calls_sem is not None
             assert client._outgoing_calls_sem.locked()
-            return super().unsubscribe(topic, properties)
+            return super().unsubscribe(topic, properties)  # type: ignore[arg-type]
 
         def publish(  # noqa: PLR0913
             self,

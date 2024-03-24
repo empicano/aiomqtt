@@ -253,7 +253,7 @@ class Client:
         # Create the underlying paho-mqtt client instance
         self._client: mqtt.Client = mqtt.Client(
             callback_api_version=CallbackAPIVersion.VERSION1,
-            client_id=identifier,
+            client_id=identifier,  # type: ignore[arg-type]
             protocol=protocol,
             clean_session=clean_session,
             transport=transport,
@@ -400,7 +400,7 @@ class Client:
             **kwargs: Additional keyword arguments to pass to paho-mqtt's unsubscribe
                 method.
         """
-        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
+        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)  # type: ignore[arg-type]
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
