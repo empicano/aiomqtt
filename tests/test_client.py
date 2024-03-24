@@ -11,6 +11,7 @@ import paho.mqtt.client as mqtt
 import pytest
 from anyio import TASK_STATUS_IGNORED
 from anyio.abc import TaskStatus
+from paho.mqtt.enums import MQTTErrorCode
 from paho.mqtt.properties import Properties
 from paho.mqtt.subscribeoptions import SubscribeOptions
 
@@ -167,20 +168,21 @@ async def test_client_max_concurrent_outgoing_calls(
         def subscribe(
             self,
             topic: str
+            | tuple[str, int]
             | tuple[str, SubscribeOptions]
-            | list[tuple[str, SubscribeOptions]]
-            | list[tuple[str, int]],
+            | list[tuple[str, int]]
+            | list[tuple[str, SubscribeOptions]],
             qos: int = 0,
             options: SubscribeOptions | None = None,
             properties: Properties | None = None,
-        ) -> tuple[int, int]:
+        ) -> tuple[MQTTErrorCode, int | None]:
             assert client._outgoing_calls_sem is not None
             assert client._outgoing_calls_sem.locked()
             return super().subscribe(topic, qos, options, properties)
 
         def unsubscribe(
             self, topic: str | list[str], properties: Properties | None = None
-        ) -> tuple[int, int]:
+        ) -> tuple[MQTTErrorCode, int | None]:
             assert client._outgoing_calls_sem is not None
             assert client._outgoing_calls_sem.locked()
             return super().unsubscribe(topic, properties)
