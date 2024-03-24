@@ -29,7 +29,7 @@ from typing import (
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 from paho.mqtt.properties import Properties
-from paho.mqtt.reasoncodes import ReasonCodes
+from paho.mqtt.reasoncodes import ReasonCode
 from paho.mqtt.subscribeoptions import SubscribeOptions
 
 from .exceptions import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
@@ -195,7 +195,7 @@ class Client:
         keepalive: int = 60,
         bind_address: str = "",
         bind_port: int = 0,
-        clean_start: int = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
+        clean_start: mqtt.CleanStartOption = mqtt.MQTT_CLEAN_START_FIRST_ONLY,
         max_queued_incoming_messages: int | None = None,
         max_queued_outgoing_messages: int | None = None,
         max_inflight_messages: int | None = None,
@@ -225,7 +225,7 @@ class Client:
 
         # Pending subscribe, unsubscribe, and publish calls
         self._pending_subscribes: dict[
-            int, asyncio.Future[tuple[int, ...] | list[ReasonCodes]]
+            int, asyncio.Future[tuple[int, ...] | list[ReasonCode]]
         ] = {}
         self._pending_unsubscribes: dict[int, asyncio.Event] = {}
         self._pending_publishes: dict[int, asyncio.Event] = {}
@@ -348,7 +348,7 @@ class Client:
         *args: Any,
         timeout: float | None = None,
         **kwargs: Any,
-    ) -> tuple[int] | list[ReasonCodes]:
+    ) -> tuple[int, ...] | list[ReasonCode]:
         """Subscribe to a topic or wildcard.
 
         Args:
@@ -368,11 +368,11 @@ class Client:
             topic, qos, options, properties, *args, **kwargs
         )
         # Early out on error
-        if result != mqtt.MQTT_ERR_SUCCESS:
+        if result != mqtt.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not subscribe to topic")
         # Create future for when the on_subscribe callback is called
         callback_result: asyncio.Future[
-            tuple[int] | list[ReasonCodes]
+            tuple[int, ...] | list[ReasonCode]
         ] = asyncio.Future()
         with self._pending_call(mid, callback_result, self._pending_subscribes):
             # Wait for callback_result
@@ -402,7 +402,7 @@ class Client:
         """
         result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
         # Early out on error
-        if result != mqtt.MQTT_ERR_SUCCESS:
+        if result != mqtt.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
         # Create event for when the on_unsubscribe callback is called
         confirmation = asyncio.Event()
@@ -524,7 +524,7 @@ class Client:
         client: mqtt.Client,
         userdata: Any,
         flags: dict[str, int],
-        rc: int | ReasonCodes,
+        rc: int | ReasonCode,
         properties: Properties | None = None,
     ) -> None:
         """Called when we receive a CONNACK message from the broker."""
@@ -544,7 +544,7 @@ class Client:
         self,
         client: mqtt.Client,
         userdata: Any,
-        rc: int | ReasonCodes | None,
+        rc: int | ReasonCode | None,
         properties: Properties | None = None,
     ) -> None:
         # Return early if the disconnect is already acknowledged.
@@ -576,7 +576,7 @@ class Client:
         client: mqtt.Client,
         userdata: Any,
         mid: int,
-        granted_qos: tuple[int, ...] | list[ReasonCodes],
+        granted_qos: tuple[int, ...] | list[ReasonCode],
         properties: Properties | None = None,
     ) -> None:
         """Called when we receive a SUBACK message from the broker."""
@@ -595,7 +595,7 @@ class Client:
         userdata: Any,
         mid: int,
         properties: Properties | None = None,
-        reason_codes: list[ReasonCodes] | ReasonCodes | None = None,
+        reason_codes: list[ReasonCode] | ReasonCode | None = None,
     ) -> None:
         """Called when we receive an UNSUBACK message from the broker."""
         try:

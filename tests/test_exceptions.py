@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import pytest
 from paho.mqtt.packettypes import PacketTypes
-from paho.mqtt.reasoncodes import ReasonCodes
+from paho.mqtt.reasoncodes import ReasonCode
 
 from aiomqtt.exceptions import _CONNECT_RC_STRINGS, MqttCodeError, MqttConnectError
 
@@ -42,7 +42,7 @@ def test_mqtt_code_error_int(rc: int) -> None:
     ],
 )
 def test_mqtt_code_error_reason_codes(packet_type: int, a_name: str) -> None:
-    rc = ReasonCodes(packet_type, a_name)
+    rc = ReasonCode(packet_type, a_name)
     assert str(MqttCodeError(rc)) == f"[code:{rc.value}] {rc!s}"
 
 
@@ -69,5 +69,5 @@ def test_mqtt_connect_error_int(rc: int, message: str) -> None:
     ],
 )
 def test_mqtt_connect_error_reason_codes(packet_type: int, a_name: str) -> None:
-    rc = ReasonCodes(packet_type, a_name)
+    rc = ReasonCode(packet_type, a_name)
     assert str(MqttConnectError(rc)) == f"[code:{rc.value}] {rc!s}"
