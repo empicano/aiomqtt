@@ -20,7 +20,7 @@ class MqttCodeError(MqttError):
         if isinstance(self.rc, ReasonCode):
             return f"[code:{self.rc.value}] {self.rc!s}"
         if isinstance(self.rc, int):
-            return f"[code:{self.rc}] {mqtt.error_string(self.rc)}"
+            return f"[code:{self.rc}] {mqtt.error_string(self.rc)}"  # type: ignore[arg-type]
         return f"[code:{self.rc}] {super().__str__()}"
 
 

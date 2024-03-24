@@ -573,21 +573,17 @@ files = [
 
 [[package]]
 name = "paho-mqtt"
-version = "2.0.1.dev0"
+version = "2.0.0"
 description = "MQTT version 5.0/3.1.1 client class"
 optional = false
 python-versions = ">=3.7"
-files = []
-develop = false
+files = [
+    {file = "paho_mqtt-2.0.0-py3-none-any.whl", hash = "sha256:2ef745073dfc9aa68bfec30d0b9b6f0304ea75182bae85a7c77a80cefce1eff5"},
+    {file = "paho_mqtt-2.0.0.tar.gz", hash = "sha256:13b205f29251e4f2c66a6c923c31fc4fd780561e03b2d775cff8e4f2915cf947"},
+]
 
 [package.extras]
 proxy = ["pysocks"]
-
-[package.source]
-type = "git"
-url = "https://github.com/JonathanPlasse/paho.mqtt.python.git"
-reference = "fix-type-annotations"
-resolved_reference = "34e74068675b63ae60f3fc4f97f42b77d85f3274"
 
 [[package]]
 name = "pluggy"
@@ -1064,4 +1060,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "3163fac664d09732007fadec3786321dbcf913afe7a96bda3104143094b56bdb"
+content-hash = "c3b552ed6bd7864b8437dadcec211382d038f518e811385b8dc1364780e033a0"
