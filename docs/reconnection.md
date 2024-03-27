@@ -1,10 +1,8 @@
 # Reconnection
 
-Network connections are inherently unstable and can fail at any time. Especially for long-running applications, this can be a challenge.
+Network connections are inherently unstable and can fail at any time. Especially for long-running applications, this can be a challenge. To make our application resilient against connection failures, we can wrap the code in a `try`/`except`-block, listen for `MqttError`s, and reconnect like so:
 
-To make an application resilient against connection failures, we have to be able to detect failures and recover from them.
-
-The `Client` context is designed to be [reusable (but not reentrant)](https://docs.python.org/3/library/contextlib.html#reusable-context-managers). This means that we can wrap our code in a `try`/`except`-block, listen for `MqttError`s, and reconnect like so:
+<!-- The `Client` context is designed to be [reusable (but not reentrant)](https://docs.python.org/3/library/contextlib.html#reusable-context-managers). -->
 
 ```python
 import asyncio
@@ -12,11 +10,10 @@ import aiomqtt
 
 
 async def main():
-    client = aiomqtt.Client("test.mosquitto.org")
     interval = 5  # Seconds
     while True:
         try:
-            async with client:
+            async with aiomqtt.Client("test.mosquitto.org") as client:
                 await client.subscribe("humidity/#")
                 async for message in client.messages:
                     print(message.payload)
