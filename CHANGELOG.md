@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.1.0] - 2024-04-24
+
+### Changed
+
+- Migrate to paho-mqtt 2.0 (@JonathanPlasse in #286)
+
 ## [2.0.1] - 2024-03-13
 
 ## Fixed
