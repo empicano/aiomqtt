@@ -4,6 +4,7 @@ import logging
 import pathlib
 import ssl
 import sys
+import uuid
 
 import anyio
 import anyio.abc
@@ -29,8 +30,7 @@ from aiomqtt.types import PayloadType
 pytestmark = pytest.mark.anyio
 
 HOSTNAME = "test.mosquitto.org"
-OS_PY_VERSION = sys.platform + "_" + ".".join(map(str, sys.version_info[:2]))
-TOPIC_PREFIX = OS_PY_VERSION + "/tests/aiomqtt/"
+TOPIC_PREFIX = str(uuid.uuid1()) + "/aiomqtt/"
 
 
 @pytest.mark.network
