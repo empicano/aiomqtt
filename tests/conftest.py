@@ -6,10 +6,7 @@ from typing import Any
 import pytest
 
 
+# No longer needed, this also works with Trio
 @pytest.fixture
 def anyio_backend() -> tuple[str, dict[str, Any]]:
-    if sys.platform == "win32":
-        from asyncio.windows_events import WindowsSelectorEventLoopPolicy
-
-        return ("asyncio", {"policy": WindowsSelectorEventLoopPolicy()})
-    return ("asyncio", {})
+    return ("trio", {})
