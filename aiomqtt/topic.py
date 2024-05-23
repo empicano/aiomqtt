@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import dataclasses
+import attrs
 import sys
 
 if sys.version_info >= (3, 10):
@@ -13,7 +13,13 @@ else:
 MAX_TOPIC_LENGTH = 65535
 
 
-@dataclasses.dataclass(frozen=True)
+def _split(self):
+    if not isinstance(self.value, str):
+        return ()
+    return self.value.split("/")
+
+
+@attrs.frozen
 class Wildcard:
     """MQTT wildcard that can be subscribed to, but not published to.
 
@@ -26,36 +32,39 @@ class Wildcard:
 
     Attributes:
         value: The wildcard string.
+        levels: The topic string, pre-split.
     """
 
-    value: str
+    value: str = attrs.field()
+    levels: List[str] = attrs.field(
+        repr=False, hash=False, default=attrs.Factory(_split, takes_self=True)
+    )
 
     def __str__(self) -> str:
         return self.value
 
-    def __post_init__(self) -> None:
+    @value.validator
+    def _check_value(self, attribute, value) -> None:
         """Validate the wildcard."""
-        if not isinstance(self.value, str):
+        if not isinstance(value, str):
             msg = "Wildcard must be of type str"
             raise TypeError(msg)
         if (
-            len(self.value) == 0
-            or len(self.value) > MAX_TOPIC_LENGTH
-            or "#/" in self.value
+            len(value) == 0
+            or len(value) > MAX_TOPIC_LENGTH
+            or "#/" in value
             or any(
-                "+" in level or "#" in level
-                for level in self.value.split("/")
-                if len(level) > 1
+                "+" in level or "#" in level for level in self.levels if len(level) > 1
             )
         ):
-            msg = f"Invalid wildcard: {self.value}"
+            msg = f"Invalid {self.__class__.__name__.lower()}: {self.value}"
             raise ValueError(msg)
 
 
 WildcardLike: TypeAlias = "str | Wildcard"
 
 
-@dataclasses.dataclass(frozen=True)
+@attrs.frozen
 class Topic(Wildcard):
     """MQTT topic that can be published and subscribed to.
 
@@ -66,18 +75,17 @@ class Topic(Wildcard):
         value: The topic string.
     """
 
-    def __post_init__(self) -> None:
+    value: str = attrs.field()
+    levels: List[str] = attrs.field(
+        repr=False, hash=False, default=attrs.Factory(_split, takes_self=True)
+    )
+
+    @value.validator
+    def check(self, attribute, value) -> None:
         """Validate the topic."""
-        if not isinstance(self.value, str):
-            msg = "Topic must be of type str"
-            raise TypeError(msg)
-        if (
-            len(self.value) == 0
-            or len(self.value) > MAX_TOPIC_LENGTH
-            or "+" in self.value
-            or "#" in self.value
-        ):
-            msg = f"Invalid topic: {self.value}"
+        super()._check_value(attribute, value)
+        if "+" in value or "#" in value:
+            msg = f"Invalid topic: {value}"
             raise ValueError(msg)
 
     def matches(self, wildcard: WildcardLike) -> bool:
@@ -91,9 +99,9 @@ class Topic(Wildcard):
         """
         if not isinstance(wildcard, Wildcard):
             wildcard = Wildcard(wildcard)
-        # Split topics into levels to compare them one by one
-        topic_levels = self.value.split("/")
-        wildcard_levels = str(wildcard).split("/")
+
+        topic_levels = self.levels
+        wildcard_levels = wildcard.levels
         if wildcard_levels[0] == "$share":
             # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
             wildcard_levels = wildcard_levels[2:]
