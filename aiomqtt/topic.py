@@ -224,7 +224,7 @@ class SubscriptionTree:
 
     @property
     def empty(self):
-        """Flag whether this subtree has no children or subscriptions"""
+        """Flag. True iff this subtree has no children or subscriptions"""
         if self.child:
             return False
         if not self.subscriptions:
@@ -276,8 +276,9 @@ class SubscriptionTree:
     def detach(self, sub: Subscription):
         """Remove a subscription from this tree.
 
-        The tree is pruned if warranted. The subscription *must* have been
-        attached.
+        The tree is pruned if warranted.
+
+        Detaching an unattached subscription is a no-op.
         """
         self._detach(sub, iter(sub.topic.levels))
 
@@ -285,14 +286,16 @@ class SubscriptionTree:
     def dispatch(self, message:Message):
         """Send a message to all subscribing queues.
 
-        Returns the number of queues dispatched to.
+        Returns the number of queues dropped.
         """
         return self._dispatch(message, iter(message.topic.levels))
 
-    def _disp_here(self, message:Message, wild:bool = False):
+    def _disp_here(self, message:Message, multi:bool = False):
+        # local dispatch. If @multi is set, only send to multi-level
+        # wildcard (trailing '#') subscriptions are processed.
         drop = []
         for sb in self.subscriptions:
-            if wild and not sb.topic.prefix:
+            if multi and not sb.topic.prefix:
                 continue
             try:
                 sb.queue.put_nowait(message)
