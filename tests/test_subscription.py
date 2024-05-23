@@ -15,11 +15,12 @@ def test_sub_dispatch() -> None:
     b = Subscription("a/b/#")
     c = Subscription("a/b/c")
     d = Subscription("a/b/c/d")
+    e = Subscription("a/$q/x/y/#")
 
-    subs = (a,b,c,d)
-    with ExitStack() as e:
+    subs = (a,b,c,d,e)
+    with ExitStack() as stk:
         for sb in subs:
-            e.enter_context(sb.subscribed_to(tree))
+            stk.enter_context(sb.subscribed_to(tree))
 
         def chk(topic, ok):
             m = Message(topic, 123, 0, False,321,{})
@@ -42,6 +43,8 @@ def test_sub_dispatch() -> None:
         chk("a/b/c", (a,b,c))
         chk("a/b/c/d", (a,b,d))
         chk("a/b/c/d/e", (a,b))
+        chk("a/$q/c/d/e", ())
+        chk("a/$q/x/y/z", (e,))
 
     chk("a/x/y", ())
 
