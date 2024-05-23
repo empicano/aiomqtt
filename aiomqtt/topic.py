@@ -329,16 +329,17 @@ class SubscriptionTree:
                         del self.child[s]
                     n += nn
 
-            # … or via '+' wildcard.
-            sb = self.child.get('+')
-            if sb is not None:
-                nn = sb._dispatch(message, topic)
-                if nn:
-                    if sb.empty:
-                        del self.child['+']
-                    n += nn
+            if not s.startswith('$'):  # MQTT-4.7.2-1
+                # … or via '+' wildcard.
+                sb = self.child.get('+')
+                if sb is not None:
+                    nn = sb._dispatch(message, topic)
+                    if nn:
+                        if sb.empty:
+                            del self.child['+']
+                        n += nn
 
-            # Finally, send to any '#' wildcard topics.
-            n += self._disp_here(message, wild=True)
+                # Finally, send to multi-level ('#') wildcard topics
+                n += self._disp_here(message, multi=True)
 
             return n
