@@ -3,6 +3,13 @@ from __future__ import annotations
 
 import attrs
 import sys
+import functools
+import anyio
+from contextlib import contextmanager
+
+from .queue import Queue
+
+from typing import Iterable
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
@@ -131,7 +138,7 @@ class Wildcard(Topic):
     def _check_value(self, attribute, value) -> None:
         """Validate the wildcard."""
         if not isinstance(value, str):
-            msg = "Wildcard must be of type str"
+            msg = f"Wildcard must be of type str, not {type(value)}"
             raise TypeError(msg)
         if (
             len(value) == 0
@@ -146,3 +153,188 @@ class Wildcard(Topic):
 
 
 WildcardLike: TypeAlias = "str | Wildcard"
+
+def _to_wild(w: WildcardLike):
+    if isinstance(w,str):
+        w = Wildcard(w)
+    return w
+
+@attrs.frozen(eq=False)
+class Subscription:
+    """
+    One subscription.
+
+    Usage::
+
+        sub = Subscription()
+
+        while True:
+            try:
+                with sub.subscribed_to(tree):
+                    async for msg in sub:
+                        process(msg)
+            except anyio.IncompleteRead:
+                # overflow. We've been dropped.
+    """
+    topic: WildcardLike = attrs.field(converter=_to_wild)
+    queue: Queue = attrs.field(factory=functools.partial(Queue, 10))
+
+    @contextmanager
+    def subscribed_to(self, tree: SubscriptionTree):
+        try:
+            tree.attach(self)
+            yield self
+        finally:
+            tree.detach(self)
+
+    def close(self):
+        """
+        Close the queue's write side.
+
+        This is called by the dispatcher when the queue is full, indicating
+        lost messages.
+        """
+        self.queue.close_writer()
+
+    def __iter__(self):
+        return self
+
+    async def __aiter__(self):
+        """
+        Read the next message.
+        """
+        try:
+            return await self.queue.get()
+        except StopAsyncIteration:
+            raise anyio.IncompleteRead(self)
+
+
+@attrs.frozen
+class SubscriptionTree:
+    """
+    Remember wildcards per tree
+    """
+    subscriptions: set[Subscription] = attrs.field(factory=set)
+    child: dict[str, SubscriptionTree] = attrs.field(factory=dict)
+
+    def __getitem__(self, elem):
+        # convenient for debugging, not used in code
+        return self.child[elem]
+
+    @property
+    def empty(self):
+        """Flag whether this subtree has no children or subscriptions"""
+        if self.child:
+            return False
+        if not self.subscriptions:
+            return False
+        return True
+
+    def _attach(self, sub:Subscription, topic:Iterable[str]):
+        # attach on this level
+        try:
+            s = next(topic)
+
+        except StopIteration:
+            self.subscriptions.add(sub)
+
+        else:
+            sn = self.child.get(s)
+            if sn is None:
+                self.child[s] = sn = SubscriptionTree()
+            sn._attach(sub, topic)
+
+    def _detach(self, sub:Subscription, topic:Iterable[str]):
+        # detach on this level
+        try:
+            s = next(topic)
+
+        except StopIteration:
+            self.subscriptions.discard(sub)
+
+        else:
+            try:
+                sn = self.child[s]
+            except KeyError:
+                # This happens when the subscription was unlinked
+                # by the tree's dispatcher, due to a full queue
+                return
+            sn._detach(sub, topic)
+
+            if sn.empty:
+                del self.child[s]
+
+
+    def attach(self, sub: Subscription):
+        """Add a subscription to this tree.
+
+        Adding a subscription twice is a no-op.
+        """
+        self._attach(sub, iter(sub.topic.levels))
+
+    def detach(self, sub: Subscription):
+        """Remove a subscription from this tree.
+
+        The tree is pruned if warranted. The subscription *must* have been
+        attached.
+        """
+        self._detach(sub, iter(sub.topic.levels))
+
+
+    def dispatch(self, message:Message):
+        """Send a message to all subscribing queues.
+
+        Returns the number of queues dispatched to.
+        """
+        return self._dispatch(message, iter(message.topic.levels))
+
+    def _disp_here(self, message:Message, wild:bool = False):
+        drop = []
+        for sb in self.subscriptions:
+            if wild and not sb.topic.prefix:
+                continue
+            try:
+                sb.queue.put_nowait(message)
+            except anyio.WouldBlock:
+                drop.append(sb)
+                sb.close()
+
+        if drop:
+            sb -= drop
+        return len(drop)
+
+    def _dispatch(self, message:Message, topic:Iterable[str]):
+        try:
+            s = next(topic)
+
+        except StopIteration:
+            # We are at the leaf. Feed to all subscribers.
+            return self._disp_here(message)
+
+        else:
+            # Dispatch to the next level, either named …
+            n = 0
+
+            sb = self.child.get(s)
+            if sb is not None:
+                nn = sb._dispatch(message, topic)
+                if nn:
+                    # Some subscriptions were dropped.
+                    # Clean them up if necessary.
+                    if sb.empty:
+                        del self.child[s]
+                    n += nn
+
+            # … or via '+' wildcard.
+            sb = self.child.get('+')
+            if sb is not None:
+                nn = sb._dispatch(message, topic)
+                if nn:
+                    if sb.empty:
+                        del self.child['+']
+                    n += nn
+
+            # Finally, send to any '#' wildcard topics.
+            n += self._disp_here(message, wild=True)
+
+            return n
