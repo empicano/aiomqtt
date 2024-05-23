@@ -98,21 +98,19 @@ class Topic(Wildcard):
             # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
             wildcard_levels = wildcard_levels[2:]
 
-        def recurse(tl: list[str], wl: list[str]) -> bool:
-            """Recursively match topic levels with wildcard levels."""
-            if not tl:
-                if not wl or wl[0] == "#":
-                    return True
-                return False
-            if not wl:
-                return False
-            if wl[0] == "#":
-                return True
-            if tl[0] == wl[0] or wl[0] == "+":
-                return recurse(tl[1:], wl[1:])
+        # Special: 'a/b/c' matches the wildcard 'a/b/c/#'
+        if len(topic_levels) < len(wildcard_levels) - (wildcard_levels[-1] == "#"):
             return False
 
-        return recurse(topic_levels, wildcard_levels)
+        # Otherwise, if the topic is longer than the wildcard it can't match
+        if len(wildcard_levels) < len(topic_levels) and wildcard_levels[-1] != "#":
+            return False
+
+        # now compare the individual pieces
+        for t, w in zip(topic_levels, wildcard_levels):
+            if t != w and w != "#" and w != "+":
+                return False
+        return True
 
 
 TopicLike: TypeAlias = "str | Topic"
