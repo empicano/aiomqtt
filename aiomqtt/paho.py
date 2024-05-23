@@ -168,15 +168,27 @@ class Client(mqtt.Client):
                 if not self.suppress_exceptions:
                     raise
 
+        def _conn():
+            if self._transport == "unix":
+                if ssl_context is not None:
+                    # Trio could do it *sigh*
+                    raise RuntimeError("we cannot use SSL over a Unix socket")
+                return anyio.connect_unix(self._host)
+            else:
+                # local port is not supported *sigh*
+                if self._bind_port > 0:
+                    raise RuntimeError("Bind to a specific port is not supported")
+                return anyio.connect_tcp(self._host, self._port, local_host=self._bind_address, ssl_context=context)
+
         try:
             async with (
                     ungroup_exc,
-                    await anyio.connect_tcp(self._host, self._port, ssl_context=context) as client,
+                    await _conn() as client,
                     anyio.create_task_group() as tg,
                     ):
                 if self._transport == "websockets":
                     ctx = WebSock(client, self._host, self._websocket_path, self._websocket_extra_headers)
-                elif self._transport == "tcp":
+                elif self._transport in ("tcp","unix"):
                     ctx = nullcontext(anyio.streams.stapled.StapledByteStream(
                         client,
                         anyio.streams.buffered.BufferedByteReceiveStream(client),
