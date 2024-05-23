@@ -77,13 +77,22 @@ class Topic:
 
         # Unless the wildcard has a trailing '#', if it is longer than the
         # wildcard it can't match either
-        if not wildcard.prefix and len(wildcard_levels) < len(topic_levels):
-            return False
+        if len(wildcard_levels) < len(topic_levels):
+            # The topic is longer than the wildcard: this requires a prefix
+            # match
+            if not wildcard.prefix:
+                return False
+            # wildcards must not match on '$subtopic'
+            if topic_levels[len(wildcard_levels)].startswith('$'):
+                return False
 
         # now compare the individual pieces
         for t, w in zip(topic_levels, wildcard_levels):
-            if t != w and w != "+":
-                return False
+            if t != w:
+                if w != "+":
+                    return False
+                if t.startswith('$'):
+                    return False
         return True
 
 
