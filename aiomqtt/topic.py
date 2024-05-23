@@ -70,9 +70,6 @@ class Topic:
 
         topic_levels = self.levels
         wildcard_levels = wildcard.levels
-        if len(wildcard_levels) > 0 and wildcard_levels[0] == "$share":
-            # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
-            wildcard_levels = wildcard_levels[2:]
 
         # If the topic is shorter than the wildcard it can't match
         if len(topic_levels) < len(wildcard_levels):
@@ -100,6 +97,10 @@ def _split_wildcard(self):
     res = self.value.split("/")
     if res[-1] == '#':
         res.pop()
+
+    if len(res) > 2 and res[0] == "$share":
+        # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
+        res = res[2:]
     return tuple(res)
 
 def _has_hash(self):
