@@ -209,17 +209,23 @@ class Subscriptions:
 
         """
         do_close = False
+        done = []
+
         if self.queue is None:
             self.queue = Queue(queue_len)
             do_close = True
 
         try:
-            with ExitStack() as s:
-                for top in extract_topics(self.topics):
-                    sub = Subscription(top, self.queue)
-                    s.enter_context(sub.subscribed_to(tree))
-                yield self
+            for top in extract_topics(self.topics):
+                sub = Subscription(top, self.queue)
+                tree.attach(sub)
+                done.append(sub)
+            yield self
+
         finally:
+            for sub in done:
+                tree.detach(sub)
+
             if do_close:
                 self.queue.close_reader()
                 self.queue.close_writer()
