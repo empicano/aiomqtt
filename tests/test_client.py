@@ -43,9 +43,10 @@ async def test_client_unsubscribe() -> None:
     topic_1 = TOPIC_PREFIX + "test_client_unsubscribe/1"
     topic_2 = TOPIC_PREFIX + "test_client_unsubscribe/2"
 
-    async def handle(tg: anyio.abc.TaskGroup) -> None:
+    async def handle(tg: anyio.abc.TaskGroup, task_status: anyio.abc.TaskStatus) -> None:
         is_first_message = True
         async with aclosing(client.messages) as msgs:
+            task_status.started()
             async for message in msgs:
                 if is_first_message:
                     assert message.topic.value == topic_1
@@ -57,8 +58,7 @@ async def test_client_unsubscribe() -> None:
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic_1)
         await client.subscribe(topic_2)
-        tg.start_soon(handle, tg)
-        await anyio.wait_all_tasks_blocked()
+        await tg.start(handle, tg)
         await client.publish(topic_1, None)
         await client.unsubscribe(topic_1)
         await client.publish(topic_1, None)
@@ -103,10 +103,12 @@ async def test_client_will() -> None:
 async def test_client_tls_context() -> None:
     topic = TOPIC_PREFIX + "test_client_tls_context"
 
-    async def handle(tg: anyio.abc.TaskGroup) -> None:
-        async for message in client.messages:
-            assert message.topic.value == topic
-            tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup, task_status: anyio.abc.TaskStatus) -> None:
+        async with aclosing(client.messages) as msgs:
+            task_status.started()
+            async for message in msgs:
+                assert message.topic.value == topic
+                tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME,
@@ -114,8 +116,7 @@ async def test_client_tls_context() -> None:
         tls_context=ssl.SSLContext(protocol=ssl.PROTOCOL_TLS),
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handle, tg)
-        await anyio.wait_all_tasks_blocked()
+        await tg.start(handle, tg)
         await client.publish(topic)
 
 
@@ -123,10 +124,12 @@ async def test_client_tls_context() -> None:
 async def test_client_tls_params() -> None:
     topic = TOPIC_PREFIX + "tls_params"
 
-    async def handle(tg: anyio.abc.TaskGroup) -> None:
-        async for message in client.messages:
-            assert message.topic.value == topic
-            tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup, task_status: anyio.abc.TaskStatus) -> None:
+        async with aclosing(client.messages) as msgs:
+            task_status.started()
+            async for message in msgs:
+                assert message.topic.value == topic
+                tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME,
@@ -136,8 +139,7 @@ async def test_client_tls_params() -> None:
         ),
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handle, tg)
-        await anyio.wait_all_tasks_blocked()
+        await tg.start(handle, tg)
         await client.publish(topic)
 
 
@@ -145,17 +147,18 @@ async def test_client_tls_params() -> None:
 async def test_client_username_password() -> None:
     topic = TOPIC_PREFIX + "username_password"
 
-    async def handle(tg: anyio.abc.TaskGroup) -> None:
-        async for message in client.messages:
-            assert message.topic.value == topic
-            tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup, task_status: anyio.abc.TaskStatus) -> None:
+        async with aclosing(client.messages) as msgs:
+            task_status.started()
+            async for message in client.messages:
+                assert message.topic.value == topic
+                tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME, username="", password=""
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
-        tg.start_soon(handle, tg)
-        await anyio.wait_all_tasks_blocked()
+        await tg.start(handle, tg)
         await client.publish(topic)
 
 
@@ -219,10 +222,12 @@ async def test_client_max_concurrent_outgoing_calls(
 async def test_client_websockets() -> None:
     topic = TOPIC_PREFIX + "websockets"
 
-    async def handle(tg: anyio.abc.TaskGroup) -> None:
-        async for message in client.messages:
-            assert message.topic.value == topic
-            tg.cancel_scope.cancel()
+    async def handle(tg: anyio.abc.TaskGroup, task_status: anyio.abc.TaskStatus) -> None:
+        async with aclosing(client.messages) as msgs:
+            task_status.started()
+            async for message in msgs:
+                assert message.topic.value == topic
+                tg.cancel_scope.cancel()
 
     async with Client(
         HOSTNAME,
@@ -233,8 +238,7 @@ async def test_client_websockets() -> None:
     ) as client:
         await client.subscribe(topic)
         async with anyio.create_task_group() as tg:
-            tg.start_soon(handle, tg)
-            await anyio.wait_all_tasks_blocked()
+            await tg.start(handle, tg)
             await client.publish(topic)
 
 
