@@ -375,6 +375,8 @@ class Client:
         options: SubscribeOptions | None = None,
         properties: Properties | None = None,
         *args: Any,
+
+        queue: Queue = None,
         **kwargs: Any,
     ):
         """Subscribe to a topic or wildcard.
@@ -389,6 +391,10 @@ class Client:
             **kwargs: Additional keyword arguments to pass to paho-mqtt's subscribe
                 method.
 
+            queue (Queue):
+                A queue to send the messages to. By default a local queue
+                is generated.
+
         This is a context manager. Iterate on the result to read the
         messages::
 
@@ -396,7 +402,7 @@ class Client:
                 async for msg in sub:
                     ...
         """
-        with Subscriptions(topic).subscribed_to(self._tree) as sub:
+        with Subscriptions(topic, queue=queue).subscribed_to(self._tree) as sub:
             try:
                 self._sub_q[sub.sub_id] = sub.queue
                 if self._with_sub_ids:
