@@ -197,6 +197,10 @@ class Subscriptions:
     """
     topics: SubscribeTopic
     queue: Queue = None
+    sub_id: int = None
+
+    # class attribute
+    # ID=1 is reserved for the global queue
 
     @contextmanager
     def subscribed_to(self, tree: SubscriptionTree, queue_len:int =10):
@@ -215,6 +219,9 @@ class Subscriptions:
         """
         do_close = False
         done = []
+
+        Subscriptions._next_id += 1
+        self.sub_id = Subscriptions._next_id
 
         if self.queue is None:
             self.queue = Queue(queue_len)
@@ -247,6 +254,8 @@ class Subscriptions:
         except StopAsyncIteration:
             raise anyio.IncompleteRead(self)
 
+# 'attrs' is somewhat annoying here
+Subscriptions._next_id = 1
 
 @attrs.define(eq=False)
 class Subscription:

@@ -32,6 +32,7 @@ from paho.mqtt.enums import CallbackAPIVersion, ConnackCode, MQTTProtocolVersion
 from paho.mqtt.properties import Properties
 from paho.mqtt.reasoncodes import ReasonCode
 from paho.mqtt.subscribeoptions import SubscribeOptions
+from paho.mqtt.packettypes import PacketTypes
 
 from .exceptions import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
 from .message import Message
@@ -395,12 +396,18 @@ class Client:
                 async for msg in sub:
                     ...
         """
-        try:
-            with Subscriptions(topic).subscribed_to(self._tree) as sub:
+        with Subscriptions(topic).subscribed_to(self._tree) as sub:
+            try:
+                self._sub_q[sub.sub_id] = sub.queue
+                if self._with_sub_ids:
+                    if properties is None:
+                        properties = Properties(PacketTypes.SUBSCRIBE)
+                    properties.SubscriptionIdentifier = sub.sub_id
                 await self._subscribe(False, topic, qos, options, properties, *args, **kwargs)
                 yield sub
-        finally:
-            await self.unsubscribe(list(extract_topics(topic)))
+            finally:
+                del self._sub_q[sub.sub_id]
+                await self.unsubscribe(list(extract_topics(topic)))
 
 
     async def subscribe(  # noqa: PLR0913
@@ -427,6 +434,10 @@ class Client:
 
         The desired messages will be delivered via the `Client.messages` iterator.
         """
+        if self._with_sub_ids:
+            if properties is None:
+                properties = Properties(PacketTypes.SUBSCRIBE)
+            properties.SubscriptionIdentifier = 1
         return await self._subscribe(True, topic, qos, options,
                 properties, *args, **kwargs)
 
@@ -568,6 +579,8 @@ class Client:
         # multiple times. Maybe because we receive multiple CONNACK messages
         # from the server. In any case, we return early so that we don't set
         # self._connected twice
+
+        self._with_sub_ids = getattr(properties,"SubscriptionIdentifierAvailable",1)
         if self._connected.is_set():
             return
         if rc.value < 6:
@@ -638,10 +651,17 @@ class Client:
         # Convert the paho.mqtt message into our own Message type
         m = Message._from_paho_message(message)  # noqa: SLF001
         # Put the message in the message queue
-        try:
+        if self._with_sub_ids:
+            for sub_id in m.properties.SubscriptionIdentifier:
+                try:
+                    self._sub_q[sub_id].put_nowait(m)
+                except anyio.WouldBlock:
+                    self._sub_q[id].close_writer()
+                    del self._sub_q[id]
+                except KeyError:
+                    pass
+        else:
             self._tree.dispatch(m)
-        except anyio.WouldBlock:
-            self._logger.warning("Message queue is full. Discarding message.")
 
     def _on_publish(self, client: mqtt.Client, userdata: Any, mid: int, 
             reason: ReasonCode, props: Properties) -> None:
@@ -680,6 +700,7 @@ class Client:
         self._queue = self._queue_type(self._max_queued_incoming_messages)
         self._tree = SubscriptionTree()
         self._subscriptions: dict[str, Subscription] = {}
+        self._sub_q = {1: self._queue}
 
         try:
             with anyio.fail_after(self.timeout) as timer:
