@@ -174,6 +174,32 @@ async def test_client_logger() -> None:
 
 
 @pytest.mark.network
+async def test_client_subscribe() -> None:
+
+    async def glob(task_status):
+        await client.subscribe("x/y/z")
+        task_status.started()
+        async with aclosing(client.messages) as msgs:
+            async for m in msgs:
+                assert m.topic.value == "x/y/z"
+                assert m.payload == b"bar"
+                break
+
+    async with (
+            Client(HOSTNAME) as client,
+            anyio.create_task_group() as tg,
+        ):
+        await tg.start(glob)
+        async with client.subscription("a/b/c") as sub:
+            await client.publish("a/b/c", b'foo')
+            await client.publish("x/y/z", b'bar')
+            async for m in sub:
+                assert m.topic.value == "a/b/c"
+                assert m.payload == b"foo"
+                break
+
+
+@pytest.mark.network
 async def test_client_max_concurrent_outgoing_calls(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

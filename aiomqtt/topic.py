@@ -5,9 +5,10 @@ import attrs
 import sys
 import functools
 import anyio
-from contextlib import contextmanager
+from contextlib import contextmanager, ExitStack
 
 from .queue import Queue
+from .types import extract_topics
 
 from typing import Iterable
 
@@ -108,7 +109,7 @@ def _split_wildcard(self):
         res.pop()
 
     if len(res) > 2 and res[0] == "$share":
-        # Shared subscriptions use the topic structure: $share/<group_id>/<topic>
+        # Shared subscriptions use the topic structure '$share/<group_id>/<topic>'
         res = res[2:]
     return tuple(res)
 
@@ -127,12 +128,19 @@ class Wildcard(Topic):
     operations on a wildcard.
 
     Args:
-        value: The wildcard string.
+        value (str):
+            The wildcard topic.
 
     Attributes:
-        value: The wildcard string.
-        levels: The wildcard string, pre-split, without trailing '#' if any.
-        prefix: indicates that the wildcard has a trailing '#'.
+        value (str):
+            The wildcard topic.
+        levels (tuple[str]):
+            The topic, pre-split on '/'.
+
+            Leading shared topics '$share/XXX/' or trailing multi-level
+            wildcards '/#' are not included in this attribute.
+        prefix (bool):
+            indicates that the wildcard has a trailing multi-level wildcard '#'.
     """
 
     value: str = attrs.field()
@@ -169,6 +177,66 @@ def _to_wild(w: WildcardLike):
         w = Wildcard(w)
     return w
 
+
+@attrs.define(eq=False)
+class Subscriptions:
+    """
+    A handler for possibly-multiple subscriptions.
+
+    Args:
+        topics (SubscribeTopic):
+            The topic(s) we want to subscribe to.
+        queue (Queue):
+            The queue to send messages to. If `None` a transient queue will
+            be created.
+    """
+    topics: SubscribeTopic
+    queue: Queue = None
+
+    @contextmanager
+    def subscribed_to(self, tree: SubscriptionTree, queue_len:int =10):
+        """
+        Add our subscription(s) to this tree.
+
+        Args:
+            tree (SubscriptionTree):
+                The tree to hook our subscription(s) into.
+            queue_len (int):
+                If using a transient queue, its maximum length.
+
+        This is a context manager. It yields an iterator for the queue
+        which raises `anyio.IncompleteRead` if/when the queue overflows.
+
+        """
+        do_close = False
+        if self.queue is None:
+            self.queue = Queue(queue_len)
+            do_close = True
+
+        try:
+            with ExitStack() as s:
+                for top in extract_topics(self.topics):
+                    sub = Subscription(top, self.queue)
+                    s.enter_context(sub.subscribed_to(tree))
+                yield self
+        finally:
+            if do_close:
+                self.queue.close_reader()
+                self.queue.close_writer()
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        """
+        Read the next message.
+        """
+        try:
+            return await self.queue.get()
+        except StopAsyncIteration:
+            raise anyio.IncompleteRead(self)
+
+
 @attrs.define(eq=False)
 class Subscription:
     """
@@ -182,9 +250,19 @@ class Subscription:
             try:
                 with sub.subscribed_to(tree):
                     async for msg in sub:
-                        process(msg)
+                        await process(msg)
             except anyio.IncompleteRead:
-                # overflow. We've been dropped.
+                # The subscription has been dropped because
+                # our processing was too slow.
+                # 
+                # Recovering from this error typically involves
+                # re-subscribing to the topic(s), to get the server to
+                # resend any persistent messages that we might have missed.
+                ...
+
+        # in some other task
+        tree.dispatch(Message("/some/topic", ...))
+
     """
     topic: WildcardLike = attrs.field(converter=_to_wild)
     queue: Queue = None
@@ -210,8 +288,8 @@ class Subscription:
         """
         Close the queue's write side.
 
-        This is called by the dispatcher when the queue is full, indicating
-        lost messages.
+        Called by the dispatcher when the queue is full,
+        indicating lost messages.
         """
         self.queue.close_writer()
 
@@ -231,7 +309,14 @@ class Subscription:
 @attrs.frozen
 class SubscriptionTree:
     """
-    Remember wildcards per tree
+    Collect subscriptions and dispatch to them efficiently.
+
+    Attributes:
+        subscriptions (set[Subscription]):
+            The subscriptions on this topic, or its multi-level wildcard (trailing '#').
+        child (dict[str, SubscriptionTree]):
+            Subscriptions on the next level of the topic hierarchy,
+            indexed by its name or the single-level wildcard('+')
     """
     subscriptions: set[Subscription] = attrs.field(factory=set)
     child: dict[str, SubscriptionTree] = attrs.field(factory=dict)
@@ -242,7 +327,7 @@ class SubscriptionTree:
 
     @property
     def empty(self):
-        """Flag. True iff this subtree has no children or subscriptions"""
+        """Flag. True iff this (sub)tree has no children or subscriptions"""
         if self.child:
             return False
         if not self.subscriptions:
@@ -284,32 +369,43 @@ class SubscriptionTree:
                 del self.child[s]
 
 
-    def attach(self, sub: Subscription):
+    def attach(self, sub: Subscription) -> None:
         """Add a subscription to this tree.
 
         Adding a subscription twice is a no-op.
+
+        Args:
+            sub (Subscription): The subscription to add.
         """
         self._attach(sub, iter(sub.topic.levels))
 
-    def detach(self, sub: Subscription):
+    def detach(self, sub: Subscription) -> None:
         """Remove a subscription from this tree.
 
         The tree is pruned if warranted.
 
         Detaching an unattached subscription is a no-op.
+
+        Args:
+            sub (Subscription): The subscription to remove.
         """
         self._detach(sub, iter(sub.topic.levels))
 
 
-    def dispatch(self, message:Message):
+    def dispatch(self, message: Message) -> int:
         """Send a message to all subscribing queues.
 
-        Returns the number of queues dropped.
+        Args:
+            message (Message): The message to send.
+            
+        Returns:
+            the number of queues dropped.
+
         """
         return self._dispatch(message, iter(message.topic.levels))
 
     def _disp_here(self, message:Message, multi:bool = False):
-        # local dispatch. If @multi is set, only send to multi-level
+        # local dispatch. If @multi is set, only multi-level
         # wildcard (trailing '#') subscriptions are processed.
         drop = []
         for sb in self.subscriptions:

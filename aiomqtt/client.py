@@ -43,9 +43,11 @@ from .types import (
     T,
     WebSocketHeaders,
     _PahoSocket,
+    extract_topics,
 )
 from .queue import Queue
 from .event import ValueEvent
+from .topic import SubscriptionTree, Subscription, Subscriptions
 
 if sys.version_info >= (3, 11):
     from typing import Concatenate, Self
@@ -330,6 +332,77 @@ class Client:
         yield from self._pending_publishes.keys()
 
     @_outgoing_call
+    async def _subscribe(  # noqa: PLR0913
+        self,
+        /,
+        global_queue: bool,
+        topic: SubscribeTopic,
+        qos: int = 0,
+        options: SubscribeOptions | None = None,
+        properties: Properties | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> tuple[int, ...] | list[ReasonCode]:
+        result, mid = self._client.subscribe(
+            topic, qos, options, properties, *args, **kwargs
+        )
+        # Early out on error
+        if result != MQTTErrorCode.MQTT_ERR_SUCCESS or mid is None:
+            raise MqttCodeError(result, "Could not subscribe to topic")
+
+        if global_queue:
+            for top in extract_topics(topic):
+                if top in self._subscriptions:
+                    continue
+                sub = Subscription(top, self._queue)
+                self._tree.attach(sub)
+                self._subscriptions[top] = sub
+
+        # Create future for when the on_subscribe callback is called
+        callback_result = ValueEvent()
+        with self._pending_call(mid, callback_result, self._pending_subscribes):
+            # Wait for callback_result
+            return await callback_result.wait()
+
+
+    @asynccontextmanager
+    async def subscription(
+        self,
+        /,
+        topic: SubscribeTopic,
+        qos: int = 0,
+        options: SubscribeOptions | None = None,
+        properties: Properties | None = None,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        """Subscribe to a topic or wildcard.
+
+        Args:
+            topic: The topic or wildcard to subscribe to.
+            qos: The requested QoS level for the subscription.
+            options: (MQTT v5.0 only) Optional paho-mqtt subscription options.
+            properties: (MQTT v5.0 only) Optional paho-mqtt properties.
+            *args: Additional positional arguments to pass to paho-mqtt's subscribe
+                method.
+            **kwargs: Additional keyword arguments to pass to paho-mqtt's subscribe
+                method.
+
+        This is a context manager. Iterate on the result to read the
+        messages::
+
+            async with client.subscription(topic) as sub:
+                async for msg in sub:
+                    ...
+        """
+        try:
+            with Subscriptions(topic).subscribed_to(self._tree) as sub:
+                await self._subscribe(False, topic, qos, options, properties, *args, **kwargs)
+                yield sub
+        finally:
+            await self.unsubscribe(topic)
+
+
     async def subscribe(  # noqa: PLR0913
         self,
         /,
@@ -352,19 +425,10 @@ class Client:
             **kwargs: Additional keyword arguments to pass to paho-mqtt's subscribe
                 method.
 
+        The desired messages will be delivered via the `Client.messages` iterator.
         """
-        result, mid = self._client.subscribe(
-            topic, qos, options, properties, *args, **kwargs
-        )
-        # Early out on error
-        if result != MQTTErrorCode.MQTT_ERR_SUCCESS or mid is None:
-            raise MqttCodeError(result, "Could not subscribe to topic")
-
-        # Create future for when the on_subscribe callback is called
-        callback_result = ValueEvent()
-        with self._pending_call(mid, callback_result, self._pending_subscribes):
-            # Wait for callback_result
-            return await callback_result.wait()
+        return await self._subscribe(True, topic, qos, options,
+                properties, *args, **kwargs)
 
     @_outgoing_call
     async def unsubscribe(
@@ -378,7 +442,7 @@ class Client:
         """Unsubscribe from a topic or wildcard.
 
         Args:
-            topic: The topic or wildcard to unsubscribe from.
+            topic: The topic(s) or wildcard(s) to unsubscribe from.
             properties: (MQTT v5.0 only) Optional paho-mqtt properties.
             *args: Additional positional arguments to pass to paho-mqtt's unsubscribe
                 method.
@@ -390,6 +454,15 @@ class Client:
         if result != MQTTErrorCode.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
         # Create event for when the on_unsubscribe callback is called
+
+        if isinstance(topic,str):
+            topic = [topic]
+        for top in topic:
+            sub = self._subscriptions.pop(top, None)
+            if sub is not None:
+                self._tree.detach(sub)
+
+        # Create future for when the on_unsubscribe callback is called
         confirmation = anyio.Event()
         with self._pending_call(mid, confirmation, self._pending_unsubscribes):
             # Wait for confirmation
@@ -438,9 +511,22 @@ class Client:
 
     @property
     async def messages(self) -> AsyncGenerator[Message, None]:
-        """Async generator that yields messages from the underlying message queue."""
+        """Async generator that yields messages from the common message queue.
+
+        Raises `anyio.IncompleteRead` on overflow.
+
+        Usage::
+
+            async with aclosing(client.messages) as msgs:
+                async for msg in msgs:
+                    await process(msg)
+        """
         while True:
-            yield await self._queue.get()
+            try:
+                yield await self._queue.get()
+            except StopAsyncIteration:
+                raise anyio.IncompleteRead()
+
 
     @contextmanager
     def _pending_call(
@@ -553,7 +639,7 @@ class Client:
         m = Message._from_paho_message(message)  # noqa: SLF001
         # Put the message in the message queue
         try:
-            self._queue.put_nowait(m)
+            self._tree.dispatch(m)
         except anyio.WouldBlock:
             self._logger.warning("Message queue is full. Discarding message.")
 
@@ -592,6 +678,8 @@ class Client:
         exc = None
 
         self._queue = self._queue_type(self._max_queued_incoming_messages)
+        self._tree = SubscriptionTree()
+        self._subscriptions: dict[str, Subscription] = {}
 
         try:
             with anyio.fail_after(self.timeout) as timer:
