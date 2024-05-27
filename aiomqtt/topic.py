@@ -317,7 +317,7 @@ class Subscription:
             raise anyio.IncompleteRead(self)
 
 
-@attrs.frozen
+@attrs.frozen(eq=False)
 class SubscriptionTree:
     """
     Collect subscriptions and dispatch to them efficiently.
@@ -414,16 +414,18 @@ class SubscriptionTree:
 
         Args:
             message (Message): The message to send.
-            
-        Returns:
-            the number of queues dropped.
 
         """
-        return self._dispatch(message, iter(message.topic.levels))
+        self._dispatch(message, iter(message.topic.levels))
 
     def _disp_here(self, message:Message, multi:bool = False):
-        # local dispatch. If @multi is set, only multi-level
-        # wildcard (trailing '#') subscriptions are processed.
+        """
+        Local dispatch. If @multi is set, only multi-level
+        wildcard (trailing '#') subscriptions are processed.
+
+        Returns True if one or more subscriptions were dropped
+        due to queue overflow.
+        """
         drop = []
         for sb in self.subscriptions:
             if multi and not sb.topic.prefix:
@@ -435,10 +437,26 @@ class SubscriptionTree:
                 sb.close()
 
         if drop:
-            sb -= drop
+            self.subscriptions -= drop
         return len(drop)
 
     def _dispatch(self, message:Message, topic:Iterable[str]):
+        """
+        Dispatch to this (sub)tree.
+
+        Args:
+            message (Message):
+                The message to forward.
+            topic: (Iterable[str]):
+                The message's topic.
+
+        A call to '_dispatch' retrieves the next value of the 'topic'
+        iterator and then recursively calls its subtree, or dispatches
+        locally.
+
+        Returns True if one or more subscriptions or subtrees
+        were dropped due to queue overflow.
+        """
         try:
             s = next(topic)
 
@@ -448,29 +466,26 @@ class SubscriptionTree:
 
         else:
             # Dispatch to the next level, either named …
-            n = 0
+            did_drop = False
 
             sb = self.child.get(s)
-            if sb is not None:
-                nn = sb._dispatch(message, topic)
-                if nn:
-                    # Some subscriptions were dropped.
-                    # Clean them up if necessary.
-                    if sb.empty:
-                        del self.child[s]
-                    n += nn
+            if sb is not None and sb._dispatch(message, topic):
+                # Some subscriptions were dropped.
+                # Clean them up if necessary.
+                if sb.empty:
+                    del self.child[s]
+                did_drop = True
 
             if not s.startswith('$'):  # MQTT-4.7.2-1
                 # … or via '+' wildcard.
                 sb = self.child.get('+')
-                if sb is not None:
-                    nn = sb._dispatch(message, topic)
-                    if nn:
-                        if sb.empty:
-                            del self.child['+']
-                        n += nn
+                if sb is not None and sb._dispatch(message, topic):
+                    if sb.empty:
+                        del self.child['+']
+                    did_drop = True
 
                 # Finally, send to multi-level ('#') wildcard topics
-                n += self._disp_here(message, multi=True)
+                if self._disp_here(message, multi=True):
+                    did_drop = True
 
-            return n
+            return did_drop
