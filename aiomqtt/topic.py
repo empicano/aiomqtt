@@ -27,6 +27,11 @@ def _split_topic(self):
     return tuple(self.value.split("/"))
 
 
+class DuplicateSubscription(RuntimeError):
+    """This topic is already subscribed to."""
+    pass
+
+
 @attrs.frozen
 class Topic:
     """MQTT topic that can be published and subscribed to.
@@ -346,6 +351,9 @@ class SubscriptionTree:
             s = next(topic)
 
         except StopIteration:
+            for sb in self.subscriptions:
+                if sb.topic.value == sub.topic.value:
+                    raise DuplicateSubscription(sub)
             self.subscriptions.add(sub)
 
         else:
@@ -382,6 +390,9 @@ class SubscriptionTree:
 
         Args:
             sub (Subscription): The subscription to add.
+
+        Raises:
+            `DuplicateSubscription` if the subscription already exists.
         """
         self._attach(sub, iter(sub.topic.levels))
 
