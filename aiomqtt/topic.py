@@ -169,7 +169,7 @@ def _to_wild(w: WildcardLike):
         w = Wildcard(w)
     return w
 
-@attrs.frozen(eq=False)
+@attrs.define(eq=False)
 class Subscription:
     """
     One subscription.
@@ -187,15 +187,24 @@ class Subscription:
                 # overflow. We've been dropped.
     """
     topic: WildcardLike = attrs.field(converter=_to_wild)
-    queue: Queue = attrs.field(factory=functools.partial(Queue, 10))
+    queue: Queue = None
 
     @contextmanager
     def subscribed_to(self, tree: SubscriptionTree):
+        do_close = False
+        if self.queue is None:
+            self.queue = Queue()
+            do_close = True
+
         try:
             tree.attach(self)
             yield self
         finally:
             tree.detach(self)
+
+            if do_close:
+                self.queue.close_reader()
+                self.queue.close_writer()
 
     def close(self):
         """

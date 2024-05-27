@@ -141,10 +141,6 @@ class Client(mqtt.Client):
         self._out_message_mutex = _null_ctx
         self._in_message_mutex = _null_ctx
 
-        self._out_q = Queue(999)
-        self._out_p = None  # packet to retransmit
-        self._connected = ValueEvent()
-
     @asynccontextmanager
     async def _connect_once(self):
         self._connected = ValueEvent()
@@ -280,6 +276,10 @@ class Client(mqtt.Client):
 
     @asynccontextmanager
     async def connect(self, *a, **k):
+        self._out_q = Queue(999)
+        self._out_p = None  # packet to retransmit
+        self._connected = ValueEvent()
+
         try:
             self._close_ok = True
             self.connect_async(*a, **k)
@@ -293,6 +293,9 @@ class Client(mqtt.Client):
         except BaseExceptionGroup as exc:
             m,r = exc.split(GeneratorExit)
             raise r
+        finally:
+            self._out_q.close_writer()
+            self._out_q.close_reader()
 
 
     def _sock_close(self):

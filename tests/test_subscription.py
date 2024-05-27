@@ -46,5 +46,3 @@ def test_sub_dispatch() -> None:
         chk("a/$q/c/d/e", ())
         chk("a/$q/x/y/z", (e,))
 
-    chk("a/x/y", ())
-

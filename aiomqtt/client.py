@@ -232,9 +232,11 @@ class Client:
         # Queue that holds incoming messages
         if queue_type is None:
             queue_type = Queue
+        self._queue_type = queue_type
+
         if max_queued_incoming_messages is None:
             max_queued_incoming_messages = 0
-        self._queue = queue_type(max_queued_incoming_messages)
+        self._max_queued_incoming_messages = max_queued_incoming_messages
 
         # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: anyio.Semaphore | None
@@ -588,6 +590,9 @@ class Client:
         self._connected = ValueEvent()
 
         exc = None
+
+        self._queue = self._queue_type(self._max_queued_incoming_messages)
+
         try:
             with anyio.fail_after(self.timeout) as timer:
                 async with self._client.connect(
@@ -626,6 +631,11 @@ class Client:
             if exc is not None:
                 raise exc
             raise
+
+        finally:
+            self._queue.close_reader()
+            self._queue.close_writer()
+
 
 
 
