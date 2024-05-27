@@ -330,7 +330,7 @@ class SubscriptionTree:
         """Flag. True iff this (sub)tree has no children or subscriptions"""
         if self.child:
             return False
-        if not self.subscriptions:
+        if self.subscriptions:
             return False
         return True
 
