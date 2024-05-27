@@ -175,28 +175,45 @@ async def test_client_logger() -> None:
 
 @pytest.mark.network
 async def test_client_subscribe() -> None:
+    # we can't do multiple subscriptions on the same topic yet(?)
+    # so we use a shared subscription, if supported
+    # otherwise the test gets skipped
 
     async def glob(task_status):
-        await client.subscribe("x/y/z")
+        await client.subscribe([("x/y/z",0),("$share/xxx/e/o/#",0)])
         task_status.started()
         async with aclosing(client.messages) as msgs:
             async for m in msgs:
+                if m.topic.value == "e/o/t2":
+                    break
+                if m.topic.value == "e/o/t1":
+                    continue
                 assert m.topic.value == "x/y/z"
                 assert m.payload == b"bar"
-                break
 
     async with (
-            Client(HOSTNAME) as client,
+            ungroup_exc,
+            Client(HOSTNAME, protocol=ProtocolVersion.V5) as client,
             anyio.create_task_group() as tg,
         ):
+        if client._client._protocol != ProtocolVersion.V5:
+            pytest.skip("Connection isn't MQTT5")
+
         await tg.start(glob)
-        async with client.subscription("a/b/c") as sub:
+        async with client.subscription([("a/b/c",0),("e/o/#",0)]) as sub:
             await client.publish("a/b/c", b'foo')
             await client.publish("x/y/z", b'bar')
+            await client.publish("e/o/t1", None)
             async for m in sub:
+                if m.topic.value == "e/o/t1":
+                    break
+                if m.topic.value == "e/o/t2":
+                    continue
                 assert m.topic.value == "a/b/c"
                 assert m.payload == b"foo"
-                break
+
+        # ensure that the handler's subscription is still active
+        await client.publish("e/o/t2", None)
 
 
 @pytest.mark.network
