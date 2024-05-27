@@ -174,7 +174,8 @@ async def test_client_logger() -> None:
 
 
 @pytest.mark.network
-async def test_client_subscribe() -> None:
+@pytest.mark.parametrize("subscr_ids", [True,False])
+async def test_client_subscribe(subscr_ids) -> None:
     # we can't do multiple subscriptions on the same topic yet(?)
     # so we use a shared subscription, if supported
     # otherwise the test gets skipped
@@ -198,6 +199,11 @@ async def test_client_subscribe() -> None:
         ):
         if client._client._protocol != ProtocolVersion.V5:
             pytest.skip("Connection isn't MQTT5")
+
+        if subscr_ids and not client._with_sub_ids:
+            pytest.skip("Server without subscription IDs")
+        elif not subscr_ids:
+            client._with_sub_ids = False
 
         await tg.start(glob)
         async with client.subscription([("a/b/c",0),("e/o/#",0)]) as sub:
