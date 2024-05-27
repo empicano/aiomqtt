@@ -400,7 +400,7 @@ class Client:
                 await self._subscribe(False, topic, qos, options, properties, *args, **kwargs)
                 yield sub
         finally:
-            await self.unsubscribe(topic)
+            await self.unsubscribe(list(extract_topics(topic)))
 
 
     async def subscribe(  # noqa: PLR0913
