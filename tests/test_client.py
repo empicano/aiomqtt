@@ -43,7 +43,7 @@ async def test_client_unsubscribe() -> None:
     topic_1 = TOPIC_PREFIX + "test_client_unsubscribe/1"
     topic_2 = TOPIC_PREFIX + "test_client_unsubscribe/2"
 
-    async def handle(tg: anyio.abc.TaskGroup, task_status: anyio.abc.TaskStatus) -> None:
+    async def handle(tg: anyio.abc.TaskGroup, evt: anyio.Event, task_status: anyio.abc.TaskStatus) -> None:
         is_first_message = True
         async with aclosing(client.messages) as msgs:
             task_status.started()
@@ -51,15 +51,19 @@ async def test_client_unsubscribe() -> None:
                 if is_first_message:
                     assert message.topic.value == topic_1
                     is_first_message = False
+                    evt.set()
                 else:
                     assert message.topic.value == topic_2
                     tg.cancel_scope.cancel()
 
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
+        evt = anyio.Event()
         await client.subscribe(topic_1)
         await client.subscribe(topic_2)
-        await tg.start(handle, tg)
+        await tg.start(handle, tg, evt)
         await client.publish(topic_1, None)
+        await evt.wait()
+
         await client.unsubscribe(topic_1)
         await client.publish(topic_1, None)
         # Test that other subscriptions still receive messages
