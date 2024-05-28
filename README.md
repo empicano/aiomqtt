@@ -41,7 +41,7 @@ aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com
 - Supports MQTT versions 5.0, 3.1.1 and 3.1
 - Fully type-hinted
 - Did we mention no more callbacks?
-- Works with asyncio *and* trio! No workarounds requires!
+- Works with asyncio *and* trio! No workarounds required!
 
 <!-- pitch end -->
 
