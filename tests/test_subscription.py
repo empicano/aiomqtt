@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import pytest
 from contextlib import ExitStack
-import anyio
 
-from aiomqtt.topic import Topic, Wildcard, SubscriptionTree, Subscription
+import anyio
+import pytest
+
 from aiomqtt.message import Message
+from aiomqtt.topic import Subscription, SubscriptionTree, Topic, Wildcard
 
 
 def test_sub_dispatch() -> None:

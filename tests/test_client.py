@@ -6,6 +6,7 @@ import socket
 import ssl
 import sys
 import uuid
+from contextlib import aclosing
 
 import anyio
 import anyio.abc
@@ -17,8 +18,6 @@ from paho.mqtt.enums import MQTTErrorCode
 from paho.mqtt.properties import Properties
 from paho.mqtt.subscribeoptions import SubscribeOptions
 
-from contextlib import aclosing
-
 from aiomqtt import (
     Client,
     MqttError,
@@ -27,8 +26,8 @@ from aiomqtt import (
     TLSParameters,
     Will,
 )
-from aiomqtt.types import PayloadType
 from aiomqtt.paho import ungroup_exc
+from aiomqtt.types import PayloadType
 
 # This is the same as marking all tests in this file with @pytest.mark.anyio
 pytestmark = pytest.mark.anyio

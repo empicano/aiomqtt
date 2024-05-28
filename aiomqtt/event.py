@@ -1,12 +1,11 @@
-"""
-This module contains an awaitable value.
+"""This module contains an awaitable value.
 """
 
 from __future__ import annotations
 
-import anyio
 from concurrent.futures import CancelledError
 
+import anyio
 import attr
 
 __all__ = ["ValueEvent"]

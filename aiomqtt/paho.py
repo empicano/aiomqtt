@@ -1,18 +1,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import anyio
-import anyio.streams.buffered
-import anyio.streams.stapled
-
 import logging
 import math
 import ssl
 import sys
 import time
-
 from contextlib import asynccontextmanager, nullcontext
-
 from typing import (
     Any,
     AsyncGenerator,
@@ -27,16 +21,22 @@ from typing import (
     cast,
 )
 
-from contextlib import nullcontext
-
+import anyio
+import anyio.streams.buffered
+import anyio.streams.stapled
 import paho.mqtt.client as mqtt
-from paho.mqtt.enums import MQTTErrorCode, MessageType, CallbackAPIVersion, _ConnectionState
+from paho.mqtt.enums import (
+    CallbackAPIVersion,
+    MessageType,
+    MQTTErrorCode,
+    _ConnectionState,
+)
+from paho.mqtt.packettypes import PacketTypes
 from paho.mqtt.properties import Properties
 from paho.mqtt.reasoncodes import ReasonCode
-from paho.mqtt.packettypes import PacketTypes
 
-from .exceptions import MqttCodeError, MqttConnectError, MqttError
 from .event import ValueEvent
+from .exceptions import MqttCodeError, MqttConnectError, MqttError
 from .queue import Queue
 
 if sys.version_info >= (3, 11):
@@ -59,8 +59,7 @@ except AttributeError:
     time_func = time.time
 
 class _UngroupExc:
-    """
-    A sync+async context manager that unwraps single-element
+    """A sync+async context manager that unwraps single-element
     exception groups.
     """
     def __call__(self):
@@ -68,7 +67,7 @@ class _UngroupExc:
         return self
 
     def one(self, e):
-        "convert the exceptiongroup @e to a single exception"
+        "Convert the exceptiongroup @e to a single exception"
         while isinstance(e, BaseExceptionGroup):
             if len(e.exceptions) != 1:
                 break
@@ -118,8 +117,7 @@ mqtt.MQTTMessageInfo = MQTTMessageInfo
 
 
 class Client(mqtt.Client):
-    """
-    This is a subclass of the paho.mqtt client that uses async tasks
+    """This is a subclass of the paho.mqtt client that uses async tasks
     instead of threads.
 
     See `paho.mqtt.client.Client` for usage details.
@@ -378,7 +376,7 @@ class Client(mqtt.Client):
         self._packet_seen = time_func()
         return pkt
 
-    
+
     async def _loop_read(self):
         while True:
             self._in_packet = await self._recv_one()
@@ -470,7 +468,6 @@ class Client(mqtt.Client):
 
         :raises OSError: if the first connection fail unless retry_first_connection=True
         """
-
         run = True
 
         while run:

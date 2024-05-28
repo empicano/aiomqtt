@@ -1,17 +1,17 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import attrs
-import sys
-import functools
-import anyio
 import asyncio
-from contextlib import contextmanager, ExitStack
+import functools
+import sys
+from contextlib import ExitStack, contextmanager
+from typing import Iterable
+
+import anyio
+import attrs
 
 from .queue import Queue
 from .types import extract_topics
-
-from typing import Iterable
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
@@ -30,7 +30,6 @@ def _split_topic(self):
 
 class DuplicateSubscription(RuntimeError):
     """This topic is already subscribed to."""
-    pass
 
 
 @attrs.frozen
@@ -186,8 +185,7 @@ def _to_wild(w: WildcardLike):
 
 @attrs.define(eq=False)
 class Subscriptions:
-    """
-    A handler for possibly-multiple subscriptions.
+    """A handler for possibly-multiple subscriptions.
 
     Args:
         topics (SubscribeTopic):
@@ -207,8 +205,7 @@ class Subscriptions:
 
     @contextmanager
     def subscribed_to(self, tree: SubscriptionTree, queue_len: int = 100):
-        """
-        Add our subscription(s) to this tree.
+        """Add our subscription(s) to this tree.
 
         Args:
             tree (SubscriptionTree):
@@ -260,8 +257,7 @@ class Subscriptions:
         return self
 
     async def __anext__(self):
-        """
-        Read the next message.
+        """Read the next message.
         """
         if self.closed and self.queue.empty():
             raise anyio.IncompleteRead(self)
@@ -276,8 +272,7 @@ Subscriptions._next_id = 1
 
 @attrs.define(eq=False)
 class Subscription:
-    """
-    One subscription.
+    """One subscription.
 
     Usage::
 
@@ -291,7 +286,7 @@ class Subscription:
             except anyio.IncompleteRead:
                 # The subscription has been dropped because
                 # our processing was too slow.
-                # 
+                #
                 # Recovering from this error typically involves
                 # re-subscribing to the topic(s), to get the server to
                 # resend any persistent messages that we might have missed.
@@ -322,8 +317,7 @@ class Subscription:
                 self.queue.close_writer()
 
     def close(self):
-        """
-        Close the queue's write side.
+        """Close the queue's write side.
 
         Called by the dispatcher when the queue is full,
         indicating lost messages.
@@ -334,8 +328,7 @@ class Subscription:
         return self
 
     async def __aiter__(self):
-        """
-        Read the next message.
+        """Read the next message.
         """
         try:
             return await self.queue.get()
@@ -345,8 +338,7 @@ class Subscription:
 
 @attrs.frozen(eq=False)
 class SubscriptionTree:
-    """
-    Collect subscriptions and dispatch to them efficiently.
+    """Collect subscriptions and dispatch to them efficiently.
 
     Attributes:
         subscriptions (set[Subscription]):
@@ -445,8 +437,7 @@ class SubscriptionTree:
         self._dispatch(message, iter(message.topic.levels))
 
     def _disp_here(self, message:Message, multi:bool = False):
-        """
-        Local dispatch. If @multi is set, only multi-level
+        """Local dispatch. If @multi is set, only multi-level
         wildcard (trailing '#') subscriptions are processed.
 
         Returns True if one or more subscriptions were dropped
@@ -467,8 +458,7 @@ class SubscriptionTree:
         return len(drop)
 
     def _dispatch(self, message:Message, topic:Iterable[str]):
-        """
-        Dispatch to this (sub)tree.
+        """Dispatch to this (sub)tree.
 
         Args:
             message (Message):

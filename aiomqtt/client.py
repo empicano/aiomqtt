@@ -1,9 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import anyio
 import asyncio
-from contextlib import contextmanager, asynccontextmanager
 import dataclasses
 import enum
 import functools
@@ -12,6 +10,7 @@ import math
 import socket
 import ssl
 import sys
+from contextlib import asynccontextmanager, contextmanager
 from types import TracebackType
 from typing import (
     Any,
@@ -27,16 +26,25 @@ from typing import (
     cast,
 )
 
-from . import paho as mqtt
+import anyio
 from paho.mqtt.client import MQTT_CLEAN_START_FIRST_ONLY
-from paho.mqtt.enums import CallbackAPIVersion, ConnackCode, MQTTProtocolVersion, MQTTErrorCode
+from paho.mqtt.enums import (
+    CallbackAPIVersion,
+    ConnackCode,
+    MQTTErrorCode,
+    MQTTProtocolVersion,
+)
+from paho.mqtt.packettypes import PacketTypes
 from paho.mqtt.properties import Properties
 from paho.mqtt.reasoncodes import ReasonCode
 from paho.mqtt.subscribeoptions import SubscribeOptions
-from paho.mqtt.packettypes import PacketTypes
 
+from . import paho as mqtt
+from .event import ValueEvent
 from .exceptions import MqttCodeError, MqttConnectError, MqttError, MqttReentrantError
 from .message import Message
+from .queue import Queue
+from .topic import Subscription, Subscriptions, SubscriptionTree
 from .types import (
     P,
     PayloadType,
@@ -47,9 +55,6 @@ from .types import (
     _PahoSocket,
     extract_topics,
 )
-from .queue import Queue
-from .event import ValueEvent
-from .topic import SubscriptionTree, Subscription, Subscriptions
 
 if sys.version_info >= (3, 11):
     from typing import Concatenate, Self
@@ -424,7 +429,7 @@ class Client:
                 await self.unsubscribe(list(extract_topics(topic)))
 
 
-    async def subscribe(  # noqa: PLR0913
+    async def subscribe(
         self,
         /,
         topic: SubscribeTopic,
@@ -679,7 +684,7 @@ class Client:
         else:
             self._tree.dispatch(m)
 
-    def _on_publish(self, client: mqtt.Client, userdata: Any, mid: int, 
+    def _on_publish(self, client: mqtt.Client, userdata: Any, mid: int,
             reason: ReasonCode, props: Properties) -> None:
         try:
             self._pending_publishes.pop(mid).set()
@@ -747,7 +752,7 @@ class Client:
         except ExceptionGroup as exc2:
             # If the original error has been wrapped in an exception group,
             # raise it instead.
-            # 
+            #
             # This typically happens when the server closes the connection
             # after sending an error. We thus get the MQTT error from the
             # disconnect packet *and* the EOFError because it closed the

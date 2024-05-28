@@ -1,5 +1,4 @@
-"""
-trio/anyio no longer have queues, but sometimes a memory object stream is
+"""trio/anyio no longer have queues, but sometimes a memory object stream is
 unwieldy. Thus this re-implemens a simple queue using
 `anyio.create_memory_object_stream`.
 """
@@ -8,7 +7,6 @@ from __future__ import annotations
 
 import anyio
 from anyio import create_memory_object_stream
-
 from outcome import Error, Value
 
 from typing import TYPE_CHECKING  # isort:skip
@@ -26,8 +24,7 @@ __all__ = [
 
 
 class Queue:
-    """
-    Queues have been replaced in trio/anyio by memory object streams, but
+    """Queues have been replaced in trio/anyio by memory object streams, but
     those are more complicated to use.
 
     This Queue class simply re-implements queues on top of memory object streams.
@@ -50,13 +47,15 @@ class Queue:
 
     async def get(self):
         """Get the next value, blocking.
-        May raise an exception if one was sent."""
+        May raise an exception if one was sent.
+        """
         res = await self._r.receive()
         return res.unwrap()
 
     def get_nowait(self):
         """Get the next value, nonblocking.
-        May raise an exception if one was sent."""
+        May raise an exception if one was sent.
+        """
         res = self._r.receive_nowait()
         return res.unwrap()
 
