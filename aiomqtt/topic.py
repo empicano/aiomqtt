@@ -8,7 +8,6 @@ from contextlib import ExitStack, contextmanager
 from typing import Iterable
 
 import anyio
-import attrs
 
 from .queue import Queue
 from .types import extract_topics
@@ -22,17 +21,16 @@ else:
 MAX_TOPIC_LENGTH = 65535
 
 
-def _split_topic(self):
-    if not isinstance(self.value, str):
+def _split_topic(value):
+    if not isinstance(value, str):
         return ()
-    return tuple(self.value.split("/"))
+    return tuple(value.split("/"))
 
 
 class DuplicateSubscription(RuntimeError):
     """This topic is already subscribed to."""
 
 
-@attrs.frozen
 class Topic:
     """MQTT topic that can be published and subscribed to.
 
@@ -43,14 +41,7 @@ class Topic:
         value: The topic string.
     """
 
-    value: str = attrs.field()
-    levels: List[str] = attrs.field(
-        repr=False, hash=False, default=attrs.Factory(_split_topic, takes_self=True)
-    )
-
-    @value.validator
-    def check(self, attribute, value) -> None:
-        """Validate the topic."""
+    def __init__(self, value):
         if not isinstance(value, str):
             msg = "Wildcard must be of type str"
             raise TypeError(msg)
@@ -59,8 +50,16 @@ class Topic:
             or len(value) > MAX_TOPIC_LENGTH
             or "+" in value or "#" in value
         ):
-            msg = f"Invalid topic: {self.value}"
+            msg = f"Invalid topic: {value}"
             raise ValueError(msg)
+
+        self.value:str = value
+        self.levels:tuple[str] = _split_topic(value)
+
+
+    def __repr__(self):
+        return self.value
+
 
     def matches(self, wildcard: WildcardLike) -> bool:
         """Check if the topic matches a given wildcard.
@@ -106,10 +105,10 @@ TopicLike: TypeAlias = "str | Topic"
 
 
 
-def _split_wildcard(self):
-    if not isinstance(self.value, str):
+def _split_wildcard(value):
+    if not isinstance(value, str):
         return ()
-    res = self.value.split("/")
+    res = value.split("/")
     if res[-1] == '#':
         res.pop()
 
@@ -124,7 +123,6 @@ def _has_hash(self):
     return self.value == '#' or self.value.endswith('/#')
 
 
-@attrs.frozen
 class Wildcard(Topic):
     """MQTT wildcard that can be subscribed to, but not published to.
 
@@ -148,18 +146,9 @@ class Wildcard(Topic):
             indicates that the wildcard has a trailing multi-level wildcard '#'.
     """
 
-    value: str = attrs.field()
-    levels: List[str] = attrs.field(
-        repr=False, hash=False, default=attrs.Factory(_split_wildcard, takes_self=True)
-    )
-    prefix: bool = attrs.field(default=attrs.Factory(_has_hash, takes_self=True))
+    def __init__(self, value):
+        levels: tuple[str] = _split_wildcard(value)
 
-    def __str__(self) -> str:
-        return self.value
-
-    @value.validator
-    def _check_value(self, attribute, value) -> None:
-        """Validate the wildcard."""
         if not isinstance(value, str):
             msg = f"Wildcard must be of type str, not {type(value)}"
             raise TypeError(msg)
@@ -168,11 +157,21 @@ class Wildcard(Topic):
             or len(value) > MAX_TOPIC_LENGTH
             or "#/" in value
             or any(
-                "+" in level or "#" in level for level in self.levels if len(level) > 1
+                "+" in level or "#" in level for level in levels if len(level) > 1
             )
         ):
-            msg = f"Invalid wildcard: {self.value}"
+            msg = f"Invalid wildcard: {value}"
             raise ValueError(msg)
+
+        self.value: str = value
+        self.levels: tuple[str] = levels
+        self.prefix: bool = _has_hash(self)
+
+    def __repr__(self):
+        return self.value
+
+    def __str__(self) -> str:
+        return self.value
 
 
 WildcardLike: TypeAlias = "str | Wildcard"
@@ -183,7 +182,6 @@ def _to_wild(w: WildcardLike):
     return w
 
 
-@attrs.define(eq=False)
 class Subscriptions:
     """A handler for possibly-multiple subscriptions.
 
@@ -197,8 +195,15 @@ class Subscriptions:
     topics: SubscribeTopic
     queue: Queue = None
 
-    sub_id: int = attrs.field(init=False, default=None)
-    closed: bool|None = attrs.field(init=False, default=None)
+    sub_id: int = None
+    closed: bool|None = None
+
+    # ID 1 is used for subscriptions to the global queue
+    _next_id:int = 2
+
+    def __init__(self, topics: SubscribeTopic, queue: Queue = None):
+        self.topics = topics
+        self.queue = queue
 
     # class attribute
     # ID=1 is reserved for the global queue
@@ -220,8 +225,8 @@ class Subscriptions:
         do_close = False
         done = []
 
-        Subscriptions._next_id += 1
         self.sub_id = Subscriptions._next_id
+        Subscriptions._next_id += 1
 
         if self.queue is None:
             self.queue = Queue(queue_len)
@@ -267,10 +272,6 @@ class Subscriptions:
         except StopAsyncIteration:
             raise anyio.IncompleteRead(self)
 
-# 'attrs' is somewhat annoying here
-Subscriptions._next_id = 1
-
-@attrs.define(eq=False)
 class Subscription:
     """One subscription.
 
@@ -296,8 +297,14 @@ class Subscription:
         tree.dispatch(Message("/some/topic", ...))
 
     """
-    topic: WildcardLike = attrs.field(converter=_to_wild)
+    topic: Wildcard
     queue: Queue = None
+
+    _next_id = 1
+
+    def __init__(self, topic:WildcardLike, queue:Queue = None):
+        self.topic = _to_wild(topic)
+        self.queue = queue
 
     @contextmanager
     def subscribed_to(self, tree: SubscriptionTree):
@@ -336,7 +343,6 @@ class Subscription:
             raise anyio.IncompleteRead(self)
 
 
-@attrs.frozen(eq=False)
 class SubscriptionTree:
     """Collect subscriptions and dispatch to them efficiently.
 
@@ -347,8 +353,9 @@ class SubscriptionTree:
             Subscriptions on the next level of the topic hierarchy,
             indexed by its name or the single-level wildcard('+')
     """
-    subscriptions: set[Subscription] = attrs.field(factory=set)
-    child: dict[str, SubscriptionTree] = attrs.field(factory=dict)
+    def __init__(self):
+        self.subscriptions: set[Subscription] = set()
+        self.child: dict[str, SubscriptionTree] = {}
 
     def __getitem__(self, elem):
         # convenient for debugging, not used in code
