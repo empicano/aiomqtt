@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import anyio
+import asyncio
 from contextlib import contextmanager, asynccontextmanager
 import dataclasses
 import enum
@@ -72,6 +73,13 @@ class ProtocolVersion(enum.IntEnum):
     V31 = MQTTProtocolVersion.MQTTv31
     V311 = MQTTProtocolVersion.MQTTv311
     V5 = MQTTProtocolVersion.MQTTv5
+
+@dataclasses.dataclass(frozen=True)
+class _GlobalSub:
+    queue: Queue
+
+    def enqueue(self, message: Message):
+        self.queue.put_nowait(message)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -238,7 +246,7 @@ class Client:
         self._queue_type = queue_type
 
         if max_queued_incoming_messages is None:
-            max_queued_incoming_messages = 0
+            max_queued_incoming_messages = 10000
         self._max_queued_incoming_messages = max_queued_incoming_messages
 
         # Semaphore to limit the number of concurrent outgoing calls
@@ -404,7 +412,7 @@ class Client:
         """
         with Subscriptions(topic, queue=queue).subscribed_to(self._tree) as sub:
             try:
-                self._sub_q[sub.sub_id] = sub.queue
+                self._sub_q[sub.sub_id] = sub
                 if self._with_sub_ids:
                     if properties is None:
                         properties = Properties(PacketTypes.SUBSCRIBE)
@@ -658,12 +666,14 @@ class Client:
         m = Message._from_paho_message(message)  # noqa: SLF001
         # Put the message in the message queue
         if self._with_sub_ids:
-            for sub_id in m.properties.SubscriptionIdentifier:
+            for sub_id in (1,) if m.properties is None or not m.properties.SubscriptionIdentifier else m.properties.SubscriptionIdentifier:
                 try:
-                    self._sub_q[sub_id].put_nowait(m)
-                except anyio.WouldBlock:
-                    self._sub_q[id].close_writer()
-                    del self._sub_q[id]
+                    self._sub_q[sub_id].enqueue(m)
+                except (anyio.WouldBlock, asyncio.QueueFull):
+                    # the global queue discards
+                    if id != 1:
+                        self._sub_q[id].close_writer()
+                        del self._sub_q[id]
                 except KeyError:
                     pass
         else:
@@ -706,7 +716,7 @@ class Client:
         self._queue = self._queue_type(self._max_queued_incoming_messages)
         self._tree = SubscriptionTree()
         self._subscriptions: dict[str, Subscription] = {}
-        self._sub_q = {1: self._queue}
+        self._sub_q:dict[int,_GlobalSub|Subscriptions] = {1: _GlobalSub(self._queue)}
 
         try:
             with anyio.fail_after(self.timeout) as timer:

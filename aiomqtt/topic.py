@@ -5,6 +5,7 @@ import attrs
 import sys
 import functools
 import anyio
+import asyncio
 from contextlib import contextmanager, ExitStack
 
 from .queue import Queue
@@ -197,13 +198,15 @@ class Subscriptions:
     """
     topics: SubscribeTopic
     queue: Queue = None
-    sub_id: int = None
+
+    sub_id: int = attrs.field(init=False, default=None)
+    closed: bool|None = attrs.field(init=False, default=None)
 
     # class attribute
     # ID=1 is reserved for the global queue
 
     @contextmanager
-    def subscribed_to(self, tree: SubscriptionTree, queue_len:int =10):
+    def subscribed_to(self, tree: SubscriptionTree, queue_len: int = 100):
         """
         Add our subscription(s) to this tree.
 
@@ -227,6 +230,8 @@ class Subscriptions:
             self.queue = Queue(queue_len)
             do_close = True
 
+        self.closed = None if hasattr(self.queue, "close_writer") else False
+
         try:
             for top in extract_topics(self.topics):
                 sub = Subscription(top, self.queue)
@@ -242,6 +247,15 @@ class Subscriptions:
                 self.queue.close_reader()
                 self.queue.close_writer()
 
+    def enqueue(self, message: Message):
+        if not self.closed:
+            self.queue.put_nowait(message)
+
+    def close_writer(self):
+        if self.closed is None:
+            self.queue.close_writer()
+        self.closed = True
+
     def __aiter__(self):
         return self
 
@@ -249,6 +263,9 @@ class Subscriptions:
         """
         Read the next message.
         """
+        if self.closed and self.queue.empty():
+            raise anyio.IncompleteRead(self)
+
         try:
             return await self.queue.get()
         except StopAsyncIteration:
@@ -441,7 +458,7 @@ class SubscriptionTree:
                 continue
             try:
                 sb.queue.put_nowait(message)
-            except anyio.WouldBlock:
+            except (anyio.WouldBlock, asyncio.QueueFull):
                 drop.append(sb)
                 sb.close()
 
