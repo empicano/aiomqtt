@@ -39,6 +39,7 @@ aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com
 - No more return codes (welcome to the `MqttError`)
 - Graceful disconnection (forget about `on_unsubscribe`, `on_disconnect`, etc.)
 - Supports MQTT versions 5.0, 3.1.1 and 3.1
+- Optionally: separate queues per subscription. No more overhead for dispatching.
 - Fully type-hinted
 - Did we mention no more callbacks?
 - Works with asyncio *and* trio! No workarounds required!
@@ -55,7 +56,7 @@ aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com
 
 ## Installation
 
-aiomqtt can be installed via `pip install aiomqtt`. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
+aiomqtt can be installed via `pip install aiomqtt`. The only dependencies are [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) and [anyio](https://github.com/agronholm/anyio).
 
 If you can't wait for the latest version, you can install aiomqtt directly from GitHub with:
 
