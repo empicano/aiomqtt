@@ -20,15 +20,15 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-paho-mqtt = "^2.0.0"
+paho-mqtt = "^2.1.0"
 typing-extensions = {version = "^4.4.0", markers = "python_version < '3.10'"}
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.9.0"
-ruff = "^0.1.9"
+mypy = "^1.10.0"
+ruff = "^0.4.8"
 pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 anyio = "^3.6.2"
@@ -51,6 +51,8 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.ruff]
 target-version = "py38"
+
+[tool.ruff.lint]
 select = [
     "F",   # Pyflakes
     "E",   # pycodestyle
@@ -108,12 +110,7 @@ unfixable = [
 ]
 task-tags = ["SPDX-License-Identifier"]
 
-[tool.ruff.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
-fixture-parentheses = false
-mark-parentheses = false
-parametrize-names-type = "csv"
-
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
     "S101", # assert-used
 ]
@@ -121,7 +118,12 @@ parametrize-names-type = "csv"
     "SLF001", # private-member-access
 ]
 
-[tool.ruff.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
+[tool.ruff.lint.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = "csv"
+
+[tool.ruff.lint.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
 convention = "google"
 
 [tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
