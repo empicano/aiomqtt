@@ -253,8 +253,8 @@ class Client:
         # Create the underlying paho-mqtt client instance
         self._client: mqtt.Client = mqtt.Client(
             callback_api_version=CallbackAPIVersion.VERSION1,
-            client_id=identifier,  # type: ignore[arg-type]
-            protocol=protocol,
+            client_id=identifier,
+            protocol=protocol.value,
             clean_session=clean_session,
             transport=transport,
             reconnect_on_failure=False,
@@ -371,9 +371,9 @@ class Client:
         if result != mqtt.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not subscribe to topic")
         # Create future for when the on_subscribe callback is called
-        callback_result: asyncio.Future[
-            tuple[int, ...] | list[ReasonCode]
-        ] = asyncio.Future()
+        callback_result: asyncio.Future[tuple[int, ...] | list[ReasonCode]] = (
+            asyncio.Future()
+        )
         with self._pending_call(mid, callback_result, self._pending_subscribes):
             # Wait for callback_result
             return await self._wait_for(callback_result, timeout=timeout)
@@ -400,7 +400,7 @@ class Client:
             **kwargs: Additional keyword arguments to pass to paho-mqtt's unsubscribe
                 method.
         """
-        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)  # type: ignore[arg-type]
+        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
