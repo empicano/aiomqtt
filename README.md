@@ -1,39 +1,32 @@
-<h1 align="center">The idiomatic asyncio MQTT client 🙌</h1>
-<p align="center"><em>(formerly known as asyncio-mqtt)</em></p>
-<p align="center">
-    <a href="https://github.com/sbtinstruments/aiomqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/aiomqtt"></a>
-    <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/aiomqtt"></a>
-    <a href="https://pypi.org/project/aiomqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/aiomqtt.svg"></a>
-    <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/aiomqtt"></a>
-    <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml"><img alt="test" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml/badge.svg"></a>
-    <a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/docs.yml"><img alt="docs" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/docs.yml/badge.svg"></a>
-    <a href="https://codecov.io/gh/sbtinstruments/aiomqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/aiomqtt"></a>
-    <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a>
-    <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Code style: Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/format.json"></a>
-    <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a>
-</p>
+# The idiomatic asyncio MQTT client 🙌
 
-<!-- pitch start -->
+<a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml"><img alt="test" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml/badge.svg"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/aiomqtt.svg"></a> <a href="https://codecov.io/gh/sbtinstruments/aiomqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/aiomqtt"></a> <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a> <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a> <a href="https://github.com/sbtinstruments/aiomqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/aiomqtt"></a>
 
-Write code like this:
+**Documentation:** [https://sbtinstruments.github.io/aiomqtt](https://sbtinstruments.github.io/aiomqtt)
+
+---
+
+<!-- documentation start -->
+
+`aiomqtt` is a lightweight and idiomatic MQTT client:
 
 **Publish**
 
 ```python
-async with Client("test.mosquitto.org") as client:
-    await client.publish("humidity/outside", payload=0.38)
+async with aiomqtt.Client("test.mosquitto.org") as client:
+    await client.publish("temperature/outside", payload=28.4)
 ```
 
 **Subscribe**
 
 ```python
-async with Client("test.mosquitto.org") as client:
-    await client.subscribe("humidity/#")
+async with aiomqtt.Client("test.mosquitto.org") as client:
+    await client.subscribe("temperature/#")
     async for message in client.messages:
         print(message.payload)
 ```
 
-aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com/eclipse/paho.mqtt.python) library with an idiomatic asyncio interface:
+## Key features
 
 - No more callbacks! 👍
 - No more return codes (welcome to the `MqttError`)
@@ -42,27 +35,23 @@ aiomqtt combines the stability of the time-proven [paho-mqtt](https://github.com
 - Fully type-hinted
 - Did we mention no more callbacks?
 
-<!-- pitch end -->
-
----
-
-**[Read the documentation at sbtinstruments.github.io/aiomqtt](https://sbtinstruments.github.io/aiomqtt)**
-
----
-
-<!-- documentation start -->
-
 ## Installation
 
-aiomqtt can be installed via `pip install aiomqtt`. The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
+```
+pip install aiomqtt
+```
 
-If you can't wait for the latest version, you can install aiomqtt directly from GitHub with:
+The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 
-`pip install git+https://github.com/sbtinstruments/aiomqtt`
+If you can't wait for the latest version, install directly from GitHub with:
+
+```
+pip install git+https://github.com/sbtinstruments/aiomqtt
+```
 
 ### Note for Windows users
 
-Since Python `3.8`, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by aiomqtt. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
+Since Python 3.8, the default asyncio event loop is the `ProactorEventLoop`. Said loop [doesn't support the `add_reader` method](https://docs.python.org/3/library/asyncio-platforms.html#windows) that is required by aiomqtt. Please switch to an event loop that supports the `add_reader` method such as the built-in `SelectorEventLoop`:
 
 ```python
 # Change to the "Selector" event loop if platform is Windows
@@ -92,15 +81,4 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Changelog
 
-The changelog lives in [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md). It follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-
-## Related projects
-
-Is aiomqtt not what you're looking for? There are a few other clients you can try:
-
-- [paho-mqtt](https://github.com/eclipse/paho.mqtt.python): Synchronous client
-- [micropython-mqtt](https://github.com/peterhinch/micropython-mqtt): Asynchronous client for microcontrollers in MicroPython
-- [gmqtt](https://github.com/wialon/gmqtt): Asynchronous client
-- [fastapi-mqtt](https://github.com/sabuhish/fastapi-mqtt): Asynchronous wrapper around gmqtt; Simplifies integration with FastAPI
-- [amqtt](https://github.com/Yakifo/amqtt): Asynchronous client; Includes a broker
-- [trio-paho-mqtt](https://github.com/bkanuka/trio-paho-mqtt): Asynchronous wrapper around paho-mqtt; Based on trio instead of asyncio
+See [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md), which follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
