@@ -392,10 +392,9 @@ async def test_aexit_client_is_already_disconnected_failure() -> None:
         await client.__aexit__(None, None, None)
 
 
-@pytest.mark.xfail
 @pytest.mark.network
-async def test_messages_generator_is_reusable() -> None:
-    """Test that the messages generator is reusable after dis- and reconnection."""
+async def test_messages_view_is_reusable() -> None:
+    """Test that ``.messages`` is reusable after dis- and reconnection."""
     topic = TOPIC_PREFIX + "test_messages_generator_is_reusable"
     client = Client(HOSTNAME)
     async with client:
@@ -409,3 +408,21 @@ async def test_messages_generator_is_reusable() -> None:
         # TODO(felix): Switch to anext function from Python 3.10
         message = await client.messages.__anext__()
         assert message.payload == b"foo"
+
+
+@pytest.mark.network
+async def test_messages_view_multiple_tasks_concurrently() -> None:
+    """Test that ``.messages`` can be used concurrently by multiple tasks."""
+    topic = TOPIC_PREFIX + "test_messages_generator_is_reentrant"
+    async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
+
+        async def handle() -> None:
+            # TODO(felix): Switch to anext function from Python 3.10
+            await client.messages.__anext__()
+
+        tg.start_soon(handle)
+        tg.start_soon(handle)
+        await anyio.wait_all_tasks_blocked()
+        await client.subscribe(topic)
+        await client.publish(topic, "foo")
+        await client.publish(topic, "bar")
