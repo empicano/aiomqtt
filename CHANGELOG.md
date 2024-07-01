@@ -6,9 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.2.0] - 2024-07-02
+
+### Changed
+
+- Bump paho-mqtt to 2.1 (@empicano in #305)
+- Migrate to paho-mqtt callback v2 (@empicano in #313)
+
 ### Fixed
-* Fixed an issue where iterating over received messages would yield nothing after the first
-iteration.
+
+- Fix `Client.messages` not being reusable (@ryan-summers in #312)
 
 ## [2.1.0] - 2024-04-24
 
@@ -36,15 +43,15 @@ iteration.
 - Switch from black to Ruff and update dev dependencies (@JonathanPlasse in #255)
 - Rename `Client.id` attribute to `identifier` (@empicano in #262)
 
-### Fixed
-
-- Release reusability correctly to allow consecutive calls to `__aexit__` (@spacemanspiff2007 in #263)
-
 ### Removed
 
 - Remove deprecated `connect`/`disconnect` methods (@empicano in #262)
 - Remove deprecated `filtered_messages` and `unfiltered_messages` methods (@empicano in #262)
 - Remove deprecated `message_retry_set` client argument (@empicano in #262)
+
+### Fixed
+
+- Release reusability correctly to allow consecutive calls to `__aexit__` (@spacemanspiff2007 in #263)
 
 ## [1.2.1] - 2023-09-19
 
