@@ -8,19 +8,19 @@
 
 <!-- documentation start -->
 
-`aiomqtt` is a lightweight and idiomatic MQTT client:
+Write code like this:
 
 **Publish**
 
 ```python
-async with aiomqtt.Client("test.mosquitto.org") as client:
+async with Client("test.mosquitto.org") as client:
     await client.publish("temperature/outside", payload=28.4)
 ```
 
 **Subscribe**
 
 ```python
-async with aiomqtt.Client("test.mosquitto.org") as client:
+async with Client("test.mosquitto.org") as client:
     await client.subscribe("temperature/#")
     async for message in client.messages:
         print(message.payload)
@@ -73,7 +73,7 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 
 ## Contributing
 
-We're very happy about contributions to aiomqtt! ✨ You can get started by reading [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
+We're happy about contributions to aiomqtt! 🎉 You can get started by reading [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
 
 ## Versioning
 
