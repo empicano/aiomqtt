@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+* Fixed an issue where iterating over received messages would yield nothing after the first
+iteration.
+
 ## [2.1.0] - 2024-04-24
 
 ### Changed
