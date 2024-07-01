@@ -238,7 +238,6 @@ class Client:
         if max_queued_incoming_messages is None:
             max_queued_incoming_messages = 0
         self._queue = queue_type(maxsize=max_queued_incoming_messages)
-        self.messages = self._messages()
 
         # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: asyncio.Semaphore | None
@@ -320,6 +319,10 @@ class Client:
         if timeout is None:
             timeout = 10
         self.timeout = timeout
+
+    @property
+    def messages(self) -> AsyncGenerator[Message, None]:
+        return self._messages()
 
     @property
     def identifier(self) -> str:
