@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Bump paho-mqtt to 2.1 (@empicano in #305)
 - Migrate to paho-mqtt callback v2 (@empicano in #313)
+- Update FastAPI example in the documentation (@odie5533 in #321)
 
 ### Fixed
 
