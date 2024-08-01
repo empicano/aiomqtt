@@ -144,7 +144,7 @@ class Client:
             client when it disconnects. If ``False``, the client is a persistent client
             and subscription information and queued messages will be retained when the
             client disconnects.
-        transport: The transport protocol to use. Either ``"tcp"`` or ``"websockets"``.
+        transport: The transport protocol to use. Either ``"tcp"``, ``"websockets"`` or ``"unix"``.
         timeout: The default timeout for all communication with the broker in seconds.
         keepalive: The keepalive timeout for the client in seconds.
         bind_address: The IP address of a local network interface to bind this client
@@ -190,7 +190,7 @@ class Client:
         protocol: ProtocolVersion | None = None,
         will: Will | None = None,
         clean_session: bool | None = None,
-        transport: Literal["tcp", "websockets"] = "tcp",
+        transport: Literal["tcp", "websockets", "unix"] = "tcp",
         timeout: float | None = None,
         keepalive: int = 60,
         bind_address: str = "",
