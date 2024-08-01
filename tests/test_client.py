@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import pathlib
 import ssl
 import sys
+from typing import Any
 
 import anyio
 import anyio.abc
@@ -413,7 +415,7 @@ async def test_messages_view_is_reusable() -> None:
 @pytest.mark.network
 async def test_messages_view_multiple_tasks_concurrently() -> None:
     """Test that ``.messages`` can be used concurrently by multiple tasks."""
-    topic = TOPIC_PREFIX + "test_messages_generator_is_reentrant"
+    topic = TOPIC_PREFIX + "test_messages_view_multiple_tasks_concurrently"
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
 
         async def handle() -> None:
