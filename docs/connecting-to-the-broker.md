@@ -24,7 +24,7 @@ If your use case does not allow you to use a context manager, you can use the cl
 ```
 
 ```{note}
-Examples use the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Alternatively, our [contribution guide](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md) contains an explanation of how to spin up a local mosquitto broker with Docker.
+Examples use the public [mosquitto test broker](https://test.mosquitto.org/). You can connect to this broker without any credentials. Alternatively, our [contribution guide](https://github.com/empicano/aiomqtt/blob/main/CONTRIBUTING.md) contains an explanation of how to spin up a local mosquitto broker with Docker.
 
 All examples in this documentation are self-contained and runnable as-is.
 ```

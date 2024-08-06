@@ -1,8 +1,8 @@
 # The idiomatic asyncio MQTT client 🙌
 
-<a href="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml"><img alt="test" src="https://github.com/sbtinstruments/aiomqtt/actions/workflows/test.yml/badge.svg"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/aiomqtt.svg"></a> <a href="https://codecov.io/gh/sbtinstruments/aiomqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/aiomqtt"></a> <a href="https://github.com/sbtinstruments/aiomqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a> <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a> <a href="https://github.com/sbtinstruments/aiomqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/sbtinstruments/aiomqtt"></a>
+<a href="https://github.com/empicano/aiomqtt/actions/workflows/test.yml"><img alt="test" src="https://github.com/empicano/aiomqtt/actions/workflows/test.yml/badge.svg"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/aiomqtt.svg"></a> <a href="https://codecov.io/gh/sbtinstruments/aiomqtt"><img alt="Coverage" src="https://img.shields.io/codecov/c/github/sbtinstruments/aiomqtt"></a> <a href="https://github.com/empicano/aiomqtt"><img alt="Typing: strict" src="https://img.shields.io/badge/typing-strict-green.svg"></a> <a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a> <a href="https://github.com/empicano/aiomqtt/blob/main/LICENSE"><img alt="License: BSD-3-Clause" src="https://img.shields.io/github/license/empicano/aiomqtt"></a>
 
-**Documentation:** [https://sbtinstruments.github.io/aiomqtt](https://sbtinstruments.github.io/aiomqtt)
+**Documentation:** [https://aiomqtt.felixboehm.dev](https://aiomqtt.felixboehm.dev)
 
 ---
 
@@ -46,7 +46,7 @@ The only dependency is [paho-mqtt](https://github.com/eclipse/paho.mqtt.python).
 If you can't wait for the latest version, install directly from GitHub with:
 
 ```
-pip install git+https://github.com/sbtinstruments/aiomqtt
+pip install git+https://github.com/empicano/aiomqtt
 ```
 
 ### Note for Windows users
@@ -73,7 +73,7 @@ Note that the underlying paho-mqtt library is dual-licensed. One of the licenses
 
 ## Contributing
 
-We're happy about contributions to aiomqtt! 🎉 You can get started by reading [CONTRIBUTING.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md).
+We're happy about contributions to aiomqtt! 🎉 You can get started by reading [CONTRIBUTING.md](https://github.com/empicano/aiomqtt/blob/main/CONTRIBUTING.md).
 
 ## Versioning
 
@@ -81,4 +81,4 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Changelog
 
-See [CHANGELOG.md](https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md), which follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+See [CHANGELOG.md](https://github.com/empicano/aiomqtt/blob/main/CHANGELOG.md), which follows the principles of [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
