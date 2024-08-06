@@ -124,6 +124,40 @@ class Will:
     properties: Properties | None = None
 
 
+class MessagesIterator:
+    """Dynamic view of the client's message queue."""
+
+    def __init__(self, client: Client) -> None:
+        self._client = client
+
+    def __aiter__(self) -> AsyncIterator[Message]:
+        return self
+
+    async def __anext__(self) -> Message:
+        # Wait until we either (1) receive a message or (2) disconnect
+        task = self._client._loop.create_task(self._client._queue.get())  # noqa: SLF001
+        try:
+            done, _ = await asyncio.wait(
+                (task, self._client._disconnected),  # noqa: SLF001
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        # If the asyncio.wait is cancelled, we must also cancel the queue task
+        except asyncio.CancelledError:
+            task.cancel()
+            raise
+        # When we receive a message, return it
+        if task in done:
+            return task.result()
+        # If we disconnect from the broker, stop the generator with an exception
+        task.cancel()
+        msg = "Disconnected during message iteration"
+        raise MqttError(msg)
+
+    def __len__(self) -> int:
+        """Return the number of messages in the message queue."""
+        return self._client._queue.qsize()  # noqa: SLF001
+
+
 class Client:
     """Asynchronous context manager for the connection to the MQTT broker.
 
@@ -169,12 +203,6 @@ class Client:
         socket_options: Options to pass to the underlying socket.
         websocket_path: The path to use for websockets.
         websocket_headers: The headers to use for websockets.
-
-    Attributes:
-        messages (typing.AsyncGenerator[aiomqtt.client.Message, None]):
-            Async generator that yields messages from the underlying message queue.
-        identifier (str):
-            The client identifier.
     """
 
     def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
@@ -322,48 +350,17 @@ class Client:
 
     @property
     def identifier(self) -> str:
-        """Return the client identifier.
+        """The client's identifier.
 
         Note that paho-mqtt stores the client ID as `bytes` internally. We assume that
         the client ID is a UTF8-encoded string and decode it first.
         """
         return self._client._client_id.decode()  # noqa: SLF001
 
-    class MessagesIterator:
-        """Dynamic view of the message queue."""
-
-        def __init__(self, client: Client) -> None:
-            self._client = client
-
-        def __aiter__(self) -> AsyncIterator[Message]:
-            return self
-
-        async def __anext__(self) -> Message:
-            # Wait until we either (1) receive a message or (2) disconnect
-            task = self._client._loop.create_task(self._client._queue.get())  # noqa: SLF001
-            try:
-                done, _ = await asyncio.wait(
-                    (task, self._client._disconnected),  # noqa: SLF001
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            # If the asyncio.wait is cancelled, we must also cancel the queue task
-            except asyncio.CancelledError:
-                task.cancel()
-                raise
-            # When we receive a message, return it
-            if task in done:
-                return task.result()
-            # If we disconnect from the broker, stop the generator with an exception
-            task.cancel()
-            msg = "Disconnected during message iteration"
-            raise MqttError(msg)
-
-        def __len__(self) -> int:
-            return self._client._queue.qsize()  # noqa: SLF001
-
     @property
     def messages(self) -> MessagesIterator:
-        return self.MessagesIterator(self)
+        """Dynamic view of the client's message queue."""
+        return MessagesIterator(self)
 
     @property
     def _pending_calls(self) -> Generator[int, None, None]:

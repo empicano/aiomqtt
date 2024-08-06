@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from .client import (
     Client,
+    MessagesIterator,
     ProtocolVersion,
     ProxySettings,
     TLSParameters,
@@ -17,6 +18,7 @@ __version_tuple__ = (0, 0, 0)
 __all__ = [
     "__version__",
     "__version_tuple__",
+    "MessagesIterator",
     "Client",
     "Message",
     "ProtocolVersion",
