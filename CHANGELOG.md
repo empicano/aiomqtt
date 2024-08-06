@@ -6,7 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-## Changed
+## [2.3.0] - 2024-08-07
+
+### Added
+
+- Implement `len(client.messages)` to return number of messages in queue (@empicano in #323)
+
+### Changed
 
 - Update FastAPI docs to use dependency injection (@odie5533 in #321)
 

@@ -57,5 +57,5 @@ This is a combination of some concepts addressed in more detail in other section
 ```
 
 ```{tip}
-With Starlette you can yield the initialized client to [the lifespan's state](https://www.starlette.io/lifespan/) instead of using global variables.
+With Starlette you can yield the initialized client to [the lifespan's state](https://www.starlette.io/lifespan/) instead of using global variables and dependency injection.
 ```

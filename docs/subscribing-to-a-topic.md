@@ -98,7 +98,7 @@ asyncio.run(main())
 ```
 
 ```{tip}
-By default, the size of the queue is unlimited. You can set a limit through the client's `max_queued_incoming_messages` argument.
+By default, the size of the queue is unlimited. You can set a limit through the client's `max_queued_incoming_messages` argument. `len(client.messages)` returns the current number of messages in the queue.
 ```
 
 ## Processing concurrently
