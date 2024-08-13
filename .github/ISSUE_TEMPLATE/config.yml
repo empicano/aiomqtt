@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub dicussions
+    url: https://github.com/empicano/aiomqtt/discussions
+    about: Ask (and answer) questions, brainstorm, and show what you've built.
