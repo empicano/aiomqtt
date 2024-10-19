@@ -5,13 +5,13 @@ description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
 license = "BSD-3-Clause"
 authors = [
     "Frederik Aalund <fpa@sbtinstruments.com>",
-    "Felix Böhm <felix@felixboehm.dev>",
+    "Felix Böhm <f@bo3hm.com>",
     "Jonathan Plasse <jonathan.plasse@live.fr>",
 ]
 readme = "README.md"
 packages = [{ include = "aiomqtt" }]
 repository = "https://github.com/empicano/aiomqtt"
-documentation = "https://aiomqtt.felixboehm.dev"
+documentation = "https://aiomqtt.bo3hm.com"
 keywords = [
     "mqtt",
     "iot",

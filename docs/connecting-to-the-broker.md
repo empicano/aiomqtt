@@ -17,10 +17,10 @@ asyncio.run(main())
 
 The connection to the broker is managed by the `Client` context manager. This context manager connects to the broker when we enter the `with` statement and disconnects when we exit it again.
 
-Context managers make it easier to manage resources like network connections or files by ensuring that their teardown logic is always executed -- even in case of an exception.
+Context managers make it easy to manage resources like network connections or files by ensuring that their teardown logic is always executed -- even in case of an exception.
 
 ```{tip}
-If your use case does not allow you to use a context manager, you can use the client's `__aenter__` and `__aexit__` methods to connect and disconnect as a workaround. With this approach you need to ensure yourself that `___aexit___` is also called in case of an exception. Avoid this workaround if you can, it's a bit tricky to get right.
+If your use case does not allow you to use a context manager, you can use the client's `__aenter__` and `__aexit__` methods manually as a workaround. With this approach you need to ensure that `___aexit___` is also called in case of an exception. Avoid this workaround if you can, it's a bit tricky to get right.
 ```
 
 ```{note}

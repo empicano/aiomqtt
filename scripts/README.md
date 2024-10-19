@@ -1,6 +1,6 @@
 # Development scripts
 
-- `check`: Format and lint the code with `ruff`; Use `--dry` option for dry run
+- `check`: Format, lint, and type check with ruff and mypy; Use `--dry` option for dry run
 - `develop`: Spin up a local mosquitto broker via Docker
 - `docs`: Build the documentation; Use `--reload` option to serve locally with live reload
 - `setup`: Install or update the dependencies after a `git clone` or `git pull`; Also (re-)installs the local version of aiomqtt

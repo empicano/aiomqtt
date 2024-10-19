@@ -1,6 +1,6 @@
 ---
 name: Open an issue
-about: Report a bug or discuss a new feature
+about: Report a problem or discuss a new feature
 ---
 
 <!--
@@ -10,4 +10,5 @@ If you're filing a bug report, please consider including the following informati
 
 - The version of aiomqtt
 - A minimal self-contained code snippet that reproduces the bug (you can use `test.mosquitto.org` for a publicly available MQTT broker)
+- Possibly related issues
 -->
