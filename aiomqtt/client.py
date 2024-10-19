@@ -244,7 +244,7 @@ class Client:
         self._bind_port = bind_port
         self._clean_start = clean_start
         self._properties = properties
-        self._loop = asyncio.get_event_loop()
+        self._loop = asyncio.get_running_loop()
 
         # Connection state
         self._connected: asyncio.Future[None] = asyncio.Future()
