@@ -219,7 +219,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 
 - Fix race condition in the "advanced example" in `README.md`. Contributed by [Steve Palmer (@steverpalmer)](https://github.com/steverpalmer) in [#93](https://github.com/sbtinstruments/asyncio-mqtt/pull/93)
 - Make `password` keyword argument optional (as it always should have been). Contributed by [@Shikoruma](https://github.com/Shikoruma) in [#89](https://github.com/sbtinstruments/asyncio-mqtt/pull/89)
-- Fix false postive type error from Pyright regarding `asynccontextmanager`. Contributed by [Shawn Wilsher (@sdwilsh)](https://github.com/sdwilsh) in [#87](https://github.com/sbtinstruments/asyncio-mqtt/pull/87)
+- Fix false positive type error from Pyright regarding `asynccontextmanager`. Contributed by [Shawn Wilsher (@sdwilsh)](https://github.com/sdwilsh) in [#87](https://github.com/sbtinstruments/asyncio-mqtt/pull/87)
 - Fix type hints (mostly related to async_generator). Contributed by [@laundmo](https://github.com/laundmo) in [#86](https://github.com/sbtinstruments/asyncio-mqtt/pull/86)
 
 ## [0.11.0] - 2021-11-04
@@ -290,7 +290,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 
 ## [0.7.0] - 2020-08-04
 
-I've tested the library for production use at SBT Instruments. This uncovered a bunch of bugs and missing features that I've adressed in this release. We are approaching a 1.0.0 release. Let me know if you want something changed before that via the issue tracker on GitHub.
+I've tested the library for production use at SBT Instruments. This uncovered a bunch of bugs and missing features that I've addressed in this release. We are approaching a 1.0.0 release. Let me know if you want something changed before that via the issue tracker on GitHub.
 
 ### Added
 
