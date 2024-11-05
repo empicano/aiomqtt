@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import pathlib
 import socket
@@ -510,14 +509,15 @@ async def test_messages_view_len() -> None:
     count = 3
 
     class TestClient(Client):
-        fut: asyncio.Future[None] = asyncio.Future()
+        evt: anyio.Event = anyio.Event()
+
 
         def _on_message(
             self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
         ) -> None:
             super()._on_message(client, userdata, message)
-            self.fut.set_result(None)
-            self.fut = asyncio.Future()
+            self.evt.set()
+            self.evt = anyio.Event()
 
     async with TestClient(HOSTNAME, PORT) as client:
         assert len(client.messages) == 0
@@ -525,7 +525,8 @@ async def test_messages_view_len() -> None:
         # Publish a message and wait for it to arrive
         for index in range(count):
             await client.publish(topic, None, qos=2)
-            await asyncio.wait_for(client.fut, timeout=1)
+            with anyio.fail_after(1):
+                await client.evt.wait()
             assert len(client.messages) == index + 1
         # Empty the queue
         for _ in range(count):
