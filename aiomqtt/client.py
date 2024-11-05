@@ -253,7 +253,6 @@ class Client:
         if max_queued_incoming_messages is None:
             max_queued_incoming_messages = 10000
         self._max_queued_incoming_messages = max_queued_incoming_messages
-        self.messages = self._messages()
 
         # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: anyio.Semaphore | None
@@ -338,42 +337,6 @@ class Client:
         the client ID is a UTF8-encoded string and decode it first.
         """
         return self._client._client_id.decode()  # noqa: SLF001
-
-    class MessagesIterator:
-        """Dynamic view of the message queue."""
-
-        def __init__(self, client: Client) -> None:
-            self._client = client
-
-        def __aiter__(self) -> AsyncIterator[Message]:
-            return self
-
-        async def __anext__(self) -> Message:
-            # Wait until we either (1) receive a message or (2) disconnect
-            task = self._client._loop.create_task(self._client._queue.get())  # noqa: SLF001
-            try:
-                done, _ = await asyncio.wait(
-                    (task, self._client._disconnected),  # noqa: SLF001
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            # If the asyncio.wait is cancelled, we must also cancel the queue task
-            except asyncio.CancelledError:
-                task.cancel()
-                raise
-            # When we receive a message, return it
-            if task in done:
-                return task.result()
-            # If we disconnect from the broker, stop the generator with an exception
-            task.cancel()
-            msg = "Disconnected during message iteration"
-            raise MqttError(msg)
-
-        def __len__(self) -> int:
-            return self._client._queue.qsize()  # noqa: SLF001
-
-    @property
-    def messages(self) -> MessagesIterator:
-        return self.MessagesIterator(self)
 
     @property
     def _pending_calls(self) -> Generator[int, None, None]:
@@ -577,7 +540,7 @@ class Client:
             await confirmation.wait()
 
     @property
-    async def messages(self) -> AsyncGenerator[Message, None]:
+    def messages(self) -> AsyncGenerator[Message, None]:
         """Async generator that yields messages from the common message queue.
 
         Raises `anyio.IncompleteRead` on overflow.
@@ -588,11 +551,19 @@ class Client:
                 async for msg in msgs:
                     await process(msg)
         """
-        while True:
-            try:
-                yield await self._queue.get()
-            except StopAsyncIteration:
-                raise anyio.IncompleteRead()
+        class MessageIter:
+            def __init__(self, q: Queue):
+                self._q = q
+            def __aiter__(self):
+                return self
+            def __anext__(self):
+                return self._q.__anext__()
+            async def aclose(self):
+                self._q.close_reader()
+            def __len__(self):
+                return self._q.qsize()
+
+        return MessageIter(self._queue)
 
     @contextmanager
     def _pending_call(
