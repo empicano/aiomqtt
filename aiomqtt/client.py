@@ -678,7 +678,7 @@ class Client:
         """Called when we receive a SUBACK message from the broker."""
         try:
             fut = self._pending_subscribes.pop(mid)
-            if not fut.done():
+            if not fut.is_set():
                 fut.set(reason_codes)
         except KeyError:
             self._logger.exception(
