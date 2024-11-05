@@ -1,9 +1,4 @@
-# The idiomatic asyncio MQTT client
-
-```{include} ../README.md
-:start-after: <!-- pitch start -->
-:end-before: <!-- pitch end -->
-```
+# The idiomatic asyncio MQTT client 🙌
 
 ```{include} ../README.md
 :start-after: <!-- documentation start -->
@@ -38,9 +33,9 @@ migration-guide-v2
 :caption: Project links
 :hidden:
 
-GitHub <https://github.com/sbtinstruments/aiomqtt>
-Issue tracker <https://github.com/sbtinstruments/aiomqtt/issues>
-Changelog <https://github.com/sbtinstruments/aiomqtt/blob/main/CHANGELOG.md>
-Contributing <https://github.com/sbtinstruments/aiomqtt/blob/main/CONTRIBUTING.md>
+GitHub <https://github.com/empicano/aiomqtt>
+Issue tracker <https://github.com/empicano/aiomqtt/issues>
+Changelog <https://github.com/empicano/aiomqtt/blob/main/CHANGELOG.md>
+Contributing <https://github.com/empicano/aiomqtt/blob/main/CONTRIBUTING.md>
 PyPI <https://pypi.org/project/aiomqtt/>
 ```

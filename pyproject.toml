@@ -1,14 +1,25 @@
 [tool.poetry]
 name = "aiomqtt"
-version = "0.0.0"  # Placeholder: Managed by poetry-dynamic-versioning
+version = "0.0.0" # Placeholder: Managed by poetry-dynamic-versioning
 description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
 license = "BSD-3-Clause"
-authors = ["Frederik Aalund <fpa@sbtinstruments.com>", "Felix Böhm <felix@felixboehm.dev>", "Jonathan Plasse <jonathan.plasse@live.fr>"]
+authors = [
+    "Frederik Aalund <fpa@sbtinstruments.com>",
+    "Felix Böhm <felix@felixboehm.dev>",
+    "Jonathan Plasse <jonathan.plasse@live.fr>",
+]
 readme = "README.md"
-packages = [{include = "aiomqtt"}]
-repository = "https://github.com/sbtinstruments/aiomqtt"
-documentation = "https://sbtinstruments.github.io/aiomqtt"
-keywords = ["mqtt", "iot", "internet-of-things", "asyncio", "paho-mqtt", "mqttv5"]
+packages = [{ include = "aiomqtt" }]
+repository = "https://github.com/empicano/aiomqtt"
+documentation = "https://aiomqtt.felixboehm.dev"
+keywords = [
+    "mqtt",
+    "iot",
+    "internet-of-things",
+    "asyncio",
+    "paho-mqtt",
+    "mqttv5",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -16,21 +27,21 @@ classifiers = [
 ]
 
 [tool.poetry.urls]
-"Issue tracker" = "https://github.com/sbtinstruments/aiomqtt/issues"
+"Issue tracker" = "https://github.com/empicano/aiomqtt/issues"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-paho-mqtt = "^2.0"
 anyio = "^4.3"
-typing-extensions = {version = "^4.4.0", markers = "python_version < '3.10'"}
+paho-mqtt = "^2.1.0"
+typing-extensions = { version = "^4.4.0", markers = "python_version < '3.10'" }
 outcome = "^1.2"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.9.0"
-ruff = "^0.1.9"
+mypy = "^1.10.0"
+ruff = "^0.4.8"
 pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 furo = "^2023.3.27"
@@ -52,6 +63,8 @@ build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.ruff]
 target-version = "py38"
+
+[tool.ruff.lint]
 select = [
     "F",   # Pyflakes
     "E",   # pycodestyle
@@ -109,12 +122,7 @@ unfixable = [
 ]
 task-tags = ["SPDX-License-Identifier"]
 
-[tool.ruff.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
-fixture-parentheses = false
-mark-parentheses = false
-parametrize-names-type = "csv"
-
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
     "S101", # assert-used
 ]
@@ -122,7 +130,12 @@ parametrize-names-type = "csv"
     "SLF001", # private-member-access
 ]
 
-[tool.ruff.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
+[tool.ruff.lint.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
+fixture-parentheses = false
+mark-parentheses = false
+parametrize-names-type = "csv"
+
+[tool.ruff.lint.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
 convention = "google"
 
 [tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
@@ -137,12 +150,8 @@ pretty = true
 filterwarnings = [
     "error",
     "ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning",
-    # TODO(jonathan): Remove these once we finish the migration to the new API
-    "ignore:Callback API version 1 is deprecated, update to latest version:DeprecationWarning",
 ]
-markers = [
-    "network: tests that requires network access"
-]
+markers = ["network: tests that requires network access"]
 xfail_strict = true
 
 [tool.coverage.run] # https://coverage.readthedocs.io/en/latest/config.html#run

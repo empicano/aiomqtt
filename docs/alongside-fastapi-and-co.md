@@ -6,9 +6,10 @@ With [FastAPI](https://github.com/tiangolo/fastapi) (`0.93+`) and [Starlette](ht
 
 ```python
 import asyncio
+from typing import Annotated
 import aiomqtt
-import contextlib
-import fastapi
+from contextlib import asynccontextmanager
+from fastapi import Depends, FastAPI
 
 
 async def listen(client):
@@ -19,8 +20,12 @@ async def listen(client):
 client = None
 
 
-@contextlib.asynccontextmanager
-async def lifespan(app):
+async def get_mqtt():
+    yield client
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global client
     async with aiomqtt.Client("test.mosquitto.org") as c:
         # Make client globally available
@@ -39,11 +44,11 @@ async def lifespan(app):
             pass
 
 
-app = fastapi.FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
-async def publish():
+async def publish(client: Annotated[aiomqtt.Client, Depends(get_mqtt)]):
     await client.publish("humidity/outside", 0.38)
 ```
 
@@ -52,5 +57,5 @@ This is a combination of some concepts addressed in more detail in other section
 ```
 
 ```{tip}
-With Starlette you can yield the initialized client to [the lifespan's state](https://www.starlette.io/lifespan/) instead of using global variables.
+With Starlette you can yield the initialized client to [the lifespan's state](https://www.starlette.io/lifespan/) instead of using global variables and dependency injection.
 ```

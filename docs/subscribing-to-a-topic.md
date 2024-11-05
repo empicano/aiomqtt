@@ -98,32 +98,33 @@ asyncio.run(main())
 ```
 
 ```{tip}
-By default, the size of the queue is unlimited. You can set a limit through the client's `max_queued_incoming_messages` argument.
+By default, the size of the queue is unlimited. You can set a limit through the client's `max_queued_incoming_messages` argument. `len(client.messages)` returns the current number of messages in the queue.
 ```
 
 ## Processing concurrently
 
 Messages are queued internally and returned sequentially from `Client.messages`. If a message takes a long time to handle, it blocks the handling of other messages.
 
-You can handle messages concurrently by using an `asyncio.TaskGroup` like so:
+You can handle messages concurrently by using multiple worker tasks like so:
 
 ```python
 import asyncio
 import aiomqtt
 
 
-async def handle(message):
-    await asyncio.sleep(5)  # Simulate some I/O-bound work
-    print(message.payload)
+async def work(client):
+    async for message in client.messages:
+        await asyncio.sleep(5)  # Simulate some I/O-bound work
+        print(message.payload)
 
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
         await client.subscribe("temperature/#")
-        # Use a task group to manage and await all tasks
+        # Use a task group to manage and await all worker tasks
         async with asyncio.TaskGroup() as tg:
-            async for message in client.messages:
-                tg.create_task(handle(message))  # Spawn new coroutine
+            for _ in range(2):  # You can use more than two workers here
+                tg.create_task(work(client))
 
 
 asyncio.run(main())

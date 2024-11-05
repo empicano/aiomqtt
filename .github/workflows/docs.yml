@@ -1,23 +1,18 @@
 name: Documentation
-
 on:
   push:
     branches: [main]
-    paths:
-      - "docs/**"
-      - "aiomqtt/**"
-      - README.md
-      - .github/workflows/docs.yml
   pull_request:
-    paths:
-      - "docs/**"
-      - "aiomqtt/**"
-      - README.md
-      - .github/workflows/docs.yml
-
 jobs:
   docs:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     defaults:
       run:
         shell: bash
@@ -43,12 +38,12 @@ jobs:
         run: scripts/setup
       - name: Build documentation
         run: scripts/docs
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload artifact
         if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/_build
-          publish_branch: documentation
-          user_name: "github-actions[bot]"
-          user_email: "github-actions[bot]@users.noreply.github.com"
+          path: docs/_build
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v4

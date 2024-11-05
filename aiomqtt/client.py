@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager, contextmanager
 from types import TracebackType
 from typing import (
     Any,
-    AsyncGenerator,
+    AsyncIterator,
     Awaitable,
     Callable,
     Coroutine,
@@ -144,7 +144,7 @@ class Will:
 
 
 class Client:
-    """The async context manager that manages the connection to the broker.
+    """Asynchronous context manager for the connection to the MQTT broker.
 
     Args:
         hostname: The hostname or IP address of the remote broker.
@@ -160,7 +160,7 @@ class Client:
             client when it disconnects. If ``False``, the client is a persistent client
             and subscription information and queued messages will be retained when the
             client disconnects.
-        transport: The transport protocol to use. Either ``"tcp"`` or ``"websockets"``.
+        transport: The transport protocol to use. Either ``"tcp"``, ``"websockets"`` or ``"unix"``.
         timeout: The default timeout for all communication with the broker in seconds.
         keepalive: The keepalive timeout for the client in seconds.
         bind_address: The IP address of a local network interface to bind this client
@@ -206,7 +206,7 @@ class Client:
         protocol: ProtocolVersion | None = None,
         will: Will | None = None,
         clean_session: bool | None = None,
-        transport: Literal["tcp", "websockets"] = "tcp",
+        transport: Literal["tcp", "websockets", "unix"] = "tcp",
         timeout: float | None = None,
         keepalive: int = 60,
         bind_address: str = "",
@@ -253,6 +253,7 @@ class Client:
         if max_queued_incoming_messages is None:
             max_queued_incoming_messages = 10000
         self._max_queued_incoming_messages = max_queued_incoming_messages
+        self.messages = self._messages()
 
         # Semaphore to limit the number of concurrent outgoing calls
         self._outgoing_calls_sem: anyio.Semaphore | None
@@ -337,6 +338,42 @@ class Client:
         the client ID is a UTF8-encoded string and decode it first.
         """
         return self._client._client_id.decode()  # noqa: SLF001
+
+    class MessagesIterator:
+        """Dynamic view of the message queue."""
+
+        def __init__(self, client: Client) -> None:
+            self._client = client
+
+        def __aiter__(self) -> AsyncIterator[Message]:
+            return self
+
+        async def __anext__(self) -> Message:
+            # Wait until we either (1) receive a message or (2) disconnect
+            task = self._client._loop.create_task(self._client._queue.get())  # noqa: SLF001
+            try:
+                done, _ = await asyncio.wait(
+                    (task, self._client._disconnected),  # noqa: SLF001
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+            # If the asyncio.wait is cancelled, we must also cancel the queue task
+            except asyncio.CancelledError:
+                task.cancel()
+                raise
+            # When we receive a message, return it
+            if task in done:
+                return task.result()
+            # If we disconnect from the broker, stop the generator with an exception
+            task.cancel()
+            msg = "Disconnected during message iteration"
+            raise MqttError(msg)
+
+        def __len__(self) -> int:
+            return self._client._queue.qsize()  # noqa: SLF001
+
+    @property
+    def messages(self) -> MessagesIterator:
+        return self.MessagesIterator(self)
 
     @property
     def _pending_calls(self) -> Generator[int, None, None]:
@@ -479,7 +516,7 @@ class Client:
             **kwargs: Additional keyword arguments to pass to paho-mqtt's unsubscribe
                 method.
         """
-        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)  # type: ignore[arg-type]
+        result, mid = self._client.unsubscribe(topic, properties, *args, **kwargs)
         # Early out on error
         if result != MQTTErrorCode.MQTT_ERR_SUCCESS or mid is None:
             raise MqttCodeError(result, "Could not unsubscribe from topic")
@@ -557,7 +594,6 @@ class Client:
             except StopAsyncIteration:
                 raise anyio.IncompleteRead()
 
-
     @contextmanager
     def _pending_call(
         self, mid: int, value: T, pending_dict: dict[int, T]
@@ -589,8 +625,8 @@ class Client:
         self,
         client: mqtt.Client,
         userdata: Any,
-        flags: dict[str, int],
-        rc: ReasonCode,
+        flags: mqtt.ConnectFlags,
+        reason_code: ReasonCode,
         properties: Properties | None = None,
     ) -> None:
         """Called when we receive a CONNACK message from the broker."""
@@ -602,18 +638,18 @@ class Client:
         self._with_sub_ids = getattr(properties,"SubscriptionIdentifierAvailable",1)
         if self._connected.is_set():
             return
-        if rc.value < 6:
+        if reason_code == mqtt.CONNACK_ACCEPTED:
             self._connected.set(None)
         else:
             # We received a negative CONNACK response
-            self._connected.set_error(MqttConnectError(rc))
+            self._connected.set_error(MqttConnectError(reason_code))
 
-    def _on_disconnect(
+    def _on_disconnect(  # noqa: PLR0913
         self,
         client: mqtt.Client,
         userdata: Any,
-        flags: int,
-        rc: ReasonCode | None,
+        flags: mqtt.DisconnectFlags,
+        reason_code: ReasonCode,
         properties: Properties | None = None,
     ) -> None:
         # Return early if the disconnect is already acknowledged.
@@ -622,11 +658,11 @@ class Client:
         if self._disconnected.is_set():
             return
 
-        if rc is None or rc.value < 6:
+        if reason_code == mqtt.MQTT_ERR_SUCCESS:
             self._disconnected.set(None)
         else:
             self._disconnected.set_error(
-                MqttCodeError(rc, "Unexpected disconnection")
+                MqttCodeError(reason_code, "Unexpected disconnection")
             )
 
         self._connected = ValueEvent()
@@ -636,13 +672,14 @@ class Client:
         client: mqtt.Client,
         userdata: Any,
         mid: int,
-        granted_qos: tuple[int, ...] | list[ReasonCode],
+        reason_codes: list[ReasonCode],
         properties: Properties | None = None,
     ) -> None:
         """Called when we receive a SUBACK message from the broker."""
         try:
             fut = self._pending_subscribes.pop(mid)
-            fut.set(granted_qos)
+            if not fut.done():
+                fut.set(reason_codes)
         except KeyError:
             self._logger.exception(
                 'Unexpected message ID "%d" in on_subscribe callback', mid
@@ -653,8 +690,8 @@ class Client:
         client: mqtt.Client,
         userdata: Any,
         mid: int,
+        reason_codes: list[ReasonCode],
         properties: Properties | None = None,
-        reason_codes: list[ReasonCode] | ReasonCode | None = None,
     ) -> None:
         """Called when we receive an UNSUBACK message from the broker."""
         try:
@@ -684,8 +721,14 @@ class Client:
         else:
             self._tree.dispatch(m)
 
-    def _on_publish(self, client: mqtt.Client, userdata: Any, mid: int,
-            reason: ReasonCode, props: Properties) -> None:
+    def _on_publish(  # noqa: PLR0913
+        self,
+        client: mqtt.Client,
+        userdata: Any,
+        mid: int,
+        reason_code: ReasonCode,
+        properties: Properties,
+    ) -> None:
         try:
             self._pending_publishes.pop(mid).set()
         except KeyError:
