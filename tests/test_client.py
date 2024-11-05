@@ -35,7 +35,18 @@ from aiomqtt.types import PayloadType
 pytestmark = pytest.mark.anyio
 
 HOSTNAME = "test.mosquitto.org"
+PORT = 1883
+SSLPORT = 8883
+WEBPORT = 8080
+BADUSER = "invalid"
 TOPIC_PREFIX = str(uuid.uuid1()) + "/aiomqtt/"
+
+# edit to override
+# HOSTNAME = "mqtt.local"
+# PORT = 51883
+# SSLPORT = 0  # zero to disable
+# WEBPORT = 0
+# BADUSER = ""    # empty to disable
 
 
 @pytest.mark.network
@@ -57,7 +68,7 @@ async def test_client_unsubscribe() -> None:
                     assert message.topic.value == topic_2
                     tg.cancel_scope.cancel()
 
-    async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
+    async with Client(HOSTNAME, PORT) as client, anyio.create_task_group() as tg:
         evt = anyio.Event()
         await client.subscribe(topic_1)
         await client.subscribe(topic_2)
@@ -76,7 +87,7 @@ async def test_client_unsubscribe() -> None:
     [(ProtocolVersion.V31, 22), (ProtocolVersion.V311, 0), (ProtocolVersion.V5, 0)],
 )
 async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
-    client = Client(HOSTNAME, protocol=protocol)
+    client = Client(HOSTNAME, PORT, protocol=protocol)
     assert len(client.identifier) == length
 
 
@@ -87,7 +98,7 @@ async def test_client_will() -> None:
 
     async def launch_client() -> None:
         with anyio.CancelScope(shield=True) as cs:
-            async with Client(HOSTNAME) as client:
+            async with Client(HOSTNAME, PORT) as client:
                 await client.subscribe(topic)
                 event.set()
                 async for message in client.messages:
@@ -98,12 +109,13 @@ async def test_client_will() -> None:
         tg.start_soon(launch_client)
         await event.wait()
         try:
-            async with Client(HOSTNAME, will=Will(topic)) as client:
+            async with Client(HOSTNAME, PORT, will=Will(topic)) as client:
                 await client._client._sock.aclose()
         except Exception:
             pass
 
 
+@pytest.mark.skipif(not SSLPORT, reason="host without SSL")
 @pytest.mark.network
 async def test_client_tls_context() -> None:
     topic = TOPIC_PREFIX + "test_client_tls_context"
@@ -117,7 +129,7 @@ async def test_client_tls_context() -> None:
 
     async with Client(
         HOSTNAME,
-        8883,
+        SSLPORT,
         tls_context=ssl.SSLContext(protocol=ssl.PROTOCOL_TLS),
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
@@ -125,6 +137,7 @@ async def test_client_tls_context() -> None:
         await client.publish(topic)
 
 
+@pytest.mark.skipif(not SSLPORT, reason="host without SSL")
 @pytest.mark.network
 async def test_client_tls_params() -> None:
     topic = TOPIC_PREFIX + "tls_params"
@@ -138,7 +151,7 @@ async def test_client_tls_params() -> None:
 
     async with Client(
         HOSTNAME,
-        8883,
+        SSLPORT,
         tls_params=TLSParameters(
             ca_certs=str(pathlib.Path.cwd() / "tests" / "mosquitto.org.crt")
         ),
@@ -160,7 +173,7 @@ async def test_client_username_password() -> None:
                 tg.cancel_scope.cancel()
 
     async with Client(
-        HOSTNAME, username="", password=""
+        HOSTNAME, PORT, username="", password=""
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
         await tg.start(handle, tg)
@@ -170,7 +183,7 @@ async def test_client_username_password() -> None:
 @pytest.mark.network
 async def test_client_logger() -> None:
     logger = logging.getLogger("aiomqtt")
-    async with Client(HOSTNAME, logger=logger) as client:
+    async with Client(HOSTNAME, PORT, logger=logger) as client:
         assert logger is client._client._logger
 
 
@@ -195,7 +208,7 @@ async def test_client_subscribe(subscr_ids) -> None:
 
     async with (
             ungroup_exc,
-            Client(HOSTNAME, protocol=ProtocolVersion.V5) as client,
+            Client(HOSTNAME, PORT, protocol=ProtocolVersion.V5) as client,
             anyio.create_task_group() as tg,
         ):
         if client._client._protocol != ProtocolVersion.V5:
@@ -266,13 +279,14 @@ async def test_client_max_concurrent_outgoing_calls(
 
     monkeypatch.setattr(mqtt, "Client", MockPahoClient)
 
-    async with Client(HOSTNAME, max_concurrent_outgoing_calls=1) as client:
+    async with Client(HOSTNAME, PORT, max_concurrent_outgoing_calls=1) as client:
         await client.subscribe(topic)
         await client.unsubscribe(topic)
         await client.publish(topic)
 
 
 @pytest.mark.network
+@pytest.mark.skipif(not WEBPORT, reason="host without websocket")
 async def test_client_websockets() -> None:
     topic = TOPIC_PREFIX + "websockets"
 
@@ -285,7 +299,7 @@ async def test_client_websockets() -> None:
 
     async with Client(
         HOSTNAME,
-        8080,
+        WEBPORT,
         transport="websockets",
         websocket_path="/",
         websocket_headers={"foo": "bar"},
@@ -303,7 +317,7 @@ async def test_client_pending_calls_threshold(
 ) -> None:
     topic = TOPIC_PREFIX + "pending_calls_threshold"
 
-    async with Client(HOSTNAME) as client:
+    async with Client(HOSTNAME, PORT) as client:
         client.pending_calls_threshold = pending_calls_threshold
         nb_publish = client.pending_calls_threshold + 1
 
@@ -330,7 +344,7 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
         TOPIC_PREFIX + "no_pending_calls_warnings_with_max_concurrent_outgoing_calls"
     )
 
-    async with Client(HOSTNAME, max_concurrent_outgoing_calls=1) as client:
+    async with Client(HOSTNAME, PORT, max_concurrent_outgoing_calls=1) as client:
         client.pending_calls_threshold = pending_calls_threshold
         nb_publish = client.pending_calls_threshold + 1
 
@@ -345,7 +359,7 @@ async def test_client_no_pending_calls_warnings_with_max_concurrent_outgoing_cal
 async def test_client_context_is_reusable() -> None:
     """Test that a client context manager instance is reusable."""
     topic = TOPIC_PREFIX + "test_client_is_reusable"
-    client = Client(HOSTNAME)
+    client = Client(HOSTNAME, PORT)
     async with client:
         await client.publish(topic, "foo")
     async with client:
@@ -355,7 +369,7 @@ async def test_client_context_is_reusable() -> None:
 @pytest.mark.network
 async def test_client_context_is_not_reentrant() -> None:
     """Test that a client context manager instance is not reentrant."""
-    client = Client(HOSTNAME)
+    client = Client(HOSTNAME, PORT)
     async with client:
         with pytest.raises(MqttReentrantError):
             async with client:
@@ -364,8 +378,8 @@ async def test_client_context_is_not_reentrant() -> None:
 
 @pytest.mark.network
 async def test_client_reusable_message() -> None:
-    custom_client = Client(HOSTNAME)
-    publish_client = Client(HOSTNAME)
+    custom_client = Client(HOSTNAME, PORT)
+    publish_client = Client(HOSTNAME, PORT)
 
     async def task_a_customer(
         task_status: TaskStatus[None] = TASK_STATUS_IGNORED,
@@ -411,17 +425,19 @@ async def test_aenter_state_reset_connect_failure() -> None:
 @pytest.mark.network
 async def test_aenter_state_reset_connack_timeout() -> None:
     """Test that internal state is reset on CONNACK timeout in ``aenter``."""
-    client = Client(HOSTNAME, timeout=0)
+    client = Client(HOSTNAME, PORT, timeout=0)
     with pytest.raises(TimeoutError), ungroup_exc:
         await client.__aenter__()
     # assert not client._lock.locked()
     assert not client._connected.is_set()
 
 
+
+@pytest.mark.skipif(not BADUSER, reason="host without auth")
 @pytest.mark.network
 async def test_aenter_state_reset_connack_negative() -> None:
     """Test that internal state is reset on negative CONNACK in ``aenter``."""
-    client = Client(HOSTNAME, username="invalid", timeout=9999)
+    client = Client(HOSTNAME, PORT, username=BADUSER, timeout=9999)
     with pytest.raises(MqttError), ungroup_exc:
         await client.__aenter__()
     # assert not client._lock.locked()
@@ -431,14 +447,14 @@ async def test_aenter_state_reset_connack_negative() -> None:
 @pytest.mark.network
 async def test_aexit_client_is_already_disconnected_success() -> None:
     """Test that ``aexit`` runs cleanly if client is already cleanly disconnected."""
-    async with Client(HOSTNAME) as client:
+    async with Client(HOSTNAME, PORT) as client:
         client._disconnected.set(None)
 
 
 @pytest.mark.network
 async def test_aexit_client_is_already_disconnected_failure() -> None:
     """Test that ``aexit`` reraises if client is already disconnected with an error."""
-    client = Client(HOSTNAME)
+    client = Client(HOSTNAME, PORT)
     await client.__aenter__()
     client._disconnected.set_error(RuntimeError())
     with pytest.raises(RuntimeError), ungroup_exc:
@@ -449,7 +465,7 @@ async def test_aexit_client_is_already_disconnected_failure() -> None:
 async def test_messages_view_is_reusable() -> None:
     """Test that ``.messages`` is reusable after dis- and reconnection."""
     topic = TOPIC_PREFIX + "test_messages_generator_is_reusable"
-    client = Client(HOSTNAME)
+    client = Client(HOSTNAME, PORT)
     async with client:
         client._disconnected.set(None)
         with anyio.move_on_after(0.1):
@@ -470,7 +486,10 @@ async def test_messages_view_is_reusable() -> None:
 async def test_messages_view_multiple_tasks_concurrently() -> None:
     """Test that ``.messages`` can be used concurrently by multiple tasks."""
     topic = TOPIC_PREFIX + "test_messages_view_multiple_tasks_concurrently"
-    async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
+    async with (
+            Client(HOSTNAME, PORT) as client,
+            anyio.create_task_group() as tg,
+            ):
 
         async def handle() -> None:
             # TODO(felix): Switch to anext function from Python 3.10
@@ -500,7 +519,7 @@ async def test_messages_view_len() -> None:
             self.fut.set_result(None)
             self.fut = asyncio.Future()
 
-    async with TestClient(HOSTNAME) as client:
+    async with TestClient(HOSTNAME, PORT) as client:
         assert len(client.messages) == 0
         await client.subscribe(topic, qos=2)
         # Publish a message and wait for it to arrive
