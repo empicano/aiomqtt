@@ -638,7 +638,7 @@ class Client:
         self._with_sub_ids = getattr(properties,"SubscriptionIdentifierAvailable",1)
         if self._connected.is_set():
             return
-        if reason_code == mqtt.CONNACK_ACCEPTED:
+        if reason_code == ConnackCode.CONNACK_ACCEPTED:
             self._connected.set(None)
         else:
             # We received a negative CONNACK response
@@ -658,7 +658,7 @@ class Client:
         if self._disconnected.is_set():
             return
 
-        if reason_code == mqtt.MQTT_ERR_SUCCESS:
+        if reason_code == MQTTErrorCode.MQTT_ERR_SUCCESS:
             self._disconnected.set(None)
         else:
             self._disconnected.set_error(
