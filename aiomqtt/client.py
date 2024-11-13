@@ -669,7 +669,14 @@ class Client:
             # usually a sign that the underlying connection broke, therefore we
             # disconnect straight away
             try:
-                client.loop_read()
+                while True:
+                    client.loop_read()
+                    # Client.loop_read() will not always consume all pending
+                    # decoded bytes from SSLSockets
+                    # See: https://github.com/eclipse-paho/paho.mqtt.python/issues/131
+                    if hasattr(client._sock, "pending") and client._sock.pending() > 0:  # type: ignore[union-attr] # noqa: SLF001
+                        continue
+                    break
             except Exception as exc:  # noqa: BLE001
                 if not self._disconnected.done():
                     self._disconnected.set_exception(exc)
