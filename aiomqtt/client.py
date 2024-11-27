@@ -85,6 +85,7 @@ class ProxySettings:
         *,
         proxy_type: int,
         proxy_addr: str,
+        proxy_port: int,
         proxy_rdns: bool | None = True,
         proxy_username: str | None = None,
         proxy_password: str | None = None,
@@ -92,6 +93,7 @@ class ProxySettings:
         self.proxy_args = {
             "proxy_type": proxy_type,
             "proxy_addr": proxy_addr,
+            "proxy_port": proxy_port,
             "proxy_rdns": proxy_rdns,
             "proxy_username": proxy_username,
             "proxy_password": proxy_password,
