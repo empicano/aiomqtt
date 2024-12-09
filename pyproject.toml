@@ -1,17 +1,19 @@
-[tool.poetry]
-name = "aiomqtt"
-version = "0.0.0" # Placeholder: Managed by poetry-dynamic-versioning
-description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
-license = "BSD-3-Clause"
+[project]
 authors = [
-    "Frederik Aalund <fpa@sbtinstruments.com>",
-    "Felix Böhm <f@bo3hm.com>",
-    "Jonathan Plasse <jonathan.plasse@live.fr>",
+    {name = "Frederik Aalund", email = "fpa@sbtinstruments.com"},
+    {name = "Felix Böhm", email = "f@bo3hm.com"},
+    {name = "Jonathan Plasse", email = "jonathan.plasse@live.fr"},
 ]
+license = {text = "BSD-3-Clause"}
+requires-python = "<4.0,>=3.8"
+dependencies = [
+    "paho-mqtt<3.0.0,>=2.1.0",
+    "typing-extensions<5.0.0,>=4.4.0; python_version < \"3.10\"",
+]
+name = "aiomqtt"
+version = "0.0.0"
+description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
 readme = "README.md"
-packages = [{ include = "aiomqtt" }]
-repository = "https://github.com/empicano/aiomqtt"
-documentation = "https://aiomqtt.bo3hm.com"
 keywords = [
     "mqtt",
     "iot",
@@ -26,39 +28,24 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-[tool.poetry.urls]
+[project.urls]
 "Issue tracker" = "https://github.com/empicano/aiomqtt/issues"
+repository = "https://github.com/empicano/aiomqtt"
+documentation = "https://aiomqtt.bo3hm.com"
 
-[tool.poetry.dependencies]
-python = "^3.8"
-paho-mqtt = "^2.1.0"
-typing-extensions = { version = "^4.4.0", markers = "python_version < '3.10'" }
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.10.0"
-ruff = "^0.4.8"
-pytest = "^7.3.1"
-pytest-cov = "^4.0.0"
-anyio = "^3.6.2"
-furo = "^2023.3.27"
-sphinx-autobuild = "^2021.3.14"
-myst-parser = "^1.0.0"
-sphinx-copybutton = "^0.5.2"
-sphinx = "^5.3"
-
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "pep440"
-strict = true
-metadata = false
-
-[build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
+[dependency-groups]
+dev = [
+    "mypy>=1.10.0,<2.0.0",
+    "ruff>=0.4.8,<1.0.0",
+    "pytest>=7.3.1,<8.0.0",
+    "pytest-cov>=4.0.0,<5.0.0",
+    "anyio>=3.6.2,<4.0.0",
+    "furo>=2023.3.27,<2024.0.0",
+    "sphinx-autobuild>=2021.3.14,<2022.0.0",
+    "myst-parser>=1.0.0,<2.0.0",
+    "sphinx-copybutton>=0.5.2,<1.0.0",
+    "sphinx>=5.3,<6.0",
+]
 
 [tool.ruff]
 target-version = "py38"

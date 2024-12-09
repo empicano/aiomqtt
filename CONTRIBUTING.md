@@ -5,8 +5,10 @@ We're very happy about contributions to aiomqtt! 🎉
 ## Development setup
 
 - Clone the aiomqtt repository
-- Install the Python version noted in `.python-version` via `pyenv`
-- Install poetry; Then run `./scripts/setup` to install the dependencies and aiomqtt itself
+- [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Install the Python version noted in `.python-version` via [uv python install](https://docs.astral.sh/uv/guides/install-python/)
+- Create virtual environment via [uv venv](https://docs.astral.sh/uv/reference/cli/#uv-venv)
+- Then run `./scripts/setup` to install the dependencies and aiomqtt itself
 - Run ruff and mypy with `./scripts/check`
 - Run the tests with `./scripts/test`
 
