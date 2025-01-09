@@ -1,18 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
-authors = [
-    {name = "Frederik Aalund", email = "fpa@sbtinstruments.com"},
-    {name = "Felix Böhm", email = "f@bo3hm.com"},
-    {name = "Jonathan Plasse", email = "jonathan.plasse@live.fr"},
-]
-license = {text = "BSD-3-Clause"}
-requires-python = "<4.0,>=3.8"
-dependencies = [
-    "paho-mqtt<3.0.0,>=2.1.0",
-    "typing-extensions<5.0.0,>=4.4.0; python_version < \"3.10\"",
-]
 name = "aiomqtt"
 version = "0.0.0"
-description = "The idiomatic asyncio MQTT client, wrapped around paho-mqtt"
+description = "The idiomatic asyncio MQTT client"
+authors = [
+    { name = "Frederik Aalund", email = "fpa@sbtinstruments.com" },
+    { name = "Felix Böhm", email = "f@bo3hm.com" },
+    { name = "Jonathan Plasse", email = "jonathan.plasse@live.fr" },
+]
 readme = "README.md"
 keywords = [
     "mqtt",
@@ -23,27 +21,33 @@ keywords = [
     "mqttv5",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
+    "License :: OSI Approved :: BSD License",
+]
+requires-python = ">=3.8,<4.0"
+dependencies = [
+    "paho-mqtt>=2.1.0,<3.0.0",
+    "typing-extensions>=4.4.0,<5.0.0; python_version < \"3.10\"",
 ]
 
 [project.urls]
-"Issue tracker" = "https://github.com/empicano/aiomqtt/issues"
-repository = "https://github.com/empicano/aiomqtt"
+source = "https://github.com/empicano/aiomqtt"
 documentation = "https://aiomqtt.bo3hm.com"
+issues = "https://github.com/empicano/aiomqtt/issues"
 
 [dependency-groups]
 dev = [
     "mypy>=1.10.0,<2.0.0",
-    "ruff>=0.4.8,<1.0.0",
+    "ruff>=0.4.8,<0.5.0",
     "pytest>=7.3.1,<8.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
     "anyio>=3.6.2,<4.0.0",
     "furo>=2023.3.27,<2024.0.0",
     "sphinx-autobuild>=2021.3.14,<2022.0.0",
     "myst-parser>=1.0.0,<2.0.0",
-    "sphinx-copybutton>=0.5.2,<1.0.0",
+    "sphinx-copybutton>=0.5.2,<0.6.0",
     "sphinx>=5.3,<6.0",
 ]
 
