@@ -191,7 +191,7 @@ class Client:
         max_queued_incoming_messages: Restricts the incoming message queue size. If the
             queue is full, further incoming messages are discarded. ``0`` or less means
             unlimited (the default).
-        max_queued_outgoing_messages: Resticts the outgoing message queue size. If the
+        max_queued_outgoing_messages: Restricts the outgoing message queue size. If the
             queue is full, further outgoing messages are discarded. ``0`` means
             unlimited (the default).
         max_inflight_messages: The maximum number of messages with QoS > ``0`` that can
@@ -646,7 +646,7 @@ class Client:
     ) -> None:
         def callback() -> None:
             # client.loop_read() may raise an exception, such as BadPipe. It's
-            # usually a sign that the underlaying connection broke, therefore we
+            # usually a sign that the underlying connection broke, therefore we
             # disconnect straight away
             try:
                 client.loop_read()
@@ -677,7 +677,7 @@ class Client:
     ) -> None:
         def callback() -> None:
             # client.loop_write() may raise an exception, such as BadPipe. It's
-            # usually a sign that the underlaying connection broke, therefore we
+            # usually a sign that the underlying connection broke, therefore we
             # disconnect straight away
             try:
                 client.loop_write()
