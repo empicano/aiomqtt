@@ -686,12 +686,12 @@ class Client:
         # paho-mqtt may call this function from the executor thread on which we've called
         # `self._client.connect()` (see [3]), so we can't do most operations on
         # self._loop directly.
-        self._loop.call_soon_threadsafe(self._loop.add_writer, sock, callback)
+        self._loop.call_soon_threadsafe(self._loop.add_writer, sock.fileno(), callback)
 
     def _on_socket_unregister_write(
         self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
     ) -> None:
-        self._loop.remove_writer(sock)
+        self._loop.remove_writer(sock.fileno())
 
     async def _misc_loop(self) -> None:
         while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:
