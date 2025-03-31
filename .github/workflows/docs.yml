@@ -19,23 +19,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4 # Uses the Python version in .python-version
-      - name: Install poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Load virtual environment cache
-        id: cache
-        uses: actions/cache@v2
-        with:
-          path: .venv
-          key: ${{ runner.os }}-${{ hashFiles('poetry.lock') }}
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: scripts/setup
+          version: "0.6.11"
+      - name: Install Python and dependencies
+        run: scripts/setup --locked # Fail if lock file is out of date
       - name: Build documentation
         run: scripts/docs
       - name: Upload artifact

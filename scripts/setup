@@ -6,4 +6,4 @@ set -o errexit -o pipefail -o nounset
 cd "$(dirname "$0")/.."
 
 # Install the dependencies and the local version of aiomqtt
-uv sync
+uv sync --all-extras "$@"
