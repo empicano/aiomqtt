@@ -16,19 +16,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          fetch-depth: 0 # Fetch entire history for poetry-dynamic-versioning, see: https://github.com/mtkennerly/poetry-dynamic-versioning/issues/55
-      - name: Set up Python
-        uses: actions/setup-python@v4 # Uses the Python version in .python-version
-      - name: Install poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-      - name: Setup dynamic versioning
-        run: poetry self add "poetry-dynamic-versioning[plugin]"
+          version: "0.6.11"
+      - name: Install Python and dependencies
+        run: scripts/setup --locked
       - name: Build package
-        run: poetry build
-      - name: Publish to PyPI # Uses trusted publishing and thus doesn't need a token
+        run: uv build
+      - name: Publish to PyPI # With trusted publishing (no token required)
         uses: pypa/gh-action-pypi-publish@release/v1
