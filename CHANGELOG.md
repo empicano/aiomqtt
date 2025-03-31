@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.3.1] - 2024-03-31
+
+### Changed
+
+- Switch from poetry to uv (@pavel-anchev in #350)
+
+### Fixed
+
+- Consistently use `sock.fileno()` to identify socket for monitoring (@airtower-luna in #357)
+- Replace deprecated `get_event_loop` with `get_running_loop`
+
 ## [2.3.0] - 2024-08-07
 
 ### Added
