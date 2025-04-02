@@ -39,14 +39,13 @@ dependencies = [
 ]
 
 [project.urls]
-source = "https://github.com/empicano/aiomqtt"
-documentation = "https://aiomqtt.bo3hm.com"
-issues = "https://github.com/empicano/aiomqtt/issues"
+"Source" = "https://github.com/empicano/aiomqtt"
+"Documentation" = "https://aiomqtt.bo3hm.com"
+"Issue tracker" = "https://github.com/empicano/aiomqtt/issues"
 
 [dependency-groups]
 dev = [
     "mypy>=1.10.0,<2.0.0",
-    "ruff>=0.4.8,<0.5.0",
     "pytest>=7.3.1,<8.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
     "anyio>=3.6.2,<4.0.0",
@@ -55,6 +54,7 @@ dev = [
     "myst-parser>=1.0.0,<2.0.0",
     "sphinx-copybutton>=0.5.2,<0.6.0",
     "sphinx>=5.3,<6.0",
+    "ruff>=0.11.2",
 ]
 
 [tool.ruff]
@@ -99,8 +99,6 @@ select = [
     "G",   # flake8-logging-format
 ]
 ignore = [
-    "ANN101", # missing-type-self
-    "ANN102", # missing-type-cls
     "ANN401", # dynamically-typed-expression
     "BLE001", # blind-except
     "COM",    # trailing-comma

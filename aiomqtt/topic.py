@@ -101,9 +101,7 @@ class Topic(Wildcard):
         def recurse(tl: list[str], wl: list[str]) -> bool:
             """Recursively match topic levels with wildcard levels."""
             if not tl:
-                if not wl or wl[0] == "#":
-                    return True
-                return False
+                return not wl or wl[0] == "#"
             if not wl:
                 return False
             if wl[0] == "#":
