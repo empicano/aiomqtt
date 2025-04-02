@@ -80,7 +80,7 @@ class TLSParameters:
 
 
 class ProxySettings:
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         *,
         proxy_type: int,
@@ -370,7 +370,7 @@ class Client:
         yield from self._pending_publishes.keys()
 
     @_outgoing_call
-    async def subscribe(  # noqa: PLR0913
+    async def subscribe(
         self,
         /,
         topic: SubscribeTopic,
@@ -525,7 +525,7 @@ class Client:
             except KeyError:
                 pass
 
-    def _on_connect(  # noqa: PLR0913
+    def _on_connect(
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -546,7 +546,7 @@ class Client:
             # We received a negative CONNACK response
             self._connected.set_exception(MqttConnectError(reason_code))
 
-    def _on_disconnect(  # noqa: PLR0913
+    def _on_disconnect(
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -578,7 +578,7 @@ class Client:
                 MqttCodeError(reason_code, "Unexpected disconnection")
             )
 
-    def _on_subscribe(  # noqa: PLR0913
+    def _on_subscribe(
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -596,7 +596,7 @@ class Client:
                 'Unexpected message ID "%d" in on_subscribe callback', mid
             )
 
-    def _on_unsubscribe(  # noqa: PLR0913
+    def _on_unsubscribe(
         self,
         client: mqtt.Client,
         userdata: Any,
@@ -623,7 +623,7 @@ class Client:
         except asyncio.QueueFull:
             self._logger.warning("Message queue is full. Discarding message.")
 
-    def _on_publish(  # noqa: PLR0913
+    def _on_publish(
         self,
         client: mqtt.Client,
         userdata: Any,
