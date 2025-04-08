@@ -11,9 +11,8 @@ from .exceptions import MqttCodeError, MqttError, MqttReentrantError
 from .message import Message
 from .topic import Topic, TopicLike, Wildcard, WildcardLike
 
-# These are placeholders that are managed by poetry-dynamic-versioning
-__version__ = "0.0.0"
-__version_tuple__ = (0, 0, 0)
+__version__ = "2.3.2"
+__version_tuple__ = (2, 3, 2)
 
 __all__ = [
     "__version__",
