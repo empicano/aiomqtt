@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.3.2] - 2024-04-08
+
+### Added
+
+- Test for Python 3.13 (@empicano in #359)
+
+### Fixed
+
+- Add missing version attributes after uv switch (@empicano in #359)
+
 ## [2.3.1] - 2024-03-31
 
 ### Changed

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aiomqtt"
-version = "2.3.1"
+version = "2.3.2"
 description = "The idiomatic asyncio MQTT client"
 authors = [
     { name = "Frederik Aalund", email = "fpa@sbtinstruments.com" },
