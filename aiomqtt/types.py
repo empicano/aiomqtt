@@ -18,10 +18,10 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 PayloadType: TypeAlias = "str | bytes | bytearray | int | float | None"
-SubscribeTopic: TypeAlias = "str | tuple[str, SubscribeOptions] | list[tuple[str, SubscribeOptions]] | list[tuple[str, int]]"
+SubscribeTopic: TypeAlias = "str | tuple[str, SubscribeOptions] | list[tuple[str, SubscribeOptions]] | list[tuple[str, int]]"  # NOQA: E501
 WebSocketHeaders: TypeAlias = (
     "dict[str, str] | Callable[[dict[str, str]], dict[str, str]]"
 )
-_PahoSocket: TypeAlias = "socket.socket | ssl.SSLSocket | Any"
+PahoSocket: TypeAlias = "socket.socket | ssl.SSLSocket | Any"
 # See the overloads of `socket.setsockopt` for details.
 SocketOption: TypeAlias = "tuple[int, int, int | bytes] | tuple[int, int, None, int]"

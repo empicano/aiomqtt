@@ -61,78 +61,37 @@ dev = [
 target-version = "py38"
 
 [tool.ruff.lint]
-select = [
-    "F",   # Pyflakes
-    "E",   # pycodestyle
-    "W",   # pycodestyle
-    "C90", # mccabe
-    "I",   # isort
-    "N",   # pep8-naming
-    "D",   # pydocstyle
-    "UP",  # pyupgrade
-    "YTT", # flake8-2020
-    "ANN", # flake8-annotations
-    "S",   # flake8-bandit
-    "B",   # flake8-bugbear
-    "A",   # flake8-builtins
-    "COM", # flake8-commas
-    "C4",  # flake8-comprehensions
-    "EM",  # flake8-errmsg
-    "ISC", # flake8-implicit-str-concat
-    "ICN", # flake8-import-conventions
-    "INP", # flake8-no-pep420
-    "PIE", # flake8-pie
-    "T20", # flake8-print
-    "PT",  # flake8-pytest-style
-    "RSE", # flake8-raise
-    "RET", # flake8-return
-    "SLF", # flake8-self
-    "SIM", # flake8-simplify
-    "TID", # flake8-tidy-imports
-    "PTH", # flake8-use-pathlib
-    "TD",  # flake8-todos
-    "ERA", # eradicate
-    "PGH", # pygrep-hooks
-    "PL",  # Pylint
-    "TRY", # tryceratops
-    "RUF", # Ruff-specific rules
-    "G",   # flake8-logging-format
-]
+select = ["ALL"]
 ignore = [
-    "ANN401", # dynamically-typed-expression
-    "BLE001", # blind-except
-    "COM",    # trailing-comma
-    "D10",    # missing-docstring
-    "E501",   # line-too-long
-    "ISC001", # single-line-implicit-string-concatenation
-    "SIM105", # use-contextlib-suppress
-    "TD003",  # missing-todo-link
-]
-unfixable = [
-    "ERA001", # commented-out-code
-    "F401",   # unused-import
-    "F841",   # unused-variable
-    "T20",    # print-found
+    "D103",
+    "C901",    # complex-structure
+    "COM812",  # missing-trailing-comma
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
+    "PLR0915", # too-many-statements
+    "D100",    # undocumented-public-module
+    "D101",    # undocumented-public-class
+    "D104",    # undocumented-public-package
+    "D105",    # undocumented-magic-method
+    "D107",    # undocumented-public-init
+    "FIX002",  # line-contains-todo
+    "TD003",   # missing-todo-link
+    "TC001",   # typing-only-first-party-import
+    "TC002",   # typing-only-third-party-import
+    "TC003",   # typing-only-standard-library-import
 ]
 task-tags = ["SPDX-License-Identifier"]
 
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = [
-    "S101", # assert-used
-]
-"tests/test_client.py" = [
+    "S101",   # assert
     "SLF001", # private-member-access
 ]
 
-[tool.ruff.lint.flake8-pytest-style] # https://github.com/charliermarsh/ruff#flake8-pytest-style-pt
-fixture-parentheses = false
-mark-parentheses = false
-parametrize-names-type = "csv"
-
-[tool.ruff.lint.pydocstyle] # https://github.com/charliermarsh/ruff#pydocstyle
-convention = "google"
-
-[tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
+[tool.mypy]
 python_version = "3.8"
 strict = true
 show_column_numbers = true
@@ -140,19 +99,15 @@ show_error_codes = true
 show_error_context = true
 pretty = true
 
-[tool.pytest.ini_options] # https://docs.pytest.org/en/latest/reference/reference.html#ini-options-ref
-filterwarnings = [
-    "error",
-    "ignore:ssl.PROTOCOL_TLS is deprecated:DeprecationWarning",
-]
+[tool.pytest.ini_options]
 markers = ["network: tests that requires network access"]
 xfail_strict = true
 
-[tool.coverage.run] # https://coverage.readthedocs.io/en/latest/config.html#run
+[tool.coverage.run]
 branch = true
 data_file = "reports/.coverage"
 
-[tool.coverage.report] # https://coverage.readthedocs.io/en/latest/config.html#report
+[tool.coverage.report]
 show_missing = true
 # Regexes for lines to exclude from consideration
 exclude_lines = [
@@ -163,5 +118,5 @@ exclude_lines = [
     "raise NotImplementedError",
 ]
 
-[tool.coverage.xml] # https://coverage.readthedocs.io/en/latest/config.html#xml
+[tool.coverage.xml]
 output = "reports/coverage.xml"
