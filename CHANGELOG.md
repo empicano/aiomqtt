@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.4.0] - 2024-05-03
+
+### Added
+
+- Allow `proxy_port` to be passed to the underlying paho `proxy_set()` function (@NickJHoffmann in #339)
+
+### Fixed
+
+- Fix retained message delayed on TLS connection (@wpickard in #343)
+
 ## [2.3.2] - 2024-04-08
 
 ### Added

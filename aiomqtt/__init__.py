@@ -11,8 +11,8 @@ from .exceptions import MqttCodeError, MqttError, MqttReentrantError
 from .message import Message
 from .topic import Topic, TopicLike, Wildcard, WildcardLike
 
-__version__ = "2.3.2"
-__version_tuple__ = (2, 3, 2)
+__version__ = "2.4.0"
+__version_tuple__ = (2, 4, 0)
 
 __all__ = [
     "Client",
