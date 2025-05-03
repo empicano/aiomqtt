@@ -44,12 +44,12 @@ class Message:
             (MQTT v5.0 only) The properties associated with the message.
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         topic: TopicLike,
         payload: PayloadType,
         qos: int,
-        retain: bool,
+        retain: bool,  # noqa: FBT001
         mid: int,
         properties: Properties | None,
     ) -> None:

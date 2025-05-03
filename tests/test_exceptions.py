@@ -34,7 +34,7 @@ def test_mqtt_code_error_int(rc: int) -> None:
 
 
 @pytest.mark.parametrize(
-    "packet_type, a_name",
+    ("packet_type", "a_name"),
     [
         (PacketTypes.CONNACK, "Success"),
         (PacketTypes.PUBACK, "Success"),
@@ -50,7 +50,7 @@ def test_mqtt_code_error_none() -> None:
     assert str(MqttCodeError(None)) == "[code:None] "
 
 
-@pytest.mark.parametrize("rc, message", [*_CONNECT_RC_STRINGS.items(), (0, "")])
+@pytest.mark.parametrize(("rc", "message"), [*_CONNECT_RC_STRINGS.items(), (0, "")])
 def test_mqtt_connect_error_int(rc: int, message: str) -> None:
     error = MqttConnectError(rc)
     arg = "Connection refused"
@@ -61,7 +61,7 @@ def test_mqtt_connect_error_int(rc: int, message: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "packet_type, a_name",
+    ("packet_type", "a_name"),
     [
         (PacketTypes.CONNACK, "Success"),
         (PacketTypes.PUBACK, "Success"),

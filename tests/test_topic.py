@@ -8,7 +8,7 @@ from aiomqtt import Topic, Wildcard
 def test_topic_validation() -> None:
     """Test that Topic raises Exceptions for invalid topics."""
     with pytest.raises(TypeError):
-        Topic(True)  # type: ignore[arg-type]
+        Topic(True)  # type: ignore[arg-type] # noqa: FBT003
     with pytest.raises(TypeError):
         Topic(1.0)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
@@ -30,7 +30,7 @@ def test_topic_validation() -> None:
 def test_wildcard_validation() -> None:
     """Test that Wildcard raises Exceptions for invalid wildcards."""
     with pytest.raises(TypeError):
-        Wildcard(True)  # type: ignore[arg-type]
+        Wildcard(True)  # type: ignore[arg-type] # noqa: FBT003
     with pytest.raises(TypeError):
         Wildcard(1.0)  # type: ignore[arg-type]
     with pytest.raises(TypeError):

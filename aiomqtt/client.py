@@ -36,12 +36,12 @@ from .exceptions import MqttCodeError, MqttConnectError, MqttError, MqttReentran
 from .message import Message
 from .types import (
     P,
+    PahoSocket,
     PayloadType,
     SocketOption,
     SubscribeTopic,
     T,
     WebSocketHeaders,
-    _PahoSocket,
 )
 
 if sys.version_info >= (3, 11):
@@ -178,7 +178,8 @@ class Client:
             client when it disconnects. If ``False``, the client is a persistent client
             and subscription information and queued messages will be retained when the
             client disconnects.
-        transport: The transport protocol to use. Either ``"tcp"``, ``"websockets"`` or ``"unix"``.
+        transport: The transport protocol to use. Either ``"tcp"``, ``"websockets"`` or
+            ``"unix"``.
         timeout: The default timeout for all communication with the broker in seconds.
         keepalive: The keepalive timeout for the client in seconds.
         bind_address: The IP address of a local network interface to bind this client
@@ -205,7 +206,7 @@ class Client:
         websocket_headers: The headers to use for websockets.
     """
 
-    def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
+    def __init__(
         self,
         hostname: str,
         port: int = 1883,
@@ -253,7 +254,8 @@ class Client:
 
         # Pending subscribe, unsubscribe, and publish calls
         self._pending_subscribes: dict[
-            int, asyncio.Future[tuple[int, ...] | list[ReasonCode]]
+            int,
+            asyncio.Future[tuple[int, ...] | list[ReasonCode]],
         ] = {}
         self._pending_unsubscribes: dict[int, asyncio.Event] = {}
         self._pending_publishes: dict[int, asyncio.Event] = {}
@@ -337,7 +339,11 @@ class Client:
 
         if will is not None:
             self._client.will_set(
-                will.topic, will.payload, will.qos, will.retain, will.properties
+                will.topic,
+                will.payload,
+                will.qos,
+                will.retain,
+                will.properties,
             )
 
         if socket_options is None:
@@ -377,9 +383,9 @@ class Client:
         qos: int = 0,
         options: SubscribeOptions | None = None,
         properties: Properties | None = None,
-        *args: Any,
+        *args: Any,  # noqa: ANN401
         timeout: float | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> tuple[int, ...] | list[ReasonCode]:
         """Subscribe to a topic or wildcard.
 
@@ -397,7 +403,12 @@ class Client:
 
         """
         result, mid = self._client.subscribe(
-            topic, qos, options, properties, *args, **kwargs
+            topic,
+            qos,
+            options,
+            properties,
+            *args,
+            **kwargs,
         )
         # Early out on error
         if result != mqtt.MQTT_ERR_SUCCESS or mid is None:
@@ -416,9 +427,9 @@ class Client:
         /,
         topic: str | list[str],
         properties: Properties | None = None,
-        *args: Any,
+        *args: Any,  # noqa: ANN401
         timeout: float | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
         """Unsubscribe from a topic or wildcard.
 
@@ -443,17 +454,17 @@ class Client:
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
     @_outgoing_call
-    async def publish(  # noqa: PLR0913
+    async def publish(
         self,
         /,
         topic: str,
         payload: PayloadType = None,
         qos: int = 0,
-        retain: bool = False,
+        retain: bool = False,  # noqa: FBT001, FBT002
         properties: Properties | None = None,
-        *args: Any,
+        *args: Any,  # noqa: ANN401
         timeout: float | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
         """Publish a message to the broker.
 
@@ -471,7 +482,13 @@ class Client:
                 method.
         """
         info = self._client.publish(
-            topic, payload, qos, retain, properties, *args, **kwargs
+            topic,
+            payload,
+            qos,
+            retain,
+            properties,
+            *args,
+            **kwargs,
         )  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
@@ -485,22 +502,23 @@ class Client:
             # Wait for confirmation
             await self._wait_for(confirmation.wait(), timeout=timeout)
 
-    async def _wait_for(
-        self, fut: Awaitable[T], timeout: float | None, **kwargs: Any
-    ) -> T:
+    async def _wait_for(self, fut: Awaitable[T], timeout: float | None) -> T:
         if timeout is None:
             timeout = self.timeout
         # Note that asyncio uses `None` to mean "No timeout". We use `math.inf`.
         timeout_for_asyncio = None if timeout == math.inf else timeout
         try:
-            return await asyncio.wait_for(fut, timeout=timeout_for_asyncio, **kwargs)
+            return await asyncio.wait_for(fut, timeout=timeout_for_asyncio)
         except asyncio.TimeoutError:
             msg = "Operation timed out"
             raise MqttError(msg) from None
 
     @contextlib.contextmanager
     def _pending_call(
-        self, mid: int, value: T, pending_dict: dict[int, T]
+        self,
+        mid: int,
+        value: T,
+        pending_dict: dict[int, T],
     ) -> Iterator[None]:
         if mid in self._pending_calls:
             msg = f'There already exists a pending call for message ID "{mid}"'
@@ -520,18 +538,16 @@ class Client:
             #
             # However, if the callback doesn't get called (e.g., due to a
             # network error) we still need to remove the item from the dict.
-            try:
+            with contextlib.suppress(KeyError):
                 del pending_dict[mid]
-            except KeyError:
-                pass
 
     def _on_connect(
         self,
-        client: mqtt.Client,
-        userdata: Any,
-        flags: mqtt.ConnectFlags,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
+        flags: mqtt.ConnectFlags,  # noqa: ARG002
         reason_code: ReasonCode,
-        properties: Properties | None = None,
+        properties: Properties | None = None,  # noqa: ARG002
     ) -> None:
         """Called when we receive a CONNACK message from the broker."""
         # Return early if already connected. Sometimes, paho-mqtt calls _on_connect
@@ -548,11 +564,11 @@ class Client:
 
     def _on_disconnect(
         self,
-        client: mqtt.Client,
-        userdata: Any,
-        flags: mqtt.DisconnectFlags,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
+        flags: mqtt.DisconnectFlags,  # noqa: ARG002
         reason_code: ReasonCode,
-        properties: Properties | None = None,
+        properties: Properties | None = None,  # noqa: ARG002
     ) -> None:
         # Return early if the disconnect is already acknowledged.
         # Sometimes (e.g., due to timeouts), paho-mqtt calls _on_disconnect
@@ -575,16 +591,16 @@ class Client:
             self._disconnected.set_result(None)
         else:
             self._disconnected.set_exception(
-                MqttCodeError(reason_code, "Unexpected disconnection")
+                MqttCodeError(reason_code, "Unexpected disconnection"),
             )
 
     def _on_subscribe(
         self,
-        client: mqtt.Client,
-        userdata: Any,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
         mid: int,
         reason_codes: list[ReasonCode],
-        properties: Properties | None = None,
+        properties: Properties | None = None,  # noqa: ARG002
     ) -> None:
         """Called when we receive a SUBACK message from the broker."""
         try:
@@ -593,27 +609,32 @@ class Client:
                 fut.set_result(reason_codes)
         except KeyError:
             self._logger.exception(
-                'Unexpected message ID "%d" in on_subscribe callback', mid
+                'Unexpected message ID "%d" in on_subscribe callback',
+                mid,
             )
 
     def _on_unsubscribe(
         self,
-        client: mqtt.Client,
-        userdata: Any,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
         mid: int,
-        reason_codes: list[ReasonCode],
-        properties: Properties | None = None,
+        reason_codes: list[ReasonCode],  # noqa: ARG002
+        properties: Properties | None = None,  # noqa: ARG002
     ) -> None:
         """Called when we receive an UNSUBACK message from the broker."""
         try:
             self._pending_unsubscribes.pop(mid).set()
         except KeyError:
             self._logger.exception(
-                'Unexpected message ID "%d" in on_unsubscribe callback', mid
+                'Unexpected message ID "%d" in on_unsubscribe callback',
+                mid,
             )
 
     def _on_message(
-        self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
+        self,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
+        message: mqtt.MQTTMessage,
     ) -> None:
         # Convert the paho.mqtt message into our own Message type
         m = Message._from_paho_message(message)  # noqa: SLF001
@@ -625,22 +646,23 @@ class Client:
 
     def _on_publish(
         self,
-        client: mqtt.Client,
-        userdata: Any,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
         mid: int,
-        reason_code: ReasonCode,
-        properties: Properties,
+        reason_code: ReasonCode,  # noqa: ARG002
+        properties: Properties,  # noqa: ARG002
     ) -> None:
-        try:
+        # Suppress KeyError since [2] may call on_publish before it even returns.
+        # That is, the message may already be published before we even get a chance to
+        # set up the 'pending_call' logic.
+        with contextlib.suppress(KeyError):
             self._pending_publishes.pop(mid).set()
-        except KeyError:
-            # Do nothing since [2] may call on_publish before it even returns.
-            # That is, the message may already be published before we even get a
-            # chance to set up the 'pending_call' logic.
-            pass
 
     def _on_socket_open(
-        self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
+        self,
+        client: mqtt.Client,
+        userdata: Any,  # noqa: ARG002, ANN401
+        sock: PahoSocket,
     ) -> None:
         def callback() -> None:
             # client.loop_read() may raise an exception, such as BadPipe. It's
@@ -648,7 +670,7 @@ class Client:
             # disconnect straight away
             try:
                 client.loop_read()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 if not self._disconnected.done():
                     self._disconnected.set_exception(exc)
 
@@ -662,7 +684,10 @@ class Client:
         self._loop.call_soon_threadsafe(create_misc_task)
 
     def _on_socket_close(
-        self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
+        self,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
+        sock: PahoSocket,
     ) -> None:
         fileno = sock.fileno()
         if fileno > -1:
@@ -671,7 +696,10 @@ class Client:
             self._loop.call_soon_threadsafe(self._misc_task.cancel)
 
     def _on_socket_register_write(
-        self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
+        self,
+        client: mqtt.Client,
+        userdata: Any,  # noqa: ARG002, ANN401
+        sock: PahoSocket,
     ) -> None:
         def callback() -> None:
             # client.loop_write() may raise an exception, such as BadPipe. It's
@@ -679,22 +707,25 @@ class Client:
             # disconnect straight away
             try:
                 client.loop_write()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 if not self._disconnected.done():
                     self._disconnected.set_exception(exc)
 
-        # paho-mqtt may call this function from the executor thread on which we've called
-        # `self._client.connect()` (see [3]), so we can't do most operations on
+        # paho-mqtt may call this function from the executor thread on which we've
+        # called `self._client.connect()` (see [3]), so we can't do most operations on
         # self._loop directly.
         self._loop.call_soon_threadsafe(self._loop.add_writer, sock.fileno(), callback)
 
     def _on_socket_unregister_write(
-        self, client: mqtt.Client, userdata: Any, sock: _PahoSocket
+        self,
+        client: mqtt.Client,  # noqa: ARG002
+        userdata: Any,  # noqa: ARG002, ANN401
+        sock: PahoSocket,
     ) -> None:
         self._loop.remove_writer(sock.fileno())
 
     async def _misc_loop(self) -> None:
-        while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:
+        while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:  # noqa: ASYNC110
             await asyncio.sleep(1)
 
     async def __aenter__(self) -> Self:
@@ -761,7 +792,8 @@ class Client:
                 self._connected = asyncio.Future()
         else:
             self._logger.warning(
-                "Could not gracefully disconnect: %d. Forcing disconnection.", rc
+                "Could not gracefully disconnect: %d. Forcing disconnection.",
+                rc,
             )
         # Force disconnection if we cannot gracefully disconnect
         if not self._disconnected.done():
@@ -772,7 +804,8 @@ class Client:
 
 
 def _set_client_socket_defaults(
-    client_socket: _PahoSocket | None, socket_options: Iterable[SocketOption]
+    client_socket: PahoSocket | None,
+    socket_options: Iterable[SocketOption],
 ) -> None:
     # Note that socket may be None if, e.g., the username and
     # password combination didn't work. In this case, we return early.

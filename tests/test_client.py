@@ -64,7 +64,7 @@ async def test_client_unsubscribe() -> None:
 
 
 @pytest.mark.parametrize(
-    "protocol, length",
+    ("protocol", "length"),
     [(ProtocolVersion.V31, 22), (ProtocolVersion.V311, 0), (ProtocolVersion.V5, 0)],
 )
 async def test_client_id(protocol: ProtocolVersion, length: int) -> None:
@@ -126,7 +126,7 @@ async def test_client_tls_params() -> None:
         HOSTNAME,
         8883,
         tls_params=TLSParameters(
-            ca_certs=str(pathlib.Path.cwd() / "tests" / "mosquitto.org.crt")
+            ca_certs=str(pathlib.Path.cwd() / "tests" / "mosquitto.org.crt"),
         ),
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
@@ -145,7 +145,9 @@ async def test_client_username_password() -> None:
             tg.cancel_scope.cancel()
 
     async with Client(
-        HOSTNAME, username="", password=""
+        HOSTNAME,
+        username="",
+        password="",
     ) as client, anyio.create_task_group() as tg:
         await client.subscribe(topic)
         tg.start_soon(handle, tg)
@@ -183,7 +185,9 @@ async def test_client_max_concurrent_outgoing_calls(
             return super().subscribe(topic, qos, options, properties)
 
         def unsubscribe(
-            self, topic: str | list[str], properties: Properties | None = None
+            self,
+            topic: str | list[str],
+            properties: Properties | None = None,
         ) -> tuple[MQTTErrorCode, int | None]:
             assert client._outgoing_calls_sem is not None
             assert client._outgoing_calls_sem.locked()
@@ -194,7 +198,7 @@ async def test_client_max_concurrent_outgoing_calls(
             topic: str,
             payload: PayloadType | None = None,
             qos: int = 0,
-            retain: bool = False,
+            retain: bool = False,  # noqa: FBT001, FBT002
             properties: Properties | None = None,
         ) -> mqtt.MQTTMessageInfo:
             assert client._outgoing_calls_sem is not None
@@ -235,7 +239,8 @@ async def test_client_websockets() -> None:
 @pytest.mark.network
 @pytest.mark.parametrize("pending_calls_threshold", [10, 20])
 async def test_client_pending_calls_threshold(
-    pending_calls_threshold: int, caplog: pytest.LogCaptureFixture
+    pending_calls_threshold: int,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     topic = TOPIC_PREFIX + "pending_calls_threshold"
 
@@ -252,7 +257,7 @@ async def test_client_pending_calls_threshold(
                 "mqtt",
                 logging.WARNING,
                 f"There are {nb_publish} pending publish calls.",
-            )
+            ),
         ]
 
 
@@ -402,12 +407,12 @@ async def test_messages_view_is_reusable() -> None:
     async with client:
         client._disconnected.set_result(None)
         with pytest.raises(MqttError):
-            # TODO(felix): Switch to anext function from Python 3.10
+            # TODO(empicano): Switch to anext function from Python 3.10
             await client.messages.__anext__()
     async with client:
         await client.subscribe(topic)
         await client.publish(topic, "foo")
-        # TODO(felix): Switch to anext function from Python 3.10
+        # TODO(empicano): Switch to anext function from Python 3.10
         message = await client.messages.__anext__()
         assert message.payload == b"foo"
 
@@ -419,7 +424,7 @@ async def test_messages_view_multiple_tasks_concurrently() -> None:
     async with Client(HOSTNAME) as client, anyio.create_task_group() as tg:
 
         async def handle() -> None:
-            # TODO(felix): Switch to anext function from Python 3.10
+            # TODO(empicano): Switch to anext function from Python 3.10
             await client.messages.__anext__()
 
         tg.start_soon(handle)
@@ -440,7 +445,10 @@ async def test_messages_view_len() -> None:
         fut: asyncio.Future[None] = asyncio.Future()
 
         def _on_message(
-            self, client: mqtt.Client, userdata: Any, message: mqtt.MQTTMessage
+            self,
+            client: mqtt.Client,
+            userdata: Any,  # noqa: ANN401
+            message: mqtt.MQTTMessage,
         ) -> None:
             super()._on_message(client, userdata, message)
             self.fut.set_result(None)

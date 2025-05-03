@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -12,7 +13,7 @@ class MqttError(Exception):
 
 
 class MqttCodeError(MqttError):
-    def __init__(self, rc: int | ReasonCode | None, *args: Any) -> None:
+    def __init__(self, rc: int | ReasonCode | None, *args: Any) -> None:  # noqa: ANN401 # TODO(empicano): Refactor exceptions
         super().__init__(*args)
         self.rc = rc
 
@@ -30,10 +31,8 @@ class MqttConnectError(MqttCodeError):
             super().__init__(rc)
             return
         msg = "Connection refused"
-        try:
+        with contextlib.suppress(KeyError):
             msg += f": {_CONNECT_RC_STRINGS[rc]}"
-        except KeyError:
-            pass
         super().__init__(rc, msg)
 
 
