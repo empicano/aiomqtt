@@ -12,7 +12,6 @@ else:
     from typing_extensions import Self
 
 from .topic import Topic, TopicLike
-from .types import PayloadType
 
 
 class Message:
@@ -32,7 +31,7 @@ class Message:
     Attributes:
         topic (aiomqtt.client.Topic):
             The topic the message was published to.
-        payload (str | bytes | bytearray | int | float | None):
+        payload (bytes):
             The message payload.
         qos (int):
             The quality of service level of the subscription that matched the message.
@@ -47,7 +46,7 @@ class Message:
     def __init__(
         self,
         topic: TopicLike,
-        payload: PayloadType,
+        payload: bytes,
         qos: int,
         retain: bool,  # noqa: FBT001
         mid: int,
