@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix the type hint for `Message.payload` from `PayloadType` to `bytes` (@meronepy in #370)
+
 ## [2.4.0] - 2024-05-03
 
 ### Added
