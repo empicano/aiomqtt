@@ -6,12 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-01-04
+
 ### Fixed
 
 - Fix the type hint for `Message.payload` from `PayloadType` to `bytes` (@meronepy in #370)
+- Let exceptions bubble up in `Client.__aexit__` instead of suppressing them (@yujia21 in #375)
 - Load TLS certs from the executor thread (@allenporter in #382)
 
-## [2.4.0] - 2024-05-03
+## [2.4.0] - 2025-05-03
 
 ### Added
 
@@ -21,7 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Fix retained message delayed on TLS connection (@wpickard in #343)
 
-## [2.3.2] - 2024-04-08
+## [2.3.2] - 2025-04-08
 
 ### Added
 
@@ -31,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Add missing version attributes after uv switch (@empicano in #359)
 
-## [2.3.1] - 2024-03-31
+## [2.3.1] - 2025-03-31
 
 ### Changed
 
