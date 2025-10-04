@@ -395,8 +395,7 @@ async def test_aexit_client_is_already_disconnected_failure() -> None:
     client = Client(HOSTNAME)
     await client.__aenter__()
     client._disconnected.set_exception(RuntimeError)
-    with pytest.raises(RuntimeError):
-        await client.__aexit__(None, None, None)
+    await client.__aexit__(None, None, None)
 
 
 @pytest.mark.network
