@@ -153,7 +153,7 @@ class MessagesIterator:
         # If we disconnect from the broker, stop the generator with an exception
         task.cancel()
         msg = "Disconnected during message iteration"
-        raise MqttError(msg)
+        raise MqttError(msg) from self._client._disconnected.exception()  # noqa: SLF001
 
     def __len__(self) -> int:
         """Return the number of messages in the message queue."""
@@ -494,6 +494,10 @@ class Client:
         )  # [2]
         # Early out on error
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
+            if self._disconnected.done() and self._disconnected.exception():
+                raise MqttCodeError(
+                    info.rc, "Could not publish message"
+                ) from self._disconnected.exception()
             raise MqttCodeError(info.rc, "Could not publish message")
         # Early out on immediate success
         if info.is_published():
@@ -787,9 +791,7 @@ class Client:
             # Return early if the client is already disconnected
             if self._lock.locked():
                 self._lock.release()
-            if (exc := self._disconnected.exception()) is not None:
-                # If the disconnect wasn't intentional, raise the error that caused it
-                raise exc
+            # let any error on disconnection exception bubble up without suppressing it
             return
         # Try to gracefully disconnect from the broker
         rc = self._client.disconnect()
