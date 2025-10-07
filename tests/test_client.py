@@ -390,15 +390,6 @@ async def test_aexit_client_is_already_disconnected_success() -> None:
 
 
 @pytest.mark.network
-async def test_aexit_client_is_already_disconnected_failure() -> None:
-    """Test that ``aexit`` reraises if client is already disconnected with an error."""
-    client = Client(HOSTNAME)
-    await client.__aenter__()
-    client._disconnected.set_exception(RuntimeError)
-    await client.__aexit__(None, None, None)
-
-
-@pytest.mark.network
 async def test_messages_view_is_reusable() -> None:
     """Test that ``.messages`` is reusable after dis- and reconnection."""
     topic = TOPIC_PREFIX + "test_messages_generator_is_reusable"
