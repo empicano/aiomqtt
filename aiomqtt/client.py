@@ -250,7 +250,7 @@ class Client:
         self._loop = asyncio.get_running_loop()
 
         # Connection state
-        self._connected: asyncio.Future[None] = asyncio.Future()
+        self._connected: asyncio.Future[Properties | None] = asyncio.Future()
         self._disconnected: asyncio.Future[None] = asyncio.Future()
         self._lock: asyncio.Lock = asyncio.Lock()
 
@@ -355,6 +355,8 @@ class Client:
         if timeout is None:
             timeout = 10
         self.timeout = timeout
+
+        self.connack_properties = None
 
     @property
     def identifier(self) -> str:
@@ -553,7 +555,7 @@ class Client:
         userdata: Any,  # noqa: ARG002, ANN401
         flags: mqtt.ConnectFlags,  # noqa: ARG002
         reason_code: ReasonCode,
-        properties: Properties | None = None,  # noqa: ARG002
+        properties: Properties | None = None,
     ) -> None:
         """Called when we receive a CONNACK message from the broker."""
         # Return early if already connected. Sometimes, paho-mqtt calls _on_connect
@@ -563,7 +565,7 @@ class Client:
         if self._connected.done():
             return
         if reason_code == mqtt.CONNACK_ACCEPTED:
-            self._connected.set_result(None)
+            self._connected.set_result(properties)
         else:
             # We received a negative CONNACK response
             self._connected.set_exception(MqttConnectError(reason_code))
@@ -769,7 +771,9 @@ class Client:
             self._lock.release()
             raise MqttError(str(exc)) from None
         try:
-            await self._wait_for(self._connected, timeout=None)
+            self.connack_properties = await self._wait_for(
+                self._connected, timeout=None
+            )
         except MqttError:
             # Reset state if connection attempt times out or CONNACK returns negative
             self._lock.release()

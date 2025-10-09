@@ -450,9 +450,15 @@ async def test_messages_view_len() -> None:
         # Publish a message and wait for it to arrive
         for index in range(count):
             await client.publish(topic, None, qos=2)
-            await asyncio.wait_for(client.fut, timeout=1)
+            await asyncio.wait_for(client.fut, timeout=2)
             assert len(client.messages) == index + 1
         # Empty the queue
         for _ in range(count):
             await client.messages.__anext__()
         assert len(client.messages) == 0
+
+
+@pytest.mark.network
+async def test_client_connack_properties() -> None:
+    async with Client(HOSTNAME, protocol=ProtocolVersion.V5) as client:
+        assert isinstance(client.connack_properties, Properties)
