@@ -4,39 +4,28 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aiomqtt"
-version = "2.5.0"
 description = "The idiomatic asyncio MQTT client"
+version = "3.0.0-alpha.1"
+requires-python = ">=3.11,<4.0"
 authors = [
     { name = "Frederik Aalund", email = "fpa@sbtinstruments.com" },
     { name = "Felix Böhm", email = "f@bo3hm.com" },
     { name = "Jonathan Plasse", email = "jonathan.plasse@live.fr" },
 ]
 readme = "README.md"
-keywords = [
-    "mqtt",
-    "iot",
-    "internet-of-things",
-    "asyncio",
-    "paho-mqtt",
-    "mqttv5",
-]
+keywords = ["mqtt", "mqtt5", "asyncio", "iot", "internet-of-things"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "License :: OSI Approved :: BSD License",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.8,<4.0"
-dependencies = [
-    "paho-mqtt>=2.1.0,<3.0.0",
-    "typing-extensions>=4.4.0,<5.0.0; python_version < \"3.11\"",
-]
+license = { file = "LICENSE" }
+dependencies = ["mqtt5"]
 
 [project.urls]
 "Source" = "https://github.com/empicano/aiomqtt"
@@ -45,40 +34,36 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.8",
+    "pytest-cov>=7.0.0",
     "mypy>=1.10.0,<2.0.0",
-    "pytest>=7.3.1,<8.0.0",
-    "pytest-cov>=4.0.0,<5.0.0",
-    "anyio>=3.6.2,<4.0.0",
     "furo>=2023.3.27,<2024.0.0",
     "sphinx-autobuild>=2021.3.14,<2022.0.0",
     "myst-parser>=1.0.0,<2.0.0",
     "sphinx-copybutton>=0.5.2,<0.6.0",
     "sphinx>=5.3,<6.0",
-    "ruff>=0.12.10",
+    "ruff>=0.13.1",
 ]
 
+[tool.uv.sources]
+mqtt5 = { path = "../mqtt5" }
+
 [tool.ruff]
-target-version = "py38"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "D103",
-    "C901",    # complex-structure
-    "COM812",  # missing-trailing-comma
-    "PLR0912", # too-many-branches
-    "PLR0913", # too-many-arguments
-    "PLR0915", # too-many-statements
-    "D100",    # undocumented-public-module
-    "D101",    # undocumented-public-class
-    "D104",    # undocumented-public-package
     "D105",    # undocumented-magic-method
     "D107",    # undocumented-public-init
+    "ERA001",  # commented-out-code
+    "C901",    # complex-structure
+    "PLR0912", # too-many-branches
+    "PLR0913", # too-many-arguments
     "FIX002",  # line-contains-todo
     "TD003",   # missing-todo-link
-    "TC001",   # typing-only-first-party-import
-    "TC002",   # typing-only-third-party-import
-    "TC003",   # typing-only-standard-library-import
+    "COM812",  # missing-trailing-comma
 ]
 task-tags = ["SPDX-License-Identifier"]
 
@@ -86,13 +71,16 @@ task-tags = ["SPDX-License-Identifier"]
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*.py" = [
-    "S101",   # assert
-    "SLF001", # private-member-access
+"tests/**.py" = [
+    "INP001",  # implicit-namespace-package
+    "PLR2004", # magic-value-comparison
+    "S101",    # assert
+    "S106",    # hardcoded-password-func-arg
+    "SLF001",  # private-member-access
 ]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 strict = true
 show_column_numbers = true
 show_error_codes = true

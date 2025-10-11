@@ -1,56 +1,44 @@
 # SPDX-License-Identifier: BSD-3-Clause
-from __future__ import annotations
+"""Custom exceptions raised by the library."""
 
-import contextlib
-from typing import Any
-
-import paho.mqtt.client as mqtt
-from paho.mqtt.reasoncodes import ReasonCode
-
-
-class MqttError(Exception):
-    pass
-
-
-class MqttCodeError(MqttError):
-    def __init__(self, rc: int | ReasonCode | None, *args: Any) -> None:  # noqa: ANN401 # TODO(empicano): Refactor exceptions
-        super().__init__(*args)
-        self.rc = rc
-
-    def __str__(self) -> str:
-        if isinstance(self.rc, ReasonCode):
-            return f"[code:{self.rc.value}] {self.rc!s}"
-        if isinstance(self.rc, int):
-            return f"[code:{self.rc}] {mqtt.error_string(self.rc)}"
-        return f"[code:{self.rc}] {super().__str__()}"
+from mqtt5 import (
+    ConnAckPacket,
+    PubAckPacket,
+    PubCompPacket,
+    PubRecPacket,
+    PubRelPacket,
+    SubAckPacket,
+    UnsubAckPacket,
+)
 
 
-class MqttConnectError(MqttCodeError):
-    def __init__(self, rc: int | ReasonCode) -> None:
-        if isinstance(rc, ReasonCode):
-            super().__init__(rc)
-            return
-        msg = "Connection refused"
-        with contextlib.suppress(KeyError):
-            msg += f": {_CONNECT_RC_STRINGS[rc]}"
-        super().__init__(rc, msg)
+class ConnectError(Exception):
+    """Raised when the connection to the broker fails or is lost."""
 
 
-class MqttReentrantError(MqttError): ...
+class ProtocolError(Exception):
+    """Raised when the protocol is violated."""
 
 
-_CONNECT_RC_STRINGS: dict[int, str] = {
-    # Reference: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1898
-    # 0: Connection successful
-    # 1: Connection refused - incorrect protocol version
-    1: "Incorrect protocol version",
-    # 2: Connection refused - invalid client identifier
-    2: "Invalid client identifier",
-    # 3: Connection refused - server unavailable
-    3: "Server unavailable",
-    # 4: Connection refused - bad username or password
-    4: "Bad username or password",
-    # 5: Connection refused - not authorised
-    5: "Not authorised",
-    # 6-255: Currently unused.
-}
+class NegativeAckError(Exception):
+    """Raised when we receive a negative acknowledgment."""
+
+    def __init__(
+        self,
+        packet: ConnAckPacket
+        | PubAckPacket
+        | PubRecPacket
+        | PubRelPacket
+        | PubCompPacket
+        | SubAckPacket
+        | UnsubAckPacket,
+    ) -> None:
+        msg = f"Negative {packet.__class__.__name__}: "
+        if isinstance(packet, SubAckPacket | UnsubAckPacket):
+            msg += ", ".join([rc.name for rc in packet.reason_codes])
+        else:
+            msg += packet.reason_code.name
+        super().__init__(msg)
+        # Attach extra info as exception attributes
+        self.packet_id = None if isinstance(packet, ConnAckPacket) else packet.packet_id
+        self.reason_str = packet.reason_str

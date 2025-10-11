@@ -1,34 +1,57 @@
 # SPDX-License-Identifier: BSD-3-Clause
-from .client import (
-    Client,
-    MessagesIterator,
-    ProtocolVersion,
-    ProxySettings,
-    TLSParameters,
+"""The idiomatic asyncio MQTT client."""
+
+import importlib.metadata
+
+from mqtt5 import (
+    PubAckPacket,
+    PubAckReasonCode,
+    PubCompPacket,
+    PubCompReasonCode,
+    PublishPacket,
+    PubRecPacket,
+    PubRecReasonCode,
+    PubRelPacket,
+    PubRelReasonCode,
+    QoS,
+    RetainHandling,
+    SubAckPacket,
+    SubAckReasonCode,
+    UnsubAckPacket,
+    UnsubAckReasonCode,
     Will,
 )
-from .exceptions import MqttCodeError, MqttError, MqttReentrantError
-from .message import Message
-from .topic import Topic, TopicLike, Wildcard, WildcardLike
 
-__version__ = "2.5.0"
-__version_tuple__ = (2, 5, 0)
+from .client import (
+    Client,
+)
+from .exceptions import (
+    ConnectError,
+    NegativeAckError,
+    ProtocolError,
+)
 
+__version__ = importlib.metadata.version(__name__)
 __all__ = [
     "Client",
-    "Message",
-    "MessagesIterator",
-    "MqttCodeError",
-    "MqttError",
-    "MqttReentrantError",
-    "ProtocolVersion",
-    "ProxySettings",
-    "TLSParameters",
-    "Topic",
-    "TopicLike",
-    "Wildcard",
-    "WildcardLike",
+    "ConnectError",
+    "NegativeAckError",
+    "ProtocolError",
+    "PubAckPacket",
+    "PubAckReasonCode",
+    "PubCompPacket",
+    "PubCompReasonCode",
+    "PubRecPacket",
+    "PubRecReasonCode",
+    "PubRelPacket",
+    "PubRelReasonCode",
+    "PublishPacket",
+    "QoS",
+    "RetainHandling",
+    "SubAckPacket",
+    "SubAckReasonCode",
+    "UnsubAckPacket",
+    "UnsubAckReasonCode",
     "Will",
     "__version__",
-    "__version_tuple__",
 ]
