@@ -9,16 +9,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         include:
           - os: macos-latest
-            python-version: "3.8"
+            python-version: "3.11"
           - os: macos-latest
-            python-version: "3.13"
+            python-version: "3.14"
           - os: windows-latest
-            python-version: "3.8"
+            python-version: "3.11"
           - os: windows-latest
-            python-version: "3.13"
+            python-version: "3.14"
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -37,14 +37,3 @@ jobs:
         run: scripts/check --dry
       - name: Test with pytest
         run: scripts/test
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          name: ${{ matrix.os }} Python ${{ matrix.python-version }}
-          files: ./reports/coverage.xml
-      - name: Publish JUnit reports
-        uses: mikepenz/action-junit-report@v3
-        if: always() # Always run, even if the previous steps fail
-        with:
-          check_name: Junit reports
-          report_paths: "./reports/*.xml"
