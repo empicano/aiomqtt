@@ -61,7 +61,7 @@ class _SlidingWindowBuffer:
 
 
 class Client:
-    """Asynchronous context manager for MQTT connections.
+    """Asynchronous context manager for the connection to the MQTT broker.
 
     Args:
         hostname: The broker's hostname or IP address.
