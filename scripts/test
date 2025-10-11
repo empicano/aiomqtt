@@ -6,4 +6,12 @@ set -o errexit -o pipefail -o nounset
 cd "$(dirname "$0")/.."
 
 # Run tests with pytest
-uv run pytest --failed-first --verbosity=2 --cov=aiomqtt --cov-report=term-missing --cov-report=xml --junitxml=reports/pytest.xml --strict-config --strict-markers tests
+uv run pytest \
+    --failed-first \
+    --verbosity=2 \
+    --cov=aiomqtt \
+    --cov-report=term-missing \
+    --strict-config \
+    --strict-markers \
+    "$@" \
+    tests
