@@ -61,6 +61,7 @@ ignore = [
     "C901",    # complex-structure
     "PLR0912", # too-many-branches
     "PLR0913", # too-many-arguments
+    "PLR0915", # too-many-statements
     "FIX002",  # line-contains-todo
     "TD003",   # missing-todo-link
     "COM812",  # missing-trailing-comma

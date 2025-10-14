@@ -7,6 +7,7 @@ import contextlib
 import logging
 import secrets
 import socket
+import time
 import types
 import typing
 
@@ -16,6 +17,7 @@ from mqtt5 import (
     ConnectPacket,
     DisconnectPacket,
     DisconnectReasonCode,
+    PingReqPacket,
     PingRespPacket,
     PubAckPacket,
     PubAckReasonCode,
@@ -163,8 +165,10 @@ class Client:
         self._pending_pubcomps: dict[int, asyncio.Future[PubCompPacket]] = {}
         self._pending_subacks: dict[int, asyncio.Future[SubAckPacket]] = {}
         self._pending_unsubacks: dict[int, asyncio.Future[UnsubAckPacket]] = {}
+        self._pending_pingresp: asyncio.Future[PingRespPacket]
         self._packet_ids = self._packet_id_generator()
         self._send_semaphore: asyncio.BoundedSemaphore
+        self._most_recent_packet_sent_time: float
 
     async def __aenter__(self) -> typing.Self:
         if self._lock.locked():
@@ -181,28 +185,27 @@ class Client:
             msg = f"Failed to connect to {self._hostname}:{self._port}"
             raise ConnectError(msg) from exc
         self._reader, self._writer = await asyncio.open_connection(sock=self._socket)
-        # Send the packet
-        connect_packet = ConnectPacket(
-            client_id=self.identifier,
-            username=self._username,
-            password=self._password,
-            clean_start=self._clean_start,
-            will=self._will,
-            keep_alive=self._keep_alive,
-            session_expiry_interval=self._session_expiry_interval,
-            authentication_method=self._authentication_method,
-            authentication_data=self._authentication_data,
-            request_problem_info=self._request_problem_info,
-            request_response_info=self._request_response_info,
-            receive_max=self._receive_max,
-            topic_alias_max=0,
-            max_packet_size=self._max_packet_size,
-            user_properties=self._user_properties,
+        await self._send(
+            ConnectPacket(
+                client_id=self.identifier,
+                username=self._username,
+                password=self._password,
+                clean_start=self._clean_start,
+                will=self._will,
+                keep_alive=self._keep_alive,
+                session_expiry_interval=self._session_expiry_interval,
+                authentication_method=self._authentication_method,
+                authentication_data=self._authentication_data,
+                request_problem_info=self._request_problem_info,
+                request_response_info=self._request_response_info,
+                receive_max=self._receive_max,
+                topic_alias_max=0,
+                max_packet_size=self._max_packet_size,
+                user_properties=self._user_properties,
+            )
         )
-        self._writer.write(connect_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
-        data = await self._reader.read(2**12)
+        data = await self._reader.read(2**14)
         self._buffer_in.write(data)
         packet, nbytes = read(self._buffer_in.buffer)
         self._buffer_in.left += nbytes
@@ -233,8 +236,9 @@ class Client:
 
     async def _run_background_tasks(self) -> None:
         async with asyncio.TaskGroup() as task_group:
-            task_group.create_task(self._receive())
-            # TODO(empicano): Ping
+            task_group.create_task(self._receive_loop())
+            if self._keep_alive > 0:
+                task_group.create_task(self._pingreq_loop())
             # TODO(empicano): Reconnection
 
     def _packet_id_generator(self) -> typing.Iterator[int]:
@@ -243,7 +247,24 @@ class Client:
             yield packet_id
             packet_id = packet_id % (2**16 - 1) + 1
 
-    async def _receive(self) -> None:
+    async def _send(
+        self,
+        packet: ConnectPacket
+        | PublishPacket
+        | PubAckPacket
+        | PubRecPacket
+        | PubRelPacket
+        | PubCompPacket
+        | SubscribePacket
+        | UnsubscribePacket
+        | PingReqPacket
+        | DisconnectPacket,
+    ) -> None:
+        self._writer.write(packet.write())
+        self._most_recent_packet_sent_time = time.monotonic()
+        await self._writer.drain()
+
+    async def _receive_loop(self) -> None:
         while True:
             data = await self._reader.read(2**14)
             if not data:  # Reached EOF
@@ -269,14 +290,14 @@ class Client:
                     return
                 self._buffer_in.left += nbytes
                 self._logger.debug(
-                    "Received packet with type %s", type(packet).__name__
+                    "Received packet with type: %s", type(packet).__name__
                 )
                 match packet:
                     case PublishPacket():
                         if len(self._getters) == 0:
                             if packet.qos == QoS.AT_MOST_ONCE:
                                 # Drop when no getter is immediately available
-                                self._logger.debug("Dropping QoS=0 PUBLISH packet")
+                                self._logger.debug("Dropping QoS=0 PublishPacket")
                             else:
                                 self._queue.append(packet)
                         else:
@@ -302,13 +323,13 @@ class Client:
                         self._pending_unsubacks[packet.packet_id].set_result(packet)
                     case DisconnectPacket():
                         self._logger.warning(
-                            "Received disconnect packet with reason code: %s",
+                            "Received DisconnectPacket with reason code: %s",
                             packet.reason_code.name,
                         )
                         await self._disconnect()
                         return
                     case PingRespPacket():
-                        pass
+                        self._pending_pingresp.set_result(packet)
                     case _:
                         self._logger.error(
                             "Received packet with unexpected type: %s",
@@ -318,6 +339,22 @@ class Client:
                             reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
                         )
                         return
+
+    async def _pingreq_loop(self) -> None:
+        while True:
+            while (  # noqa: ASYNC110
+                elapsed := time.monotonic() - self._most_recent_packet_sent_time
+            ) < self._keep_alive:
+                await asyncio.sleep(self._keep_alive - elapsed)
+            try:
+                # Per specification, we should wait for a "reasonable amount of time"
+                await asyncio.wait_for(self._pingreq(), timeout=self._keep_alive / 2)
+            except TimeoutError:
+                self._logger.warning("Ping request timed out")
+                await self._disconnect(
+                    reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT,
+                )
+                return
 
     @typing.overload
     async def publish(
@@ -446,19 +483,19 @@ class Client:
         correlation_data: bytes | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
-        publish_packet = PublishPacket(
-            topic=topic,
-            payload=payload,
-            qos=QoS.AT_MOST_ONCE,
-            retain=retain,
-            message_expiry_interval=message_expiry_interval,
-            content_type=content_type,
-            response_topic=response_topic,
-            correlation_data=correlation_data,
-            user_properties=user_properties,
+        await self._send(
+            PublishPacket(
+                topic=topic,
+                payload=payload,
+                qos=QoS.AT_MOST_ONCE,
+                retain=retain,
+                message_expiry_interval=message_expiry_interval,
+                content_type=content_type,
+                response_topic=response_topic,
+                correlation_data=correlation_data,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(publish_packet.write())
-        await self._writer.drain()
 
     async def _publish_at_least_once(
         self,
@@ -475,21 +512,20 @@ class Client:
         packet_id = next(self._packet_ids)
         # Track the acknowledgement
         self._pending_pubacks[packet_id] = asyncio.Future()
-        # Send the packet
-        publish_packet = PublishPacket(
-            packet_id=packet_id,
-            topic=topic,
-            payload=payload,
-            qos=QoS.AT_LEAST_ONCE,
-            retain=retain,
-            message_expiry_interval=message_expiry_interval,
-            content_type=content_type,
-            response_topic=response_topic,
-            correlation_data=correlation_data,
-            user_properties=user_properties,
+        await self._send(
+            PublishPacket(
+                packet_id=packet_id,
+                topic=topic,
+                payload=payload,
+                qos=QoS.AT_LEAST_ONCE,
+                retain=retain,
+                message_expiry_interval=message_expiry_interval,
+                content_type=content_type,
+                response_topic=response_topic,
+                correlation_data=correlation_data,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(publish_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
         puback_packet = await self._pending_pubacks[packet_id]
         del self._pending_pubacks[packet_id]
@@ -515,21 +551,20 @@ class Client:
         packet_id = next(self._packet_ids)
         # Track the acknowledgement
         self._pending_pubrecs[packet_id] = asyncio.Future()
-        # Send the packet
-        publish_packet = PublishPacket(
-            topic=topic,
-            payload=payload,
-            qos=QoS.EXACTLY_ONCE,
-            retain=retain,
-            packet_id=packet_id,
-            message_expiry_interval=message_expiry_interval,
-            content_type=content_type,
-            response_topic=response_topic,
-            correlation_data=correlation_data,
-            user_properties=user_properties,
+        await self._send(
+            PublishPacket(
+                topic=topic,
+                payload=payload,
+                qos=QoS.EXACTLY_ONCE,
+                retain=retain,
+                packet_id=packet_id,
+                message_expiry_interval=message_expiry_interval,
+                content_type=content_type,
+                response_topic=response_topic,
+                correlation_data=correlation_data,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(publish_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
         pubrec_packet = await self._pending_pubrecs[packet_id]
         del self._pending_pubrecs[packet_id]
@@ -549,14 +584,14 @@ class Client:
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             msg = f"Not connected to {self._hostname}:{self._port}"
             raise ConnectError(msg)
-        puback_packet = PubAckPacket(
-            packet_id=packet_id,
-            reason_code=reason_code,
-            reason_str=reason_str,
-            user_properties=user_properties,
+        await self._send(
+            PubAckPacket(
+                packet_id=packet_id,
+                reason_code=reason_code,
+                reason_str=reason_str,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(puback_packet.write())
-        await self._writer.drain()
 
     async def pubrec(
         self,
@@ -572,15 +607,14 @@ class Client:
             raise ConnectError(msg)
         # Track the acknowledgement
         self._pending_pubrels[packet_id] = asyncio.Future()
-        # Send the packet
-        pubrec_packet = PubRecPacket(
-            packet_id=packet_id,
-            reason_code=reason_code,
-            reason_str=reason_str,
-            user_properties=user_properties,
+        await self._send(
+            PubRecPacket(
+                packet_id=packet_id,
+                reason_code=reason_code,
+                reason_str=reason_str,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(pubrec_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
         pubrel_packet = await self._pending_pubrels[packet_id]
         del self._pending_pubrels[packet_id]
@@ -602,15 +636,14 @@ class Client:
             raise ConnectError(msg)
         # Track the acknowledgement
         self._pending_pubcomps[packet_id] = asyncio.Future()
-        # Send the packet
-        pubrel_packet = PubRelPacket(
-            packet_id=packet_id,
-            reason_code=reason_code,
-            reason_str=reason_str,
-            user_properties=user_properties,
+        await self._send(
+            PubRelPacket(
+                packet_id=packet_id,
+                reason_code=reason_code,
+                reason_str=reason_str,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(pubrel_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
         pubcomp_packet = await self._pending_pubcomps[packet_id]
         del self._pending_pubcomps[packet_id]
@@ -630,14 +663,14 @@ class Client:
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             msg = f"Not connected to {self._hostname}:{self._port}"
             raise ConnectError(msg)
-        pubcomp_packet = PubCompPacket(
-            packet_id=packet_id,
-            reason_code=reason_code,
-            reason_str=reason_str,
-            user_properties=user_properties,
+        await self._send(
+            PubCompPacket(
+                packet_id=packet_id,
+                reason_code=reason_code,
+                reason_str=reason_str,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(pubcomp_packet.write())
-        await self._writer.drain()
 
     async def subscribe(
         self,
@@ -679,22 +712,21 @@ class Client:
         packet_id = next(self._packet_ids)
         # Track the acknowledgement
         self._pending_subacks[packet_id] = asyncio.Future()
-        # Send the packet
-        subscribe_packet = SubscribePacket(
-            packet_id=packet_id,
-            subscriptions=[
-                Subscription(
-                    pattern=pattern,
-                    max_qos=max_qos,
-                    no_local=no_local,
-                    retain_as_published=retain_as_published,
-                    retain_handling=retain_handling,
-                ),
-            ],
-            user_properties=user_properties,
+        await self._send(
+            SubscribePacket(
+                packet_id=packet_id,
+                subscriptions=[
+                    Subscription(
+                        pattern=pattern,
+                        max_qos=max_qos,
+                        no_local=no_local,
+                        retain_as_published=retain_as_published,
+                        retain_handling=retain_handling,
+                    ),
+                ],
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(subscribe_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
         suback_packet = await self._pending_subacks[packet_id]
         del self._pending_subacks[packet_id]
@@ -732,14 +764,13 @@ class Client:
         packet_id = next(self._packet_ids)
         # Track the acknowledgement
         self._pending_unsubacks[packet_id] = asyncio.Future()
-        # Send the packet
-        unsubscribe_packet = UnsubscribePacket(
-            packet_id=packet_id,
-            patterns=[pattern],
-            user_properties=user_properties,
+        await self._send(
+            UnsubscribePacket(
+                packet_id=packet_id,
+                patterns=[pattern],
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(unsubscribe_packet.write())
-        await self._writer.drain()
         # Wait for the acknowledgement
         unsuback_packet = await self._pending_unsubacks[packet_id]
         del self._pending_unsubacks[packet_id]
@@ -749,6 +780,16 @@ class Client:
         if unsuback_packet.reason_codes[0] != UnsubAckReasonCode.SUCCESS:
             raise NegativeAckError(unsuback_packet)
         return unsuback_packet
+
+    async def _pingreq(self) -> PingRespPacket:
+        if not hasattr(self, "_disconnected") or self._disconnected.done():
+            msg = f"Not connected to {self._hostname}:{self._port}"
+            raise ConnectError(msg)
+        # Track the acknowledgement
+        self._pending_pingresp = asyncio.Future()
+        await self._send(PingReqPacket())
+        # Wait for the acknowledgement
+        return await self._pending_pingresp
 
     async def _disconnect(
         self,
@@ -769,16 +810,15 @@ class Client:
             if reason_code == DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
             else "without",
         )
-        # Send the packet
-        disconnect_packet = DisconnectPacket(
-            reason_code=reason_code,
-            session_expiry_interval=session_expiry_interval,
-            server_reference=server_reference,
-            reason_str=reason_str,
-            user_properties=user_properties,
+        await self._send(
+            DisconnectPacket(
+                reason_code=reason_code,
+                session_expiry_interval=session_expiry_interval,
+                server_reference=server_reference,
+                reason_str=reason_str,
+                user_properties=user_properties,
+            )
         )
-        self._writer.write(disconnect_packet.write())
-        await self._writer.drain()
         # Close the socket
         self._writer.close()
         await self._writer.wait_closed()
