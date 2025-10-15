@@ -7,5 +7,5 @@ cd "$(dirname "$0")/.."
 
 # Path to our Mosquitto configuration
 MOSQUITTO_CONFIGURATION="$(pwd)/scripts/mosquitto.conf"
-# Start a Mosquitto MQTT broker via docker
+# Start Mosquitto with Docker
 docker run -it --rm --name mosquitto -p 127.0.0.1:1883:1883 -v "${MOSQUITTO_CONFIGURATION}:/mosquitto/config/mosquitto.conf" eclipse-mosquitto:latest
