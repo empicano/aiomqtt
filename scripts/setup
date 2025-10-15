@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-
-# Safety first
-set -o errexit -o pipefail -o nounset
-# Change into the project's directory
-cd "$(dirname "$0")/.."
-
-# Install the dependencies and the local version of aiomqtt
-uv sync --all-extras "$@"
