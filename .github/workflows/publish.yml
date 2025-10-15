@@ -24,5 +24,6 @@ jobs:
         run: scripts/setup --locked
       - name: Build package
         run: uv build
-      - name: Publish to PyPI # With trusted publishing (no token required)
+      - name: Publish to PyPI
+        # Uses trusted publishing (no token required)
         uses: pypa/gh-action-pypi-publish@release/v1
