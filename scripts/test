@@ -12,6 +12,4 @@ uv run pytest \
     --cov=aiomqtt \
     --cov-report=term-missing \
     --strict-config \
-    --strict-markers \
-    "$@" \
-    tests
+    "$@"
