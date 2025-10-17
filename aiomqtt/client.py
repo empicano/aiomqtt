@@ -96,6 +96,8 @@ class Client:
             in the CONNACK packet. If True, the broker may return response information.
         receive_max: The maximum number of unacknowledged PUBLISH packets with QoS > 0
             that the broker may send to the client.
+        topic_alias_max: The maximum number of topic aliases that the broker may use
+            when sending PUBLISH packets.
         max_packet_size: The maximum size of a packet in bytes that we want to accept.
             If None, there is no limit beyond limitations in the protocol.
         user_properties: Name/value pairs to send with the packet. The meaning of these
@@ -122,7 +124,7 @@ class Client:
         request_problem_info: bool = True,
         request_response_info: bool = False,
         receive_max: int = 65535,
-        # topic_alias_max: int = 0,
+        topic_alias_max: int = 0,
         max_packet_size: int | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
@@ -146,6 +148,7 @@ class Client:
         self._request_problem_info = request_problem_info
         self._request_response_info = request_response_info
         self._receive_max = receive_max
+        self._topic_alias_max = topic_alias_max
         self._max_packet_size = max_packet_size
         self._user_properties = user_properties
         # Network settings
@@ -202,7 +205,7 @@ class Client:
                 request_problem_info=self._request_problem_info,
                 request_response_info=self._request_response_info,
                 receive_max=self._receive_max,
-                topic_alias_max=0,
+                topic_alias_max=self._topic_alias_max,
                 max_packet_size=self._max_packet_size,
                 user_properties=self._user_properties,
             )
@@ -306,7 +309,7 @@ class Client:
                 case PublishPacket():
                     if len(self._getters) == 0:
                         if packet.qos == QoS.AT_MOST_ONCE:
-                            # Drop when no getter is immediately available
+                            # Drop when no consumer is immediately available
                             self._logger.debug("Dropping QoS=0 PublishPacket")
                         else:
                             self._queue.append(packet)
@@ -683,6 +686,7 @@ class Client:
         no_local: bool = False,
         retain_as_published: bool = True,
         retain_handling: RetainHandling = RetainHandling.SEND_ALWAYS,
+        subscription_id: int | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> SubAckPacket:
         """Subscribe to a topic or pattern.
@@ -702,6 +706,9 @@ class Client:
                 If SEND_IF_SUBSCRIPTION_NOT_EXISTS, retained messages are sent only if
                 the subscription does not yet exist. If SEND_NEVER, retained messages
                 are not sent.
+            subscription_id: The identifier of the subscription. The broker includes
+                this value in every message to the client that matches the
+                subscription.
             user_properties: Name/value pairs to send with the packet. The meaning of
                 these properties is not defined by the MQTT specification. The same name
                 is allowed to appear more than once. The order is preserved.
@@ -726,6 +733,7 @@ class Client:
                         retain_handling=retain_handling,
                     ),
                 ],
+                subscription_id=subscription_id,
                 user_properties=user_properties,
             )
         )
