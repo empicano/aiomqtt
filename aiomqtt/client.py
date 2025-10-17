@@ -101,8 +101,8 @@ class Client:
         max_packet_size: The maximum size of a packet in bytes that we want to accept.
             If None, there is no limit beyond limitations in the protocol.
         user_properties: Name/value pairs to send with the packet. The meaning of these
-            properties is not defined by the MQTT specification. The same name is
-            allowed to appear more than once. The order is preserved.
+            properties is not defined by the specification. The same name is allowed to
+            appear more than once. The order is preserved.
     """
 
     def __init__(
@@ -440,7 +440,30 @@ class Client:
         correlation_data: bytes | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubAckPacket | PubRecPacket | None:
-        """Publish a message."""
+        """Publish a message.
+
+        Args:
+            topic: The topic to publish to.
+            payload: The message payload as bytes.
+            qos: The QoS of the message.
+            retain: Whether to retain the message. If True, any existing retained
+                message for the topic will be replaced.
+            message_expiry_interval: The lifetime of the message in seconds. When the
+                expiry interval has passed, the message will no longer be delivered to
+                any subscribers.
+            content_type: Description of the content of the message. The specification
+                does not dictate the format, but suggests using MIME types.
+            response_topic: The topic to the subscriber should respond on in a
+                request/response flow.
+            correlation_data: Set by the publisher in a request/response flow to match
+                responses to requests.
+            user_properties: Name/value pairs to send with the packet. The meaning of
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
+
+        Returns:
+            The PUBACK / PUBREC response from the broker (for QoS=1 / QoS=2).
+        """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             raise ConnectError(self._hostname, self._port)
         match qos:
@@ -710,8 +733,8 @@ class Client:
                 this value in every message to the client that matches the
                 subscription.
             user_properties: Name/value pairs to send with the packet. The meaning of
-                these properties is not defined by the MQTT specification. The same name
-                is allowed to appear more than once. The order is preserved.
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
 
         Returns:
             The SUBACK response from the broker.
@@ -763,8 +786,8 @@ class Client:
         Args:
             pattern: The topic or pattern to unsubscribe from.
             user_properties: Name/value pairs to send with the packet. The meaning of
-                these properties is not defined by the MQTT specification. The same name
-                is allowed to appear more than once. The order is preserved.
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
 
         Returns:
             The UNSUBACK response from the broker.
