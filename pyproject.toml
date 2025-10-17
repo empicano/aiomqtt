@@ -13,7 +13,6 @@ authors = [
     { name = "Jonathan Plasse", email = "jonathan.plasse@live.fr" },
 ]
 readme = "README.md"
-keywords = ["mqtt", "mqtt5", "asyncio", "iot", "internet-of-things"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -29,7 +28,7 @@ dependencies = ["mqtt5"]
 
 [project.urls]
 "Source" = "https://github.com/empicano/aiomqtt"
-"Documentation" = "https://aiomqtt.bo3hm.com"
+"Documentation" = "https://github.com/empicano/aiomqtt/tree/main/docs"
 "Issue tracker" = "https://github.com/empicano/aiomqtt/issues"
 
 [dependency-groups]
@@ -38,11 +37,6 @@ dev = [
     "pytest-asyncio>=0.23.8",
     "pytest-cov>=7.0.0",
     "mypy>=1.10.0,<2.0.0",
-    "furo>=2023.3.27,<2024.0.0",
-    "sphinx-autobuild>=2021.3.14,<2022.0.0",
-    "myst-parser>=1.0.0,<2.0.0",
-    "sphinx-copybutton>=0.5.2,<0.6.0",
-    "sphinx>=5.3,<6.0",
     "ruff>=0.13.1",
 ]
 
@@ -66,7 +60,6 @@ ignore = [
     "TD003",   # missing-todo-link
     "COM812",  # missing-trailing-comma
 ]
-task-tags = ["SPDX-License-Identifier"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -84,28 +77,10 @@ convention = "google"
 python_version = "3.11"
 strict = true
 show_column_numbers = true
-show_error_codes = true
 show_error_context = true
 pretty = true
 
 [tool.pytest.ini_options]
-markers = ["network: tests that requires network access"]
+addopts = "--strict-markers"
+markers = ["network: Requires network access"]
 xfail_strict = true
-
-[tool.coverage.run]
-branch = true
-data_file = "reports/.coverage"
-
-[tool.coverage.report]
-show_missing = true
-# Regexes for lines to exclude from consideration
-exclude_lines = [
-    # Have to re-enable the standard pragma
-    "pragma: no cover",
-    # Don't complain if tests do not hit defensive assertion code:
-    "raise AssertionError",
-    "raise NotImplementedError",
-]
-
-[tool.coverage.xml]
-output = "reports/coverage.xml"
