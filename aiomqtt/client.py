@@ -17,6 +17,7 @@ from mqtt5 import (
     ConnectPacket,
     DisconnectPacket,
     DisconnectReasonCode,
+    Packet,
     PingReqPacket,
     PingRespPacket,
     PubAckPacket,
@@ -78,6 +79,8 @@ class Client:
             resumes the existing session. If no session is available, then the broker
             creates a new session.
         will: The will message to publish if the client disconnects unexpectedly.
+        timeout: The default timeout for all communication with the broker in seconds.
+            If None, there is no timeout.
         keep_alive: The keep alive interval in seconds. The broker might override this
             value.
         session_expiry_interval: The time for the session to expire in seconds.
@@ -111,7 +114,7 @@ class Client:
         password: str | None = None,
         clean_start: bool = False,
         will: Will | None = None,
-        # timeout: float = 10,
+        timeout: float = 10,
         keep_alive: int = 0,
         session_expiry_interval: int = 0,
         authentication_method: str | None = None,
@@ -150,6 +153,7 @@ class Client:
         self._socket: socket.socket
         self._reader: asyncio.StreamReader
         self._writer: asyncio.StreamWriter
+        self._timeout = timeout
         # Connection status
         self._disconnected: asyncio.Future[None]
         self._lock: asyncio.Lock = asyncio.Lock()
@@ -182,8 +186,7 @@ class Client:
             self._socket.connect((self._hostname, self._port))
         except OSError as exc:
             self._lock.release()
-            msg = f"Failed to connect to {self._hostname}:{self._port}"
-            raise ConnectError(msg) from exc
+            raise ConnectError(self._hostname, self._port) from exc
         self._reader, self._writer = await asyncio.open_connection(sock=self._socket)
         await self._send(
             ConnectPacket(
@@ -205,10 +208,7 @@ class Client:
             )
         )
         # Wait for the acknowledgement
-        data = await self._reader.read(2**14)
-        self._buffer_in.write(data)
-        packet, nbytes = read(self._buffer_in.buffer)
-        self._buffer_in.left += nbytes
+        packet = await self._receive()
         if not isinstance(packet, ConnAckPacket):
             await self._disconnect(
                 reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
@@ -264,81 +264,91 @@ class Client:
         self._most_recent_packet_sent_time = time.monotonic()
         await self._writer.drain()
 
-    async def _receive_loop(self) -> None:
+    async def _receive(self) -> Packet:
         while True:
-            data = await self._reader.read(2**14)
-            if not data:  # Reached EOF
-                await self._disconnect()
-                return
-            self._buffer_in.write(data)
-            while self._buffer_in.left < self._buffer_in.right:
+            # TODO(empicano): Check for _disconnected?
+            if self._buffer_in.left < self._buffer_in.right:
                 try:
                     # TODO(empicano): We don't actually know if we're reading over the
                     # buffer.right pointer -> We could check afterwards with nbytes
-                    # until mqtt5 implements memoryviews
+                    # until mqtt5 implements memoryviews; Then, also remove the
+                    # if-statement and return immediately in mqtt5 if len(memview) == 0
                     packet, nbytes = read(
                         self._buffer_in.buffer,
                         index=self._buffer_in.left,
                     )
                 except IndexError:  # Partial packet
-                    break
-                except ValueError:
-                    self._logger.exception("Received malformed packet")
+                    pass
+                except ValueError as exc:
                     await self._disconnect(
                         reason_code=DisconnectReasonCode.MALFORMED_PACKET,
                     )
-                    return
-                self._buffer_in.left += nbytes
-                self._logger.debug(
-                    "Received packet with type: %s", type(packet).__name__
-                )
-                match packet:
-                    case PublishPacket():
-                        if len(self._getters) == 0:
-                            if packet.qos == QoS.AT_MOST_ONCE:
-                                # Drop when no getter is immediately available
-                                self._logger.debug("Dropping QoS=0 PublishPacket")
-                            else:
-                                self._queue.append(packet)
+                    msg = "Received malformed packet"
+                    raise ProtocolError(msg) from exc
+                else:
+                    self._buffer_in.left += nbytes
+                    return packet
+            data = await self._reader.read(2**14)
+            if not data:  # Reached EOF
+                await self._disconnect()
+                raise ConnectError(self._hostname, self._port)
+            self._buffer_in.write(data)
+
+    async def _receive_loop(self) -> None:
+        while True:
+            try:
+                packet = await self._receive()
+            except ProtocolError:
+                self._logger.exception("Received malformed packet")
+                raise
+            self._logger.debug("Received packet with type: %s", type(packet).__name__)
+            match packet:
+                case PublishPacket():
+                    if len(self._getters) == 0:
+                        if packet.qos == QoS.AT_MOST_ONCE:
+                            # Drop when no getter is immediately available
+                            self._logger.debug("Dropping QoS=0 PublishPacket")
                         else:
-                            self._getters.popleft().set_result(packet)
-                    case PubAckPacket():
-                        self._pending_pubacks[packet.packet_id].set_result(packet)
+                            self._queue.append(packet)
+                    else:
+                        self._getters.popleft().set_result(packet)
+                case PubAckPacket():
+                    self._pending_pubacks[packet.packet_id].set_result(packet)
+                    self._send_semaphore.release()
+                case PubRecPacket():
+                    self._pending_pubrecs[packet.packet_id].set_result(packet)
+                    if packet.reason_code not in [
+                        PubRecReasonCode.SUCCESS,
+                        PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
+                    ]:
                         self._send_semaphore.release()
-                    case PubRecPacket():
-                        self._pending_pubrecs[packet.packet_id].set_result(packet)
-                        if packet.reason_code not in [
-                            PubRecReasonCode.SUCCESS,
-                            PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
-                        ]:
-                            self._send_semaphore.release()
-                    case PubRelPacket():
-                        self._pending_pubrels[packet.packet_id].set_result(packet)
-                    case PubCompPacket():
-                        self._pending_pubcomps[packet.packet_id].set_result(packet)
-                        self._send_semaphore.release()
-                    case SubAckPacket():
-                        self._pending_subacks[packet.packet_id].set_result(packet)
-                    case UnsubAckPacket():
-                        self._pending_unsubacks[packet.packet_id].set_result(packet)
-                    case DisconnectPacket():
-                        self._logger.warning(
-                            "Received DisconnectPacket with reason code: %s",
-                            packet.reason_code.name,
-                        )
-                        await self._disconnect()
-                        return
-                    case PingRespPacket():
-                        self._pending_pingresp.set_result(packet)
-                    case _:
-                        self._logger.error(
-                            "Received packet with unexpected type: %s",
-                            type(packet).__name__,
-                        )
-                        await self._disconnect(
-                            reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
-                        )
-                        return
+                case PubRelPacket():
+                    self._pending_pubrels[packet.packet_id].set_result(packet)
+                case PubCompPacket():
+                    self._pending_pubcomps[packet.packet_id].set_result(packet)
+                    self._send_semaphore.release()
+                case SubAckPacket():
+                    self._pending_subacks[packet.packet_id].set_result(packet)
+                case UnsubAckPacket():
+                    self._pending_unsubacks[packet.packet_id].set_result(packet)
+                case DisconnectPacket():
+                    self._logger.warning(
+                        "Received DisconnectPacket with reason code: %s",
+                        packet.reason_code.name,
+                    )
+                    await self._disconnect()
+                    return
+                case PingRespPacket():
+                    self._pending_pingresp.set_result(packet)
+                case _:
+                    self._logger.error(
+                        "Received packet with unexpected type: %s",
+                        type(packet).__name__,
+                    )
+                    await self._disconnect(
+                        reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
+                    )
+                    return
 
     async def _pingreq_loop(self) -> None:
         while True:
@@ -347,14 +357,12 @@ class Client:
             ) < self._keep_alive:
                 await asyncio.sleep(self._keep_alive - elapsed)
             try:
-                # Per specification, we should wait for a "reasonable amount of time"
-                await asyncio.wait_for(self._pingreq(), timeout=self._keep_alive / 2)
+                await asyncio.wait_for(self._pingreq(), timeout=self._timeout)
             except TimeoutError:
-                self._logger.warning("Ping request timed out")
+                self._logger.warning("Operation timed out: PingReq")
                 await self._disconnect(
-                    reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT,
+                    reason_code=DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
                 )
-                return
 
     @typing.overload
     async def publish(
@@ -431,8 +439,7 @@ class Client:
     ) -> PubAckPacket | PubRecPacket | None:
         """Publish a message."""
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         match qos:
             case QoS.AT_MOST_ONCE:
                 await self._publish_at_most_once(
@@ -582,8 +589,7 @@ class Client:
     ) -> None:
         """Acknowledge receipt of QoS=1 PUBLISH packet."""
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         await self._send(
             PubAckPacket(
                 packet_id=packet_id,
@@ -603,8 +609,7 @@ class Client:
     ) -> PubRelPacket:
         """Acknowledge receipt of QoS=2 PUBLISH packet."""
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         # Track the acknowledgement
         self._pending_pubrels[packet_id] = asyncio.Future()
         await self._send(
@@ -632,8 +637,7 @@ class Client:
     ) -> PubCompPacket:
         """Acknowledge receipt of PUBREC packet (QoS=2 PUBLISH flow)."""
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         # Track the acknowledgement
         self._pending_pubcomps[packet_id] = asyncio.Future()
         await self._send(
@@ -661,8 +665,7 @@ class Client:
     ) -> None:
         """Acknowledge receipt of PUBREL packet (QoS=2 PUBLISH flow)."""
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         await self._send(
             PubCompPacket(
                 packet_id=packet_id,
@@ -707,8 +710,7 @@ class Client:
             The SUBACK response from the broker.
         """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         packet_id = next(self._packet_ids)
         # Track the acknowledgement
         self._pending_subacks[packet_id] = asyncio.Future()
@@ -732,7 +734,8 @@ class Client:
         del self._pending_subacks[packet_id]
         if len(suback_packet.reason_codes) != 1:
             # TODO(empicano): We should disconnect here
-            raise ProtocolError
+            msg = "Received malformed packet"
+            raise ProtocolError(msg)
         if suback_packet.reason_codes[0] not in (
             SubAckReasonCode.GRANTED_QOS_AT_MOST_ONCE,
             SubAckReasonCode.GRANTED_QOS_AT_LEAST_ONCE,
@@ -759,8 +762,7 @@ class Client:
             The UNSUBACK response from the broker.
         """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         packet_id = next(self._packet_ids)
         # Track the acknowledgement
         self._pending_unsubacks[packet_id] = asyncio.Future()
@@ -776,15 +778,15 @@ class Client:
         del self._pending_unsubacks[packet_id]
         if len(unsuback_packet.reason_codes) != 1:
             # TODO(empicano): We should disconnect here
-            raise ProtocolError
+            msg = "Received malformed packet"
+            raise ProtocolError(msg)
         if unsuback_packet.reason_codes[0] != UnsubAckReasonCode.SUCCESS:
             raise NegativeAckError(unsuback_packet)
         return unsuback_packet
 
     async def _pingreq(self) -> PingRespPacket:
         if not hasattr(self, "_disconnected") or self._disconnected.done():
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
         # Track the acknowledgement
         self._pending_pingresp = asyncio.Future()
         await self._send(PingReqPacket())
@@ -827,8 +829,7 @@ class Client:
         """Iterate over incoming messages."""
         while True:
             if not hasattr(self, "_disconnected") or self._disconnected.done():
-                msg = f"Not connected to {self._hostname}:{self._port}"
-                raise ConnectError(msg)
+                raise ConnectError(self._hostname, self._port)
             if len(self._queue) > 0:
                 yield self._queue.popleft()
                 continue
@@ -842,8 +843,7 @@ class Client:
             if fut.done():
                 yield fut.result()
                 continue
-            msg = f"Not connected to {self._hostname}:{self._port}"
-            raise ConnectError(msg)
+            raise ConnectError(self._hostname, self._port)
 
     async def __aexit__(
         self,
