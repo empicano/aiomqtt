@@ -216,7 +216,7 @@ class Client:
             await self._disconnect(
                 reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
             )
-            msg = f"Received packet with unexpected type: {type(packet)}"
+            msg = f"Received packet of unexpected type: {type(packet).__name__}"
             raise ProtocolError(msg)
         self.connack = packet
         if self.connack.reason_code != ConnAckReasonCode.SUCCESS:
@@ -334,24 +334,22 @@ class Client:
                     self._pending_subacks[packet.packet_id].set_result(packet)
                 case UnsubAckPacket():
                     self._pending_unsubacks[packet.packet_id].set_result(packet)
+                case PingRespPacket():
+                    self._pending_pingresp.set_result(packet)
                 case DisconnectPacket():
                     self._logger.warning(
                         "Received DisconnectPacket with reason code: %s",
                         packet.reason_code.name,
                     )
                     await self._disconnect()
-                    return
-                case PingRespPacket():
-                    self._pending_pingresp.set_result(packet)
+                    raise ConnectError(self._hostname, self._port)
                 case _:
-                    self._logger.error(
-                        "Received packet with unexpected type: %s",
-                        type(packet).__name__,
-                    )
+                    msg = f"Received packet of unexpected type: {type(packet).__name__}"
+                    self._logger.error(msg)
                     await self._disconnect(
-                        reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
+                        reason_code=DisconnectReasonCode.PROTOCOL_ERROR
                     )
-                    return
+                    raise ProtocolError(msg)
 
     async def _pingreq_loop(self) -> None:
         while True:
@@ -361,11 +359,12 @@ class Client:
                 await asyncio.sleep(self._keep_alive - elapsed)
             try:
                 await asyncio.wait_for(self._pingreq(), timeout=self._timeout)
-            except TimeoutError:
-                self._logger.warning("Operation timed out: PingReq")
+            except TimeoutError as exc:
+                self._logger.warning("Operation timed out: PingReqPacket")
                 await self._disconnect(
-                    reason_code=DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
+                    reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT
                 )
+                raise ConnectError(self._hostname, self._port) from exc
 
     @typing.overload
     async def publish(
@@ -462,7 +461,7 @@ class Client:
                 allowed to appear more than once. The order is preserved.
 
         Returns:
-            The PUBACK / PUBREC response from the broker (for QoS=1 / QoS=2).
+            The PUBACK/PUBREC response from the broker (for QoS=1/QoS=2).
         """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             raise ConnectError(self._hostname, self._port)
@@ -613,7 +612,17 @@ class Client:
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
-        """Acknowledge receipt of QoS=1 PUBLISH packet."""
+        """Acknowledge receipt of QoS=1 PUBLISH packet.
+
+        Args:
+            packet_id: The identifier of the PUBLISH packet to acknowledge.
+            reason_code: Indicates the result of an operation. Reason codes of 128 or
+                greater indicate failure.
+            reason_str: Additional information on the reason as human readable string.
+            user_properties: Name/value pairs to send with the packet. The meaning of
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
+        """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             raise ConnectError(self._hostname, self._port)
         await self._send(
@@ -633,7 +642,20 @@ class Client:
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubRelPacket:
-        """Acknowledge receipt of QoS=2 PUBLISH packet."""
+        """Acknowledge receipt of QoS=2 PUBLISH packet.
+
+        Args:
+            packet_id: The identifier of the PUBLISH packet to acknowledge.
+            reason_code: Indicates the result of an operation. Reason codes of 128 or
+                greater indicate failure.
+            reason_str: Additional information on the reason as human readable string.
+            user_properties: Name/value pairs to send with the packet. The meaning of
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
+
+        Returns:
+            The PUBREL response from the broker.
+        """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             raise ConnectError(self._hostname, self._port)
         # Track the acknowledgement
@@ -661,7 +683,20 @@ class Client:
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubCompPacket:
-        """Acknowledge receipt of PUBREC packet (QoS=2 PUBLISH flow)."""
+        """Acknowledge receipt of PUBREC packet (QoS=2 PUBLISH flow).
+
+        Args:
+            packet_id: The identifier of the PUBLISH packet to acknowledge.
+            reason_code: Indicates the result of an operation. Reason codes of 128 or
+                greater indicate failure.
+            reason_str: Additional information on the reason as human readable string.
+            user_properties: Name/value pairs to send with the packet. The meaning of
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
+
+        Returns:
+            The PUBCOMP response from the broker.
+        """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             raise ConnectError(self._hostname, self._port)
         # Track the acknowledgement
@@ -689,7 +724,17 @@ class Client:
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
-        """Acknowledge receipt of PUBREL packet (QoS=2 PUBLISH flow)."""
+        """Acknowledge receipt of PUBREL packet (QoS=2 PUBLISH flow).
+
+        Args:
+            packet_id: The identifier of the PUBLISH packet to acknowledge.
+            reason_code: Indicates the result of an operation. Reason codes of 128 or
+                greater indicate failure.
+            reason_str: Additional information on the reason as human readable string.
+            user_properties: Name/value pairs to send with the packet. The meaning of
+                these properties is not defined by the specification. The same name is
+                allowed to appear more than once. The order is preserved.
+        """
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             raise ConnectError(self._hostname, self._port)
         await self._send(
