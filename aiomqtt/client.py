@@ -46,12 +46,23 @@ from .exceptions import ConnectError, NegativeAckError, ProtocolError
 
 
 class _SlidingWindowBuffer:
+    """Fixed-size buffer that compacts by sliding the active data to the beginning.
+
+    Args:
+        size: Maximum buffer size in bytes.
+    """
+
     def __init__(self, size: int) -> None:
         self.buffer = bytearray(size)
         self.left = 0
         self.right = 0
 
     def write(self, data: bytes) -> None:
+        """Write data to buffer, compacting if necessary.
+
+        Args:
+            data: Bytes to write.
+        """
         if len(data) > len(self.buffer) - self.right + self.left:
             msg = "Buffer overflow"
             raise RuntimeError(msg)
@@ -79,8 +90,6 @@ class Client:
             resumes the existing session. If no session is available, then the broker
             creates a new session.
         will: The will message to publish if the client disconnects unexpectedly.
-        timeout: The default timeout for all communication with the broker in seconds.
-            If None, there is no timeout.
         keep_alive: The keep alive interval in seconds. The broker might override this
             value.
         session_expiry_interval: The time for the session to expire in seconds.
@@ -116,7 +125,6 @@ class Client:
         password: str | None = None,
         clean_start: bool = False,
         will: Will | None = None,
-        timeout: float = 10,
         keep_alive: int = 0,
         session_expiry_interval: int = 0,
         authentication_method: str | None = None,
@@ -156,7 +164,6 @@ class Client:
         self._socket: socket.socket
         self._reader: asyncio.StreamReader
         self._writer: asyncio.StreamWriter
-        self._timeout = timeout
         # Connection status
         self._disconnected: asyncio.Future[None]
         self._lock: asyncio.Lock = asyncio.Lock()
@@ -358,7 +365,8 @@ class Client:
             ) < self._keep_alive:
                 await asyncio.sleep(self._keep_alive - elapsed)
             try:
-                await asyncio.wait_for(self._pingreq(), timeout=self._timeout)
+                async with asyncio.timeout(self._keep_alive / 2):
+                    await self._pingreq()
             except TimeoutError as exc:
                 self._logger.warning("Operation timed out: PingReqPacket")
                 await self._disconnect(
@@ -884,9 +892,9 @@ class Client:
         self._disconnected.set_result(None)
         self._logger.info(
             "Disconnecting %s will message",
-            "with"
-            if reason_code == DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
-            else "without",
+            "without"
+            if reason_code == DisconnectReasonCode.NORMAL_DISCONNECTION
+            else "with",
         )
         await self._send(
             DisconnectPacket(
