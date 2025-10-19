@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 # This is the same as marking all tests in this file with @pytest.mark.asyncio
 pytestmark = pytest.mark.asyncio
 
-_HOSTNAME = "localhost"
+_HOSTNAME = "test.mosquitto.org"
 
 
 @pytest.mark.network
@@ -78,17 +78,19 @@ async def test_publish_flow_control_qos1() -> None:
     topic = conftest.unique_topic()
     ready = asyncio.Event()
 
-    async def mock(n: int = -1) -> bytes:
+    async def read_mock(n: int = -1) -> bytes:
         await ready.wait()
-        return await original(n)
+        return await original_read(n)
 
     async with aiomqtt.Client(_HOSTNAME) as client:
-        original = client._reader.read
+        original_read = client._reader.read
         async with asyncio.TaskGroup() as tg:
-            with unittest.mock.patch.object(client._reader, "read", side_effect=mock):
+            with unittest.mock.patch.object(
+                client._reader, "read", side_effect=read_mock
+            ):
                 for _ in range(client.connack.receive_max + 1):
                     tg.create_task(client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE))
-                # Yield control so that tasks can run
+                # Yield control so that other tasks can run
                 await asyncio.sleep(0)
                 assert client._send_semaphore._value == 0
                 assert client._send_semaphore._waiters is not None
@@ -106,25 +108,27 @@ async def test_publish_flow_control_qos2() -> None:
     topic = conftest.unique_topic()
     ready = asyncio.Event()
 
-    async def mock(n: int = -1) -> bytes:
+    async def read_mock(n: int = -1) -> bytes:
         await ready.wait()
-        return await original(n)
+        return await original_read(n)
 
     async with aiomqtt.Client(_HOSTNAME) as client:
-        original = client._reader.read
+        original_read = client._reader.read
         packet_ids = []
         for _ in range(client.connack.receive_max):
             pubrec_packet = await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
             packet_ids.append(pubrec_packet.packet_id)
         async with asyncio.TaskGroup() as tg:
-            with unittest.mock.patch.object(client._reader, "read", side_effect=mock):
+            with unittest.mock.patch.object(
+                client._reader, "read", side_effect=read_mock
+            ):
                 for packet_id in packet_ids:
                     tg.create_task(client.pubrel(packet_id))
                 # This next PUBLISH should block
                 blocked = tg.create_task(
                     client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
                 )
-                # Yield control so that tasks can run
+                # Yield control so that other tasks can run
                 await asyncio.sleep(0)
                 assert client._send_semaphore._value == 0
                 assert client._send_semaphore._waiters is not None
@@ -185,10 +189,12 @@ async def test_unsubscribe() -> None:
         await client.subscribe(topic)
         await client.publish(topic, payload=b"baz", qos=aiomqtt.QoS.AT_LEAST_ONCE)
         # We should only receive the first and last message
-        message = await anext(client.messages())
+        async with asyncio.timeout(5):
+            message = await anext(client.messages())
         assert message.payload == b"foo"
         await client.puback(message.packet_id)  # type: ignore[arg-type]
-        message = await anext(client.messages())
+        async with asyncio.timeout(5):
+            message = await anext(client.messages())
         assert message.payload == b"baz"
         await client.puback(message.packet_id)  # type: ignore[arg-type]
 
@@ -210,7 +216,8 @@ async def test_message_iterator_concurrency() -> None:
 
         async def consume(ready: asyncio.Event) -> aiomqtt.PublishPacket:
             ready.set()
-            return await anext(client.messages())
+            async with asyncio.timeout(5):
+                return await anext(client.messages())
 
         t1 = tg.create_task(consume(r1))
         t2 = tg.create_task(consume(r2))
@@ -251,11 +258,17 @@ async def test_aexit_last_will() -> None:
     topic = conftest.unique_topic()
     with pytest.raises(ProcessLookupError):
         async with aiomqtt.Client(
-            _HOSTNAME, will=aiomqtt.Will(topic, payload=b"foo", retain=True)
+            _HOSTNAME,
+            will=aiomqtt.Will(
+                topic, payload=b"foo", qos=aiomqtt.QoS.AT_LEAST_ONCE, retain=True
+            ),
         ):
             # Simulate an exception that should trigger LWT
             raise ProcessLookupError
     # Check that will message was published (and retained)
     async with aiomqtt.Client(_HOSTNAME) as client:
         await client.subscribe(topic)
-        await asyncio.wait_for(anext(client.messages()), timeout=1)
+        async with asyncio.timeout(5):
+            puback_packet = await anext(client.messages())
+        assert puback_packet.payload == b"foo"
+        assert puback_packet.retain is True
