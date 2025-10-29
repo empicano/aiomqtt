@@ -41,11 +41,11 @@ async def test_aenter_not_reentrant() -> None:
 @pytest.mark.network
 async def test_aenter_invalid_hostname() -> None:
     """Test reusing the client after failure to connect in ``aenter``."""
-    client = aiomqtt.Client("hostname.that.does.not.exist")
-    with pytest.raises(aiomqtt.ConnectError):
+    client = aiomqtt.Client("INVALID.HOSTNAME")
+    with pytest.raises(OSError):
         await client.__aenter__()
     # Second attempt should also fail but not raise reentry error
-    with pytest.raises(aiomqtt.ConnectError):
+    with pytest.raises(OSError):
         await client.__aenter__()
 
 
@@ -58,6 +58,31 @@ async def test_aenter_negative_connack() -> None:
     # Second attempt should also fail but not raise reentry error
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
+
+
+@pytest.mark.network
+async def test_background_reconnection() -> None:
+    """Test that client reconnects after connection loss."""
+    topic = conftest.unique_topic()
+    first = True
+
+    async def read_mock(n: int = -1) -> bytes:
+        nonlocal first
+        if first:
+            first = False
+            return b""  # EOF
+        return await original_read(n)
+
+    async with aiomqtt.Client(_HOSTNAME, reconnect=True) as client:
+        original_read = client._reader.read
+        # First operation should work
+        await client.publish(topic)
+        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+            await client.disconnected()
+        async with asyncio.timeout(5):
+            await client.connected()
+        # The client should be connected again
+        await client.publish(topic)
 
 
 @pytest.mark.parametrize(
@@ -88,7 +113,8 @@ async def test_publish_flow_control_qos1() -> None:
             with unittest.mock.patch.object(
                 client._reader, "read", side_effect=read_mock
             ):
-                for _ in range(client.connack.receive_max + 1):
+                connack_packet = await client.connected()
+                for _ in range(connack_packet.receive_max + 1):
                     tg.create_task(client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE))
                 # Yield control so that other tasks can run
                 await asyncio.sleep(0)
@@ -99,7 +125,7 @@ async def test_publish_flow_control_qos1() -> None:
                 await client.publish(topic)
                 # Resolve backpressure
                 ready.set()
-        assert client._send_semaphore._value == client.connack.receive_max
+        assert client._send_semaphore._value == connack_packet.receive_max
 
 
 @pytest.mark.network
@@ -114,8 +140,9 @@ async def test_publish_flow_control_qos2() -> None:
 
     async with aiomqtt.Client(_HOSTNAME) as client:
         original_read = client._reader.read
+        connack_packet = await client.connected()
         packet_ids = []
-        for _ in range(client.connack.receive_max):
+        for _ in range(connack_packet.receive_max):
             pubrec_packet = await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
             packet_ids.append(pubrec_packet.packet_id)
         async with asyncio.TaskGroup() as tg:
@@ -138,7 +165,7 @@ async def test_publish_flow_control_qos2() -> None:
                 # Resolve backpressure
                 ready.set()
         await client.pubrel(blocked.result().packet_id)
-        assert client._send_semaphore._value == client.connack.receive_max
+        assert client._send_semaphore._value == connack_packet.receive_max
 
 
 async def test_puback_not_connected() -> None:
