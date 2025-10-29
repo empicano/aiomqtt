@@ -5,6 +5,7 @@ import asyncio
 import collections
 import contextlib
 import logging
+import random
 import secrets
 import socket
 import time
@@ -124,6 +125,7 @@ class Client:
         username: str | None = None,
         password: str | None = None,
         clean_start: bool = False,
+        reconnect: bool = False,
         will: Will | None = None,
         keep_alive: int = 0,
         session_expiry_interval: int = 0,
@@ -139,7 +141,7 @@ class Client:
         self._hostname = hostname
         self._port = port
         self.identifier = (
-            identifier if identifier is not None else f"aiomqtt-{secrets.token_hex(4)}"
+            identifier if identifier is not None else f"aiomqtt-{secrets.token_hex(2)}"
         )
         if logger is None:
             logger = logging.getLogger("aiomqtt")
@@ -148,6 +150,7 @@ class Client:
         self._username = username
         self._password = password
         self._clean_start = clean_start
+        self._reconnect = reconnect
         self._will = will
         self._keep_alive = keep_alive
         self._session_expiry_interval = session_expiry_interval
@@ -165,9 +168,9 @@ class Client:
         self._reader: asyncio.StreamReader
         self._writer: asyncio.StreamWriter
         # Connection status
+        self._connected: asyncio.Future[ConnAckPacket] = asyncio.Future()
         self._disconnected: asyncio.Future[None]
         self._lock: asyncio.Lock = asyncio.Lock()
-        self.connack: ConnAckPacket
         # Message management
         self._getters: collections.deque[asyncio.Future[PublishPacket]] = (
             collections.deque()
@@ -189,73 +192,43 @@ class Client:
             msg = "The client context manager is reusable but not reentrant"
             raise RuntimeError(msg)
         await self._lock.acquire()
-        self._disconnected = asyncio.Future()
-        # Create and connect the socket
-        self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         try:
-            self._socket.connect((self._hostname, self._port))
-        except OSError as exc:
+            await self._connect()
+        except (ProtocolError, NegativeAckError, OSError):
             self._lock.release()
-            raise ConnectError(self._hostname, self._port) from exc
-        self._reader, self._writer = await asyncio.open_connection(sock=self._socket)
-        await self._send(
-            ConnectPacket(
-                client_id=self.identifier,
-                username=self._username,
-                password=self._password,
-                clean_start=self._clean_start,
-                will=self._will,
-                keep_alive=self._keep_alive,
-                session_expiry_interval=self._session_expiry_interval,
-                authentication_method=self._authentication_method,
-                authentication_data=self._authentication_data,
-                request_problem_info=self._request_problem_info,
-                request_response_info=self._request_response_info,
-                receive_max=self._receive_max,
-                topic_alias_max=self._topic_alias_max,
-                max_packet_size=self._max_packet_size,
-                user_properties=self._user_properties,
-            )
-        )
-        # Wait for the acknowledgement
-        packet = await self._receive()
-        if not isinstance(packet, ConnAckPacket):
-            await self._disconnect(
-                reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
-            )
-            msg = f"Received packet of unexpected type: {type(packet).__name__}"
-            raise ProtocolError(msg)
-        self.connack = packet
-        if self.connack.reason_code != ConnAckReasonCode.SUCCESS:
-            self._lock.release()
-            raise NegativeAckError(self.connack)
-        if self.connack.assigned_client_id is not None:
-            self._logger.info(
-                "Broker set client id: %s", self.connack.assigned_client_id
-            )
-            self.identifier = self.connack.assigned_client_id
-        if self.connack.server_keep_alive is not None:
-            self._logger.info(
-                "Broker set keep alive: %s", self.connack.server_keep_alive
-            )
-            self._keep_alive = self.connack.server_keep_alive
-        self._send_semaphore = asyncio.BoundedSemaphore(self.connack.receive_max)
+            raise
         # Start background tasks
         self._tasks = asyncio.create_task(self._run_background_tasks())
         return self
 
-    async def _run_background_tasks(self) -> None:
-        async with asyncio.TaskGroup() as task_group:
-            task_group.create_task(self._receive_loop())
-            if self._keep_alive > 0:
-                task_group.create_task(self._pingreq_loop())
-            # TODO(empicano): Reconnection
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: types.TracebackType | None,
+    ) -> None:
+        if hasattr(self, "_tasks"):
+            self._tasks.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._tasks
+        reason_code = DisconnectReasonCode.NORMAL_DISCONNECTION
+        # Disconnect with LWT if we exit the context manager with an exception
+        if exc is not None and self._will is not None:
+            reason_code = DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
+        await self._disconnect(reason_code=reason_code)
+        # Release the reusability lock
+        if self._lock.locked():
+            self._lock.release()
 
-    def _packet_id_generator(self) -> typing.Iterator[int]:
-        packet_id = 1
-        while True:
-            yield packet_id
-            packet_id = packet_id % (2**16 - 1) + 1
+    async def connected(self) -> ConnAckPacket:
+        """Return CONNACK when the client (re-)connects."""
+        return await self._connected
+
+    async def disconnected(self) -> None:
+        """Return when the client disconnects."""
+        if not hasattr(self, "_disconnected"):
+            return None
+        return await self._disconnected
 
     async def _send(
         self,
@@ -308,6 +281,11 @@ class Client:
         while True:
             try:
                 packet = await self._receive()
+            except ConnectError:
+                if not self._reconnect:
+                    raise
+                await self._connected
+                continue
             except ProtocolError:
                 self._logger.exception("Received malformed packet")
                 raise
@@ -348,6 +326,8 @@ class Client:
                         "Received DisconnectPacket with reason code: %s",
                         packet.reason_code.name,
                     )
+                    # TODO(empicano): This would try to send DISCONNECT, which is not
+                    # what we want
                     await self._disconnect()
                     raise ConnectError(self._hostname, self._port)
                 case _:
@@ -373,6 +353,103 @@ class Client:
                     reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT
                 )
                 raise ConnectError(self._hostname, self._port) from exc
+
+    async def _reconnect_loop(self) -> None:
+        while True:
+            await self._disconnected
+            attempt = 0
+            while True:
+                delay = random.uniform(0, 2**attempt)  # noqa: S311
+                # Implements maximum delay
+                attempt = min(8, attempt + 1)
+                self._logger.info("Reconnecting in %.2f seconds", delay)
+                await asyncio.sleep(delay)
+                try:
+                    await self._connect()
+                    self._logger.info(
+                        "Reconnected to %s:%d", self._hostname, self._port
+                    )
+                    break
+                except (OSError, ProtocolError, NegativeAckError):
+                    self._logger.exception("Failed to reconnect")
+
+    async def _run_background_tasks(self) -> None:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(self._receive_loop())
+            if self._keep_alive > 0:
+                tg.create_task(self._pingreq_loop())
+            if self._reconnect:
+                tg.create_task(self._reconnect_loop())
+
+    async def messages(self) -> typing.AsyncIterator[PublishPacket]:
+        """Iterate over incoming messages."""
+        while True:
+            if not hasattr(self, "_disconnected") or self._disconnected.done():
+                raise ConnectError(self._hostname, self._port)
+            if len(self._queue) > 0:
+                yield self._queue.popleft()
+                continue
+            fut: asyncio.Future[PublishPacket] = asyncio.Future()
+            self._getters.append(fut)
+            # Wait until we either have a message or disconnect
+            await asyncio.wait(
+                (fut, self._disconnected),
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if fut.done():
+                yield fut.result()
+                continue
+            raise ConnectError(self._hostname, self._port)
+
+    def _packet_id_generator(self) -> typing.Iterator[int]:
+        packet_id = 1
+        while True:
+            yield packet_id
+            packet_id = packet_id % (2**16 - 1) + 1
+
+    async def _connect(self) -> None:
+        # Create and connect the socket
+        self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        self._socket.connect((self._hostname, self._port))
+        self._reader, self._writer = await asyncio.open_connection(sock=self._socket)
+        await self._send(
+            ConnectPacket(
+                client_id=self.identifier,
+                username=self._username,
+                password=self._password,
+                clean_start=self._clean_start,
+                will=self._will,
+                keep_alive=self._keep_alive,
+                session_expiry_interval=self._session_expiry_interval,
+                authentication_method=self._authentication_method,
+                authentication_data=self._authentication_data,
+                request_problem_info=self._request_problem_info,
+                request_response_info=self._request_response_info,
+                receive_max=self._receive_max,
+                topic_alias_max=self._topic_alias_max,
+                max_packet_size=self._max_packet_size,
+                user_properties=self._user_properties,
+            )
+        )
+        # Wait for the acknowledgement
+        packet = await self._receive()
+        if not isinstance(packet, ConnAckPacket):
+            await self._disconnect(
+                reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
+            )
+            msg = f"Received packet of unexpected type: {type(packet).__name__}"
+            raise ProtocolError(msg)
+        if packet.reason_code != ConnAckReasonCode.SUCCESS:
+            raise NegativeAckError(packet)
+        if packet.assigned_client_id is not None:
+            self._logger.info("Broker set client id: %s", packet.assigned_client_id)
+            self.identifier = packet.assigned_client_id
+        if packet.server_keep_alive is not None:
+            self._logger.info("Broker set keep alive: %s", packet.server_keep_alive)
+            self._keep_alive = packet.server_keep_alive
+        self._send_semaphore = asyncio.BoundedSemaphore(packet.receive_max)
+        self._connected.set_result(packet)
+        self._disconnected = asyncio.Future()
 
     @typing.overload
     async def publish(
@@ -889,6 +966,8 @@ class Client:
         # Return early if we're already disconnected
         if not hasattr(self, "_disconnected") or self._disconnected.done():
             return
+        # TODO(empicano): Set these only at the end and handle concurrency with lock?
+        self._connected = asyncio.Future()
         self._disconnected.set_result(None)
         self._logger.info(
             "Disconnecting %s will message",
@@ -908,42 +987,3 @@ class Client:
         # Close the socket
         self._writer.close()
         await self._writer.wait_closed()
-
-    async def messages(self) -> typing.AsyncIterator[PublishPacket]:
-        """Iterate over incoming messages."""
-        while True:
-            if not hasattr(self, "_disconnected") or self._disconnected.done():
-                raise ConnectError(self._hostname, self._port)
-            if len(self._queue) > 0:
-                yield self._queue.popleft()
-                continue
-            fut: asyncio.Future[PublishPacket] = asyncio.Future()
-            self._getters.append(fut)
-            # Wait until we either have a message or disconnect
-            await asyncio.wait(
-                (fut, self._disconnected),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            if fut.done():
-                yield fut.result()
-                continue
-            raise ConnectError(self._hostname, self._port)
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: types.TracebackType | None,
-    ) -> None:
-        if hasattr(self, "_tasks"):
-            self._tasks.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._tasks
-        reason_code = DisconnectReasonCode.NORMAL_DISCONNECTION
-        # Disconnect with LWT if we exit the context manager with an exception
-        if exc is not None and self._will is not None:
-            reason_code = DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
-        await self._disconnect(reason_code=reason_code)
-        # Release the reusability lock
-        if self._lock.locked():
-            self._lock.release()
