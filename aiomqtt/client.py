@@ -244,8 +244,8 @@ class Client:
         | DisconnectPacket,
     ) -> None:
         self._writer.write(packet.write())
-        self._most_recent_packet_sent_time = time.monotonic()
         await self._writer.drain()
+        self._most_recent_packet_sent_time = time.monotonic()
 
     async def _receive(self) -> Packet:
         while True:
@@ -289,36 +289,57 @@ class Client:
             except ProtocolError:
                 self._logger.exception("Received malformed packet")
                 raise
-            self._logger.debug("Received packet with type: %s", type(packet).__name__)
+            self._logger.debug("Received packet of type: %s", type(packet).__name__)
             match packet:
                 case PublishPacket():
                     if len(self._getters) == 0:
                         if packet.qos == QoS.AT_MOST_ONCE:
                             # Drop when no consumer is immediately available
-                            self._logger.debug("Dropping QoS=0 PublishPacket")
+                            self._logger.debug("Dropping QoS=0 PUBLISH")
                         else:
                             self._queue.append(packet)
                     else:
                         self._getters.popleft().set_result(packet)
                 case PubAckPacket():
-                    self._pending_pubacks[packet.packet_id].set_result(packet)
-                    self._send_semaphore.release()
-                case PubRecPacket():
-                    self._pending_pubrecs[packet.packet_id].set_result(packet)
-                    if packet.reason_code not in [
-                        PubRecReasonCode.SUCCESS,
-                        PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
-                    ]:
+                    try:
+                        self._pending_pubacks[packet.packet_id].set_result(packet)
+                    except KeyError:
+                        self._logger.warning("Received unsolicited PUBACK")
+                    else:
                         self._send_semaphore.release()
+                case PubRecPacket():
+                    try:
+                        self._pending_pubrecs[packet.packet_id].set_result(packet)
+                    except KeyError:
+                        self._logger.warning("Received unsolicited PUBREC")
+                    else:
+                        if packet.reason_code not in [
+                            PubRecReasonCode.SUCCESS,
+                            PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
+                        ]:
+                            self._send_semaphore.release()
                 case PubRelPacket():
-                    self._pending_pubrels[packet.packet_id].set_result(packet)
+                    try:
+                        self._pending_pubrels[packet.packet_id].set_result(packet)
+                    except KeyError:
+                        self._logger.warning("Received unsolicited PUBREL")
                 case PubCompPacket():
-                    self._pending_pubcomps[packet.packet_id].set_result(packet)
-                    self._send_semaphore.release()
+                    try:
+                        self._pending_pubcomps[packet.packet_id].set_result(packet)
+                    except KeyError:
+                        self._logger.warning("Received unsolicited PUBCOMP")
+                    else:
+                        self._send_semaphore.release()
                 case SubAckPacket():
-                    self._pending_subacks[packet.packet_id].set_result(packet)
+                    try:
+                        self._pending_subacks[packet.packet_id].set_result(packet)
+                    except KeyError:
+                        self._logger.warning("Received unsolicited SUBACK")
                 case UnsubAckPacket():
-                    self._pending_unsubacks[packet.packet_id].set_result(packet)
+                    try:
+                        self._pending_unsubacks[packet.packet_id].set_result(packet)
+                    except KeyError:
+                        self._logger.warning("Received unsolicited UNSUBACK")
                 case PingRespPacket():
                     self._pending_pingresp.set_result(packet)
                 case DisconnectPacket():
@@ -348,7 +369,7 @@ class Client:
                 async with asyncio.timeout(self._keep_alive / 2):
                     await self._pingreq()
             except TimeoutError as exc:
-                self._logger.warning("Operation timed out: PingReqPacket")
+                self._logger.warning("PINGREQ timed out")
                 await self._disconnect(
                     reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT
                 )
@@ -445,7 +466,7 @@ class Client:
             self._logger.info("Broker set client id: %s", packet.assigned_client_id)
             self.identifier = packet.assigned_client_id
         if packet.server_keep_alive is not None:
-            self._logger.info("Broker set keep alive: %s", packet.server_keep_alive)
+            self._logger.info("Broker set keep alive: %d", packet.server_keep_alive)
             self._keep_alive = packet.server_keep_alive
         self._send_semaphore = asyncio.BoundedSemaphore(packet.receive_max)
         self._connected.set_result(packet)

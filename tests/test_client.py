@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import socket
 import unittest.mock
 
 import conftest
@@ -42,10 +43,10 @@ async def test_aenter_not_reentrant() -> None:
 async def test_aenter_invalid_hostname() -> None:
     """Test reusing the client after failure to connect in ``aenter``."""
     client = aiomqtt.Client("INVALID.HOSTNAME")
-    with pytest.raises(OSError):
+    with pytest.raises(socket.gaierror):
         await client.__aenter__()
     # Second attempt should also fail but not raise reentry error
-    with pytest.raises(OSError):
+    with pytest.raises(socket.gaierror):
         await client.__aenter__()
 
 
@@ -168,6 +169,43 @@ async def test_publish_flow_control_qos2() -> None:
         assert client._send_semaphore._value == connack_packet.receive_max
 
 
+@pytest.mark.parametrize(
+    "packet_type",
+    [
+        aiomqtt.PubAckPacket,
+        aiomqtt.PubRecPacket,
+        aiomqtt.PubRelPacket,
+        aiomqtt.PubCompPacket,
+    ],
+)
+@pytest.mark.network
+async def test_publish_unsolicited_ack(
+    packet_type: type[
+        aiomqtt.PubAckPacket
+        | aiomqtt.PubRecPacket
+        | aiomqtt.PubRelPacket
+        | aiomqtt.PubCompPacket
+    ],
+) -> None:
+    """Test that stray PUBLISH acknowledgment (e.g. after reconnection) is ignored."""
+    topic = conftest.unique_topic()
+    first = True
+
+    async def read_mock(n: int = -1) -> bytes:
+        data = await original_read(n)
+        nonlocal first
+        if first:
+            first = False
+            packet = packet_type(packet_id=999)
+            return packet.write() + data
+        return data
+
+    async with aiomqtt.Client(_HOSTNAME) as client:
+        original_read = client._reader.read
+        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+
+
 async def test_puback_not_connected() -> None:
     """Test that puback call fails when the client is not connected."""
     client = aiomqtt.Client(_HOSTNAME)
@@ -205,6 +243,30 @@ async def test_subscribe_not_connected() -> None:
 
 
 @pytest.mark.network
+async def test_subscribe_unsolicited_ack() -> None:
+    """Test that stray SUBACK (e.g. after reconnection) is ignored."""
+    topic = conftest.unique_topic()
+    first = True
+
+    async def read_mock(n: int = -1) -> bytes:
+        data = await original_read(n)
+        nonlocal first
+        if first:
+            first = False
+            packet = aiomqtt.SubAckPacket(
+                packet_id=999,
+                reason_codes=[aiomqtt.SubAckReasonCode.GRANTED_QOS_AT_MOST_ONCE],
+            )
+            return packet.write() + data
+        return data
+
+    async with aiomqtt.Client(_HOSTNAME) as client:
+        original_read = client._reader.read
+        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+
+
+@pytest.mark.network
 async def test_unsubscribe() -> None:
     """Test that messages are no longer received after unsubscribing from a topic."""
     topic = conftest.unique_topic()
@@ -232,6 +294,30 @@ async def test_unsubscribe_not_connected() -> None:
     client = aiomqtt.Client(_HOSTNAME)
     with pytest.raises(aiomqtt.ConnectError):
         await client.unsubscribe(topic)
+
+
+@pytest.mark.network
+async def test_unsubscribe_unsolicited_ack() -> None:
+    """Test that stray UNSUBACK (e.g. after reconnection) is ignored."""
+    topic = conftest.unique_topic()
+    first = True
+
+    async def read_mock(n: int = -1) -> bytes:
+        data = await original_read(n)
+        nonlocal first
+        if first:
+            first = False
+            packet = aiomqtt.UnsubAckPacket(
+                packet_id=999,
+                reason_codes=[aiomqtt.UnsubAckReasonCode.SUCCESS],
+            )
+            return packet.write() + data
+        return data
+
+    async with aiomqtt.Client(_HOSTNAME) as client:
+        original_read = client._reader.read
+        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
 
 
 @pytest.mark.network
