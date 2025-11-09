@@ -13,7 +13,7 @@ import aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.publish("socks/right/status", payload=b"missing")
+        await client.publish("shoes/right/status", payload=b"missing")
 
 
 asyncio.run(main())
@@ -80,7 +80,7 @@ Messages can be published with `retain=True`. The broker relays these messages t
 
 ## Subscribing to a topic
 
-To receive messages, we need to subscribe to topics. You can then use `Client.messages()` generator to iterate over incoming messages. This is a minimal example that listens for messages to the `socks/+/status` pattern:
+To receive messages, we need to subscribe to topics. You can then use `Client.messages()` generator to iterate over incoming messages. This is a minimal example that listens for messages to the `shoes/+/status` pattern:
 
 ```python
 import asyncio
@@ -89,13 +89,19 @@ import aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.subscribe("socks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
+        await client.subscribe("shoes/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         async for message in client.messages():
             print(message.payload)
 
 
 asyncio.run(main())
 ```
+
+> [!TIP]
+> MQTT supports two types of wildcards in subscription patterns: `+` matches exactly one topic level (e.g., `shoes/+/status` matches `shoes/left/status` but not `shoes/status`); `#` matches zero or more levels and must be the last character (e.g., `shoes/#` matches `shoes`, `shoes/left`, and `shoes/left/status`).
+
+> [!WARNING]
+> Try to avoid overlapping subscriptions (e.g., subscribing to both `shoes/#` and `shoes/left/status`). Some brokers deliver matching messages only once, others deliver them once per matching subscription.
 
 ### Receiving messages with QoS=1
 
@@ -113,7 +119,7 @@ import aiomqtt
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.subscribe("socks/#", max_qos=aiomqtt.QoS.AT_LEAST_ONCE)
+        await client.subscribe("shoes/#", max_qos=aiomqtt.QoS.AT_LEAST_ONCE)
         async for message in client.messages():
             print(message.payload)
             if message.qos == aiomqtt.QoS.AT_LEAST_ONCE:
@@ -150,7 +156,7 @@ async def consume(client):
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org", receive_max=16) as client:
-        await client.subscribe("socks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
+        await client.subscribe("shoes/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         async with asyncio.TaskGroup() as tg:
             for _ in range(4):  # The number of consumer tasks
                 tg.create_task(consume(client))
@@ -185,7 +191,7 @@ async def consume(client):
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.subscribe("socks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
+        await client.subscribe("shoes/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         task = loop.create_task(consume())
         # Do something else for a while
         await asyncio.sleep(5)
@@ -216,7 +222,7 @@ async def consume(client):
 
 async def main():
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.subscribe("socks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
+        await client.subscribe("shoes/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         try:
             # Cancel the consumer task after 5 seconds
             async with asyncio.timeout(5):
