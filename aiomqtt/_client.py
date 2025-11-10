@@ -43,7 +43,9 @@ from mqtt5 import (
     read,
 )
 
-from .exceptions import ConnectError, NegativeAckError, ProtocolError
+from ._exceptions import ConnectError, NegativeAckError, ProtocolError
+
+T = typing.TypeVar("T")
 
 
 class _SlidingWindowBuffer:
@@ -145,7 +147,7 @@ class Client:
         )
         if logger is None:
             logger = logging.getLogger("aiomqtt")
-            logger.setLevel(logging.DEBUG)
+            logger.setLevel(logging.DEBUG)  # TODO(empicano): Set to WARNING
         self._logger = logger
         self._username = username
         self._password = password
@@ -230,21 +232,23 @@ class Client:
             return None
         return await self._disconnected
 
-    async def _send(
-        self,
-        packet: ConnectPacket
-        | PublishPacket
-        | PubAckPacket
-        | PubRecPacket
-        | PubRelPacket
-        | PubCompPacket
-        | SubscribePacket
-        | UnsubscribePacket
-        | PingReqPacket
-        | DisconnectPacket,
-    ) -> None:
+    async def _disconnected_or(self, fut: asyncio.Future[T]) -> T:
+        if hasattr(self, "_disconnected"):
+            await asyncio.wait(
+                (fut, self._disconnected), return_when=asyncio.FIRST_COMPLETED
+            )
+            if fut.done():
+                return fut.result()
+        raise ConnectError(self._hostname, self._port)
+
+    async def _send(self, packet: Packet) -> None:
+        if not hasattr(self, "_writer"):
+            raise ConnectError(self._hostname, self._port)
         self._writer.write(packet.write())
-        await self._writer.drain()
+        try:
+            await self._writer.drain()
+        except ConnectionResetError as exc:
+            raise ConnectError(self._hostname, self._port) from exc
         self._most_recent_packet_sent_time = time.monotonic()
 
     async def _receive(self) -> Packet:
@@ -282,13 +286,13 @@ class Client:
             try:
                 packet = await self._receive()
             except ConnectError:
-                if not self._reconnect:
-                    raise
                 await self._connected
                 continue
             except ProtocolError:
                 self._logger.exception("Received malformed packet")
-                raise
+                await self._disconnect()
+                await self._connected
+                continue
             self._logger.debug("Received packet of type: %s", type(packet).__name__)
             match packet:
                 case PublishPacket():
@@ -347,17 +351,17 @@ class Client:
                         "Received DisconnectPacket with reason code: %s",
                         packet.reason_code.name,
                     )
-                    # TODO(empicano): This would try to send DISCONNECT, which is not
-                    # what we want
+                    # TODO(empicano): This sends DISCONNECT, which is not what we want
                     await self._disconnect()
-                    raise ConnectError(self._hostname, self._port)
+                    await self._connected
                 case _:
-                    msg = f"Received packet of unexpected type: {type(packet).__name__}"
-                    self._logger.error(msg)
+                    self._logger.error(
+                        "Received packet of unexpected type: %s", type(packet).__name__
+                    )
                     await self._disconnect(
                         reason_code=DisconnectReasonCode.PROTOCOL_ERROR
                     )
-                    raise ProtocolError(msg)
+                    await self._connected
 
     async def _pingreq_loop(self) -> None:
         while True:
@@ -368,21 +372,23 @@ class Client:
             try:
                 async with asyncio.timeout(self._keep_alive / 2):
                     await self._pingreq()
-            except TimeoutError as exc:
+            except ConnectError:
+                await self._connected
+            except TimeoutError:
                 self._logger.warning("PINGREQ timed out")
                 await self._disconnect(
                     reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT
                 )
-                raise ConnectError(self._hostname, self._port) from exc
+                await self._connected
 
     async def _reconnect_loop(self) -> None:
         while True:
             await self._disconnected
             attempt = 0
             while True:
-                delay = random.uniform(0, 2**attempt)  # noqa: S311
+                delay = random.uniform(0, 1.5**attempt)  # noqa: S311
                 # Implements maximum delay
-                attempt = min(8, attempt + 1)
+                attempt = min(10, attempt + 1)
                 self._logger.info("Reconnecting in %.2f seconds", delay)
                 await asyncio.sleep(delay)
                 try:
@@ -405,22 +411,14 @@ class Client:
     async def messages(self) -> typing.AsyncIterator[PublishPacket]:
         """Iterate over incoming messages."""
         while True:
-            if not hasattr(self, "_disconnected") or self._disconnected.done():
-                raise ConnectError(self._hostname, self._port)
             if len(self._queue) > 0:
                 yield self._queue.popleft()
                 continue
             fut: asyncio.Future[PublishPacket] = asyncio.Future()
             self._getters.append(fut)
             # Wait until we either have a message or disconnect
-            await asyncio.wait(
-                (fut, self._disconnected),
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            if fut.done():
-                yield fut.result()
-                continue
-            raise ConnectError(self._hostname, self._port)
+            # TODO(empicano): We should do something with the getter/future on fail
+            yield await self._disconnected_or(fut)
 
     def _packet_id_generator(self) -> typing.Iterator[int]:
         packet_id = 1
@@ -429,7 +427,6 @@ class Client:
             packet_id = packet_id % (2**16 - 1) + 1
 
     async def _connect(self) -> None:
-        # Create and connect the socket
         self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self._socket.connect((self._hostname, self._port))
         self._reader, self._writer = await asyncio.open_connection(sock=self._socket)
@@ -569,8 +566,6 @@ class Client:
         Returns:
             The PUBACK/PUBREC response from the broker (for QoS=1/QoS=2).
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
         match qos:
             case QoS.AT_MOST_ONCE:
                 await self._publish_at_most_once(
@@ -585,6 +580,8 @@ class Client:
                 )
                 return None
             case QoS.AT_LEAST_ONCE:
+                if not hasattr(self, "_send_semaphore"):
+                    raise ConnectError(self._hostname, self._port)
                 await self._send_semaphore.acquire()
                 return await self._publish_at_least_once(
                     topic,
@@ -597,6 +594,8 @@ class Client:
                     user_properties=user_properties,
                 )
             case QoS.EXACTLY_ONCE:
+                if not hasattr(self, "_send_semaphore"):
+                    raise ConnectError(self._hostname, self._port)
                 await self._send_semaphore.acquire()
                 return await self._publish_exactly_once(
                     topic,
@@ -648,25 +647,27 @@ class Client:
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubAckPacket:
         packet_id = next(self._packet_ids)
-        # Track the acknowledgement
         self._pending_pubacks[packet_id] = asyncio.Future()
-        await self._send(
-            PublishPacket(
-                packet_id=packet_id,
-                topic=topic,
-                payload=payload,
-                qos=QoS.AT_LEAST_ONCE,
-                retain=retain,
-                message_expiry_interval=message_expiry_interval,
-                content_type=content_type,
-                response_topic=response_topic,
-                correlation_data=correlation_data,
-                user_properties=user_properties,
+        try:
+            await self._send(
+                PublishPacket(
+                    packet_id=packet_id,
+                    topic=topic,
+                    payload=payload,
+                    qos=QoS.AT_LEAST_ONCE,
+                    retain=retain,
+                    message_expiry_interval=message_expiry_interval,
+                    content_type=content_type,
+                    response_topic=response_topic,
+                    correlation_data=correlation_data,
+                    user_properties=user_properties,
+                )
             )
-        )
-        # Wait for the acknowledgement
-        puback_packet = await self._pending_pubacks[packet_id]
-        del self._pending_pubacks[packet_id]
+            puback_packet = await self._disconnected_or(
+                self._pending_pubacks[packet_id]
+            )
+        finally:
+            del self._pending_pubacks[packet_id]
         if puback_packet.reason_code not in (
             PubAckReasonCode.SUCCESS,
             PubAckReasonCode.NO_MATCHING_SUBSCRIBERS,
@@ -687,25 +688,27 @@ class Client:
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubRecPacket:
         packet_id = next(self._packet_ids)
-        # Track the acknowledgement
         self._pending_pubrecs[packet_id] = asyncio.Future()
-        await self._send(
-            PublishPacket(
-                topic=topic,
-                payload=payload,
-                qos=QoS.EXACTLY_ONCE,
-                retain=retain,
-                packet_id=packet_id,
-                message_expiry_interval=message_expiry_interval,
-                content_type=content_type,
-                response_topic=response_topic,
-                correlation_data=correlation_data,
-                user_properties=user_properties,
+        try:
+            await self._send(
+                PublishPacket(
+                    topic=topic,
+                    payload=payload,
+                    qos=QoS.EXACTLY_ONCE,
+                    retain=retain,
+                    packet_id=packet_id,
+                    message_expiry_interval=message_expiry_interval,
+                    content_type=content_type,
+                    response_topic=response_topic,
+                    correlation_data=correlation_data,
+                    user_properties=user_properties,
+                )
             )
-        )
-        # Wait for the acknowledgement
-        pubrec_packet = await self._pending_pubrecs[packet_id]
-        del self._pending_pubrecs[packet_id]
+            pubrec_packet = await self._disconnected_or(
+                self._pending_pubrecs[packet_id]
+            )
+        finally:
+            del self._pending_pubrecs[packet_id]
         if pubrec_packet.reason_code != PubRecReasonCode.SUCCESS:
             raise NegativeAckError(pubrec_packet)
         return pubrec_packet
@@ -729,8 +732,6 @@ class Client:
                 these properties is not defined by the specification. The same name is
                 allowed to appear more than once. The order is preserved.
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
         await self._send(
             PubAckPacket(
                 packet_id=packet_id,
@@ -762,21 +763,21 @@ class Client:
         Returns:
             The PUBREL response from the broker.
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
-        # Track the acknowledgement
         self._pending_pubrels[packet_id] = asyncio.Future()
-        await self._send(
-            PubRecPacket(
-                packet_id=packet_id,
-                reason_code=reason_code,
-                reason_str=reason_str,
-                user_properties=user_properties,
+        try:
+            await self._send(
+                PubRecPacket(
+                    packet_id=packet_id,
+                    reason_code=reason_code,
+                    reason_str=reason_str,
+                    user_properties=user_properties,
+                )
             )
-        )
-        # Wait for the acknowledgement
-        pubrel_packet = await self._pending_pubrels[packet_id]
-        del self._pending_pubrels[packet_id]
+            pubrel_packet = await self._disconnected_or(
+                self._pending_pubrels[packet_id]
+            )
+        finally:
+            del self._pending_pubrels[packet_id]
         if pubrel_packet.reason_code != PubRelReasonCode.SUCCESS:
             raise NegativeAckError(pubrel_packet)
         return pubrel_packet
@@ -803,21 +804,21 @@ class Client:
         Returns:
             The PUBCOMP response from the broker.
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
-        # Track the acknowledgement
         self._pending_pubcomps[packet_id] = asyncio.Future()
-        await self._send(
-            PubRelPacket(
-                packet_id=packet_id,
-                reason_code=reason_code,
-                reason_str=reason_str,
-                user_properties=user_properties,
+        try:
+            await self._send(
+                PubRelPacket(
+                    packet_id=packet_id,
+                    reason_code=reason_code,
+                    reason_str=reason_str,
+                    user_properties=user_properties,
+                )
             )
-        )
-        # Wait for the acknowledgement
-        pubcomp_packet = await self._pending_pubcomps[packet_id]
-        del self._pending_pubcomps[packet_id]
+            pubcomp_packet = await self._disconnected_or(
+                self._pending_pubcomps[packet_id]
+            )
+        finally:
+            del self._pending_pubcomps[packet_id]
         if pubcomp_packet.reason_code != PubCompReasonCode.SUCCESS:
             raise NegativeAckError(pubcomp_packet)
         return pubcomp_packet
@@ -841,8 +842,6 @@ class Client:
                 these properties is not defined by the specification. The same name is
                 allowed to appear more than once. The order is preserved.
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
         await self._send(
             PubCompPacket(
                 packet_id=packet_id,
@@ -890,30 +889,30 @@ class Client:
         Returns:
             The SUBACK response from the broker.
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
         packet_id = next(self._packet_ids)
-        # Track the acknowledgement
         self._pending_subacks[packet_id] = asyncio.Future()
-        await self._send(
-            SubscribePacket(
-                packet_id=packet_id,
-                subscriptions=[
-                    Subscription(
-                        pattern=pattern,
-                        max_qos=max_qos,
-                        no_local=no_local,
-                        retain_as_published=retain_as_published,
-                        retain_handling=retain_handling,
-                    ),
-                ],
-                subscription_id=subscription_id,
-                user_properties=user_properties,
+        try:
+            await self._send(
+                SubscribePacket(
+                    packet_id=packet_id,
+                    subscriptions=[
+                        Subscription(
+                            pattern=pattern,
+                            max_qos=max_qos,
+                            no_local=no_local,
+                            retain_as_published=retain_as_published,
+                            retain_handling=retain_handling,
+                        ),
+                    ],
+                    subscription_id=subscription_id,
+                    user_properties=user_properties,
+                )
             )
-        )
-        # Wait for the acknowledgement
-        suback_packet = await self._pending_subacks[packet_id]
-        del self._pending_subacks[packet_id]
+            suback_packet = await self._disconnected_or(
+                self._pending_subacks[packet_id]
+            )
+        finally:
+            del self._pending_subacks[packet_id]
         if len(suback_packet.reason_codes) != 1:
             # TODO(empicano): We should disconnect here
             msg = "Received malformed packet"
@@ -943,21 +942,21 @@ class Client:
         Returns:
             The UNSUBACK response from the broker.
         """
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
         packet_id = next(self._packet_ids)
-        # Track the acknowledgement
         self._pending_unsubacks[packet_id] = asyncio.Future()
-        await self._send(
-            UnsubscribePacket(
-                packet_id=packet_id,
-                patterns=[pattern],
-                user_properties=user_properties,
+        try:
+            await self._send(
+                UnsubscribePacket(
+                    packet_id=packet_id,
+                    patterns=[pattern],
+                    user_properties=user_properties,
+                )
             )
-        )
-        # Wait for the acknowledgement
-        unsuback_packet = await self._pending_unsubacks[packet_id]
-        del self._pending_unsubacks[packet_id]
+            unsuback_packet = await self._disconnected_or(
+                self._pending_unsubacks[packet_id]
+            )
+        finally:
+            del self._pending_unsubacks[packet_id]
         if len(unsuback_packet.reason_codes) != 1:
             # TODO(empicano): We should disconnect here
             msg = "Received malformed packet"
@@ -967,13 +966,9 @@ class Client:
         return unsuback_packet
 
     async def _pingreq(self) -> PingRespPacket:
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            raise ConnectError(self._hostname, self._port)
-        # Track the acknowledgement
         self._pending_pingresp = asyncio.Future()
         await self._send(PingReqPacket())
-        # Wait for the acknowledgement
-        return await self._pending_pingresp
+        return await self._disconnected_or(self._pending_pingresp)
 
     async def _disconnect(
         self,
