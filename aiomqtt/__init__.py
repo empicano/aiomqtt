@@ -4,6 +4,7 @@
 import importlib.metadata
 
 from mqtt5 import (
+    ConnAckPacket,
     PubAckPacket,
     PubAckReasonCode,
     PubCompPacket,
@@ -22,10 +23,10 @@ from mqtt5 import (
     Will,
 )
 
-from .client import (
+from ._client import (
     Client,
 )
-from .exceptions import (
+from ._exceptions import (
     ConnectError,
     NegativeAckError,
     ProtocolError,
@@ -34,6 +35,7 @@ from .exceptions import (
 __version__ = importlib.metadata.version(__name__)
 __all__ = [
     "Client",
+    "ConnAckPacket",
     "ConnectError",
     "NegativeAckError",
     "ProtocolError",
