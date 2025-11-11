@@ -147,7 +147,7 @@ class Client:
         )
         if logger is None:
             logger = logging.getLogger("aiomqtt")
-            logger.setLevel(logging.DEBUG)  # TODO(empicano): Set to WARNING
+            logger.setLevel(logging.WARNING)
         self._logger = logger
         self._username = username
         self._password = password
@@ -174,12 +174,13 @@ class Client:
         self._disconnected: asyncio.Future[None]
         self._lock: asyncio.Lock = asyncio.Lock()
         # Message management
-        self._getters: collections.deque[asyncio.Future[PublishPacket]] = (
+        self._getters: collections.deque[
+            asyncio.Future[PublishPacket | PubRelPacket]
+        ] = collections.deque()
+        self._queue: collections.deque[PublishPacket | PubRelPacket] = (
             collections.deque()
         )
-        self._queue: collections.deque[PublishPacket] = collections.deque()
         self._pending_pubacks: dict[int, asyncio.Future[PubAckPacket]] = {}
-        self._pending_pubrels: dict[int, asyncio.Future[PubRelPacket]] = {}
         self._pending_pubrecs: dict[int, asyncio.Future[PubRecPacket]] = {}
         self._pending_pubcomps: dict[int, asyncio.Future[PubCompPacket]] = {}
         self._pending_subacks: dict[int, asyncio.Future[SubAckPacket]] = {}
@@ -261,8 +262,7 @@ class Client:
                     # until mqtt5 implements memoryviews; Then, also remove the
                     # if-statement and return immediately in mqtt5 if len(memview) == 0
                     packet, nbytes = read(
-                        self._buffer_in.buffer,
-                        index=self._buffer_in.left,
+                        self._buffer_in.buffer, index=self._buffer_in.left
                     )
                 except IndexError:  # Partial packet
                     pass
@@ -323,10 +323,10 @@ class Client:
                         ]:
                             self._send_semaphore.release()
                 case PubRelPacket():
-                    try:
-                        self._pending_pubrels[packet.packet_id].set_result(packet)
-                    except KeyError:
-                        self._logger.warning("Received unsolicited PUBREL")
+                    if len(self._getters) == 0:
+                        self._queue.append(packet)
+                    else:
+                        self._getters.popleft().set_result(packet)
                 case PubCompPacket():
                     try:
                         self._pending_pubcomps[packet.packet_id].set_result(packet)
@@ -408,13 +408,13 @@ class Client:
             if self._reconnect:
                 tg.create_task(self._reconnect_loop())
 
-    async def messages(self) -> typing.AsyncIterator[PublishPacket]:
-        """Iterate over incoming messages."""
+    async def messages(self) -> typing.AsyncIterator[PublishPacket | PubRelPacket]:
+        """Iterate over incoming PUBLISH and PUBREL packets."""
         while True:
             if len(self._queue) > 0:
                 yield self._queue.popleft()
                 continue
-            fut: asyncio.Future[PublishPacket] = asyncio.Future()
+            fut: asyncio.Future[PublishPacket | PubRelPacket] = asyncio.Future()
             self._getters.append(fut)
             # Wait until we either have a message or disconnect
             # TODO(empicano): We should do something with the getter/future on fail
@@ -748,7 +748,7 @@ class Client:
         reason_code: PubRecReasonCode = PubRecReasonCode.SUCCESS,
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
-    ) -> PubRelPacket:
+    ) -> None:
         """Acknowledge receipt of QoS=2 PUBLISH packet.
 
         Args:
@@ -759,28 +759,15 @@ class Client:
             user_properties: Name/value pairs to send with the packet. The meaning of
                 these properties is not defined by the specification. The same name is
                 allowed to appear more than once. The order is preserved.
-
-        Returns:
-            The PUBREL response from the broker.
         """
-        self._pending_pubrels[packet_id] = asyncio.Future()
-        try:
-            await self._send(
-                PubRecPacket(
-                    packet_id=packet_id,
-                    reason_code=reason_code,
-                    reason_str=reason_str,
-                    user_properties=user_properties,
-                )
+        await self._send(
+            PubRecPacket(
+                packet_id=packet_id,
+                reason_code=reason_code,
+                reason_str=reason_str,
+                user_properties=user_properties,
             )
-            pubrel_packet = await self._disconnected_or(
-                self._pending_pubrels[packet_id]
-            )
-        finally:
-            del self._pending_pubrels[packet_id]
-        if pubrel_packet.reason_code != PubRelReasonCode.SUCCESS:
-            raise NegativeAckError(pubrel_packet)
-        return pubrel_packet
+        )
 
     async def pubrel(
         self,
