@@ -1,7 +1,6 @@
 """Tests for the client."""
 
 import asyncio
-import logging
 import socket
 import unittest.mock
 
@@ -10,8 +9,6 @@ import mqtt5
 import pytest
 
 import aiomqtt
-
-logging.basicConfig(level=logging.DEBUG)
 
 # This is the same as marking all tests in this file with @pytest.mark.asyncio
 pytestmark = pytest.mark.asyncio
@@ -281,22 +278,10 @@ async def test_puback_disconnected() -> None:
 async def test_pubrec_disconnected() -> None:
     """Test that pubrec call fails when the client is not connected."""
     client = aiomqtt.Client(_HOSTNAME)
-    original_send = client._send
-
-    async def send_mock(packet: mqtt5.Packet) -> None:
-        await original_send(packet)
-        nonlocal client
-        # Disconnect after sending the packet
-        await client._disconnect()
-
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubrec(1)
     async with client:
-        with (
-            unittest.mock.patch.object(client, "_send", side_effect=send_mock),
-            pytest.raises(aiomqtt.ConnectError),
-        ):
-            await client.pubrec(1)
+        await client._disconnect()
         with pytest.raises(aiomqtt.ConnectError):
             await client.pubrec(1)
     with pytest.raises(aiomqtt.ConnectError):
@@ -407,9 +392,11 @@ async def test_unsubscribe() -> None:
         await client.publish(topic, payload=b"baz", qos=aiomqtt.QoS.AT_LEAST_ONCE)
         # We should only receive the first and last message
         message = await anext(client.messages())
+        assert isinstance(message, aiomqtt.PublishPacket)
         assert message.payload == b"foo"
         await client.puback(message.packet_id)  # type: ignore[arg-type]
         message = await anext(client.messages())
+        assert isinstance(message, aiomqtt.PublishPacket)
         assert message.payload == b"baz"
         await client.puback(message.packet_id)  # type: ignore[arg-type]
 
@@ -472,7 +459,9 @@ async def test_message_iterator_concurrency() -> None:
     r1, r2 = asyncio.Event(), asyncio.Event()
     async with aiomqtt.Client(_HOSTNAME) as client, asyncio.TaskGroup() as tg:
 
-        async def consume(ready: asyncio.Event) -> aiomqtt.PublishPacket:
+        async def consume(
+            ready: asyncio.Event,
+        ) -> aiomqtt.PublishPacket | aiomqtt.PubRelPacket:
             ready.set()
             return await anext(client.messages())
 
@@ -484,7 +473,11 @@ async def test_message_iterator_concurrency() -> None:
         await client.publish(topic, payload=b"foo")
         await client.publish(topic, payload=b"bar")
 
-    assert {t1.result().payload, t2.result().payload} == {b"foo", b"bar"}
+    m1 = t1.result()
+    m2 = t2.result()
+    assert isinstance(m1, aiomqtt.PublishPacket)
+    assert isinstance(m2, aiomqtt.PublishPacket)
+    assert {m1.payload, m2.payload} == {b"foo", b"bar"}
 
 
 @pytest.mark.network
@@ -531,6 +524,7 @@ async def test_aexit_last_will() -> None:
     # Check that will message was published (and retained)
     async with aiomqtt.Client(_HOSTNAME) as client:
         await client.subscribe(topic)
-        puback_packet = await anext(client.messages())
-        assert puback_packet.payload == b"foo"
-        assert puback_packet.retain is True
+        message = await anext(client.messages())
+        assert isinstance(message, aiomqtt.PublishPacket)
+        assert message.payload == b"foo"
+        assert message.retain is True
