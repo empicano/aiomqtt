@@ -104,12 +104,15 @@ async def test_publish_disconnected_qos1() -> None:
     topic = conftest.unique_topic()
     client = aiomqtt.Client(_HOSTNAME)
     original_send = client._send
+    first = True
 
     async def send_mock(packet: mqtt5.Packet) -> None:
+        nonlocal first
         await original_send(packet)
-        nonlocal client
-        # Disconnect after sending the packet
-        await client._disconnect()
+        # Disconnect after the first call
+        if first:
+            first = False
+            await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
@@ -131,12 +134,15 @@ async def test_publish_disconnected_qos2() -> None:
     topic = conftest.unique_topic()
     client = aiomqtt.Client(_HOSTNAME)
     original_send = client._send
+    first = True
 
     async def send_mock(packet: mqtt5.Packet) -> None:
+        nonlocal first
         await original_send(packet)
-        nonlocal client
-        # Disconnect after sending the packet
-        await client._disconnect()
+        # Disconnect after the first call
+        if first:
+            first = False
+            await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
@@ -293,12 +299,15 @@ async def test_pubrel_disconnected() -> None:
     """Test that pubrel call fails when the client is not connected."""
     client = aiomqtt.Client(_HOSTNAME)
     original_send = client._send
+    first = True
 
     async def send_mock(packet: mqtt5.Packet) -> None:
+        nonlocal first
         await original_send(packet)
-        nonlocal client
-        # Disconnect after sending the packet
-        await client._disconnect()
+        # Disconnect after the first call
+        if first:
+            first = False
+            await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubrel(1)
@@ -334,12 +343,15 @@ async def test_subscribe_disconnected() -> None:
     topic = conftest.unique_topic()
     client = aiomqtt.Client(_HOSTNAME)
     original_send = client._send
+    first = True
 
     async def send_mock(packet: mqtt5.Packet) -> None:
+        nonlocal first
         await original_send(packet)
-        nonlocal client
-        # Disconnect after sending the packet
-        await client._disconnect()
+        # Disconnect after the first call
+        if first:
+            first = False
+            await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.subscribe(topic)
@@ -407,12 +419,15 @@ async def test_unsubscribe_disconnected() -> None:
     topic = conftest.unique_topic()
     client = aiomqtt.Client(_HOSTNAME)
     original_send = client._send
+    first = True
 
     async def send_mock(packet: mqtt5.Packet) -> None:
+        nonlocal first
         await original_send(packet)
-        nonlocal client
-        # Disconnect after sending the packet
-        await client._disconnect()
+        # Disconnect after the first call
+        if first:
+            first = False
+            await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.unsubscribe(topic)
