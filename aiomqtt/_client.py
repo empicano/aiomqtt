@@ -172,7 +172,8 @@ class Client:
         # Connection status
         self._connected: asyncio.Future[ConnAckPacket] = asyncio.Future()
         self._disconnected: asyncio.Future[None]
-        self._lock: asyncio.Lock = asyncio.Lock()
+        self._context_lock = asyncio.Lock()
+        self._disconnection_lock = asyncio.Lock()
         # Message management
         self._getters: collections.deque[
             asyncio.Future[PublishPacket | PubRelPacket]
@@ -191,14 +192,14 @@ class Client:
         self._most_recent_packet_sent_time: float
 
     async def __aenter__(self) -> typing.Self:
-        if self._lock.locked():
+        if self._context_lock.locked():
             msg = "The client context manager is reusable but not reentrant"
             raise RuntimeError(msg)
-        await self._lock.acquire()
+        await self._context_lock.acquire()
         try:
             await self._connect()
         except (ProtocolError, NegativeAckError, OSError):
-            self._lock.release()
+            self._context_lock.release()
             raise
         # Start background tasks
         self._tasks = asyncio.create_task(self._run_background_tasks())
@@ -220,8 +221,8 @@ class Client:
             reason_code = DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
         await self._disconnect(reason_code=reason_code)
         # Release the reusability lock
-        if self._lock.locked():
-            self._lock.release()
+        if self._context_lock.locked():
+            self._context_lock.release()
 
     async def connected(self) -> ConnAckPacket:
         """Return CONNACK when the client (re-)connects."""
@@ -966,27 +967,29 @@ class Client:
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
-        # Return early if we're already disconnected
-        if not hasattr(self, "_disconnected") or self._disconnected.done():
-            return
-        # TODO(empicano): Set these only at the end and handle concurrency with lock?
-        self._connected = asyncio.Future()
-        self._disconnected.set_result(None)
-        self._logger.info(
-            "Disconnecting %s will message",
-            "without"
-            if reason_code == DisconnectReasonCode.NORMAL_DISCONNECTION
-            else "with",
-        )
-        await self._send(
-            DisconnectPacket(
-                reason_code=reason_code,
-                session_expiry_interval=session_expiry_interval,
-                server_reference=server_reference,
-                reason_str=reason_str,
-                user_properties=user_properties,
+        async with self._disconnection_lock:
+            # Return early if we're already disconnected
+            if not hasattr(self, "_disconnected") or self._disconnected.done():
+                return
+            self._logger.info(
+                "Disconnecting %s will message",
+                "without"
+                if reason_code == DisconnectReasonCode.NORMAL_DISCONNECTION
+                else "with",
             )
-        )
-        # Close the socket
-        self._writer.close()
-        await self._writer.wait_closed()
+            try:
+                await self._send(
+                    DisconnectPacket(
+                        reason_code=reason_code,
+                        session_expiry_interval=session_expiry_interval,
+                        server_reference=server_reference,
+                        reason_str=reason_str,
+                        user_properties=user_properties,
+                    )
+                )
+            except ConnectError:
+                self._logger.exception("Failed to send DISCONNECT")
+            self._writer.close()
+            await self._writer.wait_closed()
+            self._connected = asyncio.Future()
+            self._disconnected.set_result(None)
