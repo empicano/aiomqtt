@@ -901,7 +901,7 @@ class Client:
         finally:
             del self._pending_subacks[packet_id]
         if len(suback_packet.reason_codes) != 1:
-            # TODO(empicano): We should disconnect here
+            await self._disconnect(reason_code=DisconnectReasonCode.MALFORMED_PACKET)
             msg = "Received malformed packet"
             raise ProtocolError(msg)
         if suback_packet.reason_codes[0] not in (
@@ -945,7 +945,7 @@ class Client:
         finally:
             del self._pending_unsubacks[packet_id]
         if len(unsuback_packet.reason_codes) != 1:
-            # TODO(empicano): We should disconnect here
+            await self._disconnect(reason_code=DisconnectReasonCode.MALFORMED_PACKET)
             msg = "Received malformed packet"
             raise ProtocolError(msg)
         if unsuback_packet.reason_codes[0] != UnsubAckReasonCode.SUCCESS:
