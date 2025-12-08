@@ -247,6 +247,7 @@ class Client:
         self._bind_port = bind_port
         self._clean_start = clean_start
         self._properties = properties
+        self._tls_params = tls_params
         self._loop = asyncio.get_running_loop()
 
         # Connection state
@@ -319,17 +320,6 @@ class Client:
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
 
-        if tls_params is not None:
-            self._client.tls_set(
-                ca_certs=tls_params.ca_certs,
-                certfile=tls_params.certfile,
-                keyfile=tls_params.keyfile,
-                cert_reqs=tls_params.cert_reqs,
-                tls_version=tls_params.tls_version,
-                ciphers=tls_params.ciphers,
-                keyfile_password=tls_params.keyfile_password,
-            )
-
         if tls_insecure is not None:
             self._client.tls_insecure_set(tls_insecure)
 
@@ -355,6 +345,22 @@ class Client:
         if timeout is None:
             timeout = 10
         self.timeout = timeout
+
+    def _set_tls_params(self) -> None:
+        """Apply TLS settings to the client.
+
+        This may block on loading SSL certificates from disk (#379).
+        """
+        if self._tls_params is not None:
+            self._client.tls_set(
+                ca_certs=self._tls_params.ca_certs,
+                certfile=self._tls_params.certfile,
+                keyfile=self._tls_params.keyfile,
+                cert_reqs=self._tls_params.cert_reqs,
+                tls_version=self._tls_params.tls_version,
+                ciphers=self._tls_params.ciphers,
+                keyfile_password=self._tls_params.keyfile_password,
+            )
 
     @property
     def identifier(self) -> str:
@@ -741,6 +747,23 @@ class Client:
         while self._client.loop_misc() == mqtt.MQTT_ERR_SUCCESS:  # noqa: ASYNC110
             await asyncio.sleep(1)
 
+    def _client_connect(self) -> None:
+        """Connect to the broker.
+
+        This handles any blocking operations in the mqtt client, and should be
+        run from an executor thread with self._lock held in the event loop.
+        """
+        self._set_tls_params()
+        self._client.connect(
+            self._hostname,
+            self._port,
+            self._keepalive,
+            self._bind_address,
+            self._bind_port,
+            self._clean_start,
+            self._properties,
+        )
+
     async def __aenter__(self) -> Self:
         """Connect to the broker."""
         if self._lock.locked():
@@ -751,17 +774,7 @@ class Client:
             loop = asyncio.get_running_loop()
             # [3] Run connect() within an executor thread, since it blocks on socket
             # connection for up to `keepalive` seconds: https://git.io/Jt5Yc
-            await loop.run_in_executor(
-                None,
-                self._client.connect,
-                self._hostname,
-                self._port,
-                self._keepalive,
-                self._bind_address,
-                self._bind_port,
-                self._clean_start,
-                self._properties,
-            )
+            await loop.run_in_executor(None, self._client_connect)
             _set_client_socket_defaults(self._client.socket(), self._socket_options)
         # Convert all possible paho-mqtt Client.connect exceptions to our MqttError
         # See: https://github.com/eclipse/paho.mqtt.python/blob/v1.5.0/src/paho/mqtt/client.py#L1770
