@@ -24,3 +24,9 @@ Please check if your changes call for updates to the documentation and don't for
 ### Visual Studio Code
 
 You can find workspace settings and recommended extensions in the `.vscode` folder.
+
+### Release
+
+1. Adjust the version in `pyproject.toml`
+1. Update the `CHANGELOG.md`
+1. Create a new release on GitHub.

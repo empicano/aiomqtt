@@ -26,10 +26,10 @@ done
 
 # Run checks
 if [ "${dry}" = true ]; then
-  uv run ruff check aiomqtt tests
   uv run ruff format --check --diff aiomqtt tests
+  uv run ruff check aiomqtt tests
 else
-  uv run ruff check --fix aiomqtt tests
   uv run ruff format aiomqtt tests
+  uv run ruff check --fix aiomqtt tests
 fi
-uv run mypy aiomqtt tests --junit-xml="reports/mypy.xml"
+uv run mypy aiomqtt tests
