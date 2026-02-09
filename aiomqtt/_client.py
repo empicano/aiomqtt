@@ -57,6 +57,7 @@ class _SlidingWindowBuffer:
 
     def __init__(self, size: int) -> None:
         self.buffer = bytearray(size)
+        self.view = memoryview(self.buffer)
         self.left = 0
         self.right = 0
 
@@ -256,26 +257,21 @@ class Client:
     async def _receive(self) -> Packet:
         while True:
             # TODO(empicano): Check for _disconnected?
-            if self._buffer_in.left < self._buffer_in.right:
-                try:
-                    # TODO(empicano): We don't actually know if we're reading over the
-                    # buffer.right pointer -> We could check afterwards with nbytes
-                    # until mqtt5 implements memoryviews; Then, also remove the
-                    # if-statement and return immediately in mqtt5 if len(memview) == 0
-                    packet, nbytes = read(
-                        self._buffer_in.buffer, index=self._buffer_in.left
-                    )
-                except IndexError:  # Partial packet
-                    pass
-                except ValueError as exc:
-                    await self._disconnect(
-                        reason_code=DisconnectReasonCode.MALFORMED_PACKET,
-                    )
-                    msg = "Received malformed packet"
-                    raise ProtocolError(msg) from exc
-                else:
-                    self._buffer_in.left += nbytes
-                    return packet
+            try:
+                packet, nbytes = read(
+                    self._buffer_in.view[self._buffer_in.left : self._buffer_in.right]
+                )
+            except IndexError:  # Partial packet
+                pass
+            except ValueError as exc:
+                await self._disconnect(
+                    reason_code=DisconnectReasonCode.MALFORMED_PACKET,
+                )
+                msg = "Received malformed packet"
+                raise ProtocolError(msg) from exc
+            else:
+                self._buffer_in.left += nbytes
+                return packet
             data = await self._reader.read(2**14)
             if not data:  # Reached EOF
                 await self._disconnect()

@@ -24,7 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 license = { file = "LICENSE" }
-dependencies = ["mqtt5"]
+dependencies = ["mqtt5~=0.4.0"]
 
 [project.urls]
 "Source" = "https://github.com/empicano/aiomqtt"
@@ -39,9 +39,6 @@ dev = [
     "mypy>=1.10.0,<2.0.0",
     "ruff>=0.13.1",
 ]
-
-[tool.uv.sources]
-mqtt5 = { path = "../mqtt5" }
 
 [tool.ruff]
 target-version = "py311"
