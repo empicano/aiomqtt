@@ -348,8 +348,7 @@ class Client:
                         "Received DisconnectPacket with reason code: %s",
                         packet.reason_code.name,
                     )
-                    # TODO(empicano): This sends DISCONNECT, which is not what we want
-                    await self._disconnect()
+                    await self._close()
                     await self._connected
                 case _:
                     self._logger.error(
@@ -954,6 +953,18 @@ class Client:
         await self._send(PingReqPacket())
         return await self._disconnected_or(self._pending_pingresp)
 
+    async def _close_inner(self) -> None:
+        self._writer.close()
+        await self._writer.wait_closed()
+        self._connected = asyncio.Future()
+        self._disconnected.set_result(None)
+
+    async def _close(self) -> None:
+        async with self._disconnection_lock:
+            if not hasattr(self, "_disconnected") or self._disconnected.done():
+                return
+            await self._close_inner()
+
     async def _disconnect(
         self,
         *,
@@ -985,7 +996,4 @@ class Client:
                 )
             except ConnectError:
                 self._logger.exception("Failed to send DISCONNECT")
-            self._writer.close()
-            await self._writer.wait_closed()
-            self._connected = asyncio.Future()
-            self._disconnected.set_result(None)
+            await self._close_inner()
