@@ -413,7 +413,6 @@ class Client:
             fut: asyncio.Future[PublishPacket | PubRelPacket] = asyncio.Future()
             self._getters.append(fut)
             # Wait until we either have a message or disconnect
-            # TODO(empicano): We should do something with the getter/future on fail
             yield await self._disconnected_or(fut)
 
     def _packet_id_generator(self) -> typing.Iterator[int]:
@@ -956,6 +955,8 @@ class Client:
     async def _close_inner(self) -> None:
         self._writer.close()
         await self._writer.wait_closed()
+        # Avoid dispatching messages to stale consumers
+        self._getters.clear()
         self._connected = asyncio.Future()
         self._disconnected.set_result(None)
 
