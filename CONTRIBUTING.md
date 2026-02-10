@@ -9,13 +9,13 @@ We're happy about contributions to aiomqtt! 🎉
 - Run ruff and mypy with `./scripts/check`
 - Run the tests with `./scripts/test`
 
-During development, it's often useful to have a local MQTT broker running. You can spin up a local mosquitto broker with Docker via `./scripts/develop`. You can connect to this broker with `aiomqtt.Client("localhost", port=1883)`.
+During development, it's often useful to have a local MQTT broker running. You can spin up a local mosquitto broker with Docker via `./scripts/mosquitto`.
+
+You can connect to this broker with `aiomqtt.Client("localhost")`. Run `AIOMQTT_TEST_HOSTNAME=localhost ./scripts/test` to run the tests against the local broker instead of the public `test.mosquitto.org` broker.
 
 ## The documentation
 
-The documentation uses [Sphinx](https://www.sphinx-doc.org/en/master/). You can build it with `./scripts/docs --reload`.
-
-The Markdown source files are located in the `docs` folder. The reference section is mostly generated from the docstrings in the source code. The docstrings are formatted according to the [Google Python Style Guide](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings).
+The documentation lives in the `docs` folder. Examples should be self-contained and runnable as-is.
 
 ## Making a pull request
 
