@@ -1,12 +1,16 @@
 """Test configuration and utilities."""
 
 import inspect
+import os
 import secrets
 import sys
 
 _OS_NAME = sys.platform
 _PYTHON_VERSION = ".".join(map(str, sys.version_info[:2]))
 _RANDOM_STR = secrets.token_hex(4)
+
+# Tests run faster with a local broker
+HOSTNAME = os.environ.get("AIOMQTT_TEST_HOSTNAME", "test.mosquitto.org")
 
 
 def unique_topic() -> str:
