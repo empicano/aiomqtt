@@ -248,6 +248,8 @@ class Client:
         self._clean_start = clean_start
         self._properties = properties
         self._tls_params = tls_params
+        self._tls_insecure = tls_insecure
+        self._tls_params_set = False
         self._loop = asyncio.get_running_loop()
 
         # Connection state
@@ -320,9 +322,6 @@ class Client:
         if tls_context is not None:
             self._client.tls_set_context(tls_context)
 
-        if tls_insecure is not None:
-            self._client.tls_insecure_set(tls_insecure)
-
         if proxy is not None:
             self._client.proxy_set(**proxy.proxy_args)
 
@@ -347,20 +346,23 @@ class Client:
         self.timeout = timeout
 
     def _set_tls_params(self) -> None:
-        """Apply TLS settings to the client.
-
-        This may block on loading SSL certificates from disk (#379).
-        """
-        if self._tls_params is not None:
-            self._client.tls_set(
-                ca_certs=self._tls_params.ca_certs,
-                certfile=self._tls_params.certfile,
-                keyfile=self._tls_params.keyfile,
-                cert_reqs=self._tls_params.cert_reqs,
-                tls_version=self._tls_params.tls_version,
-                ciphers=self._tls_params.ciphers,
-                keyfile_password=self._tls_params.keyfile_password,
-            )
+        """Apply TLS settings to the client - only once."""
+        if not self._tls_params_set:
+            # This may block on loading SSL certificates from disk (#379).
+            if self._tls_params is not None:
+                self._client.tls_set(
+                    ca_certs=self._tls_params.ca_certs,
+                    certfile=self._tls_params.certfile,
+                    keyfile=self._tls_params.keyfile,
+                    cert_reqs=self._tls_params.cert_reqs,
+                    tls_version=self._tls_params.tls_version,
+                    ciphers=self._tls_params.ciphers,
+                    keyfile_password=self._tls_params.keyfile_password,
+                )
+            # set tls_insecure, strictly AFTER tls_set()
+            if self._tls_insecure is not None:
+                self._client.tls_insecure_set(self._tls_insecure)
+            self._tls_params_set = True
 
     @property
     def identifier(self) -> str:
