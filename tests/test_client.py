@@ -93,26 +93,41 @@ async def test_aexit_last_will() -> None:
         assert message.retain is True
 
 
+@pytest.mark.parametrize("data", [b"", b"\x00\x02\x00\x00"], ids=["EOF", "malformed"])
 @pytest.mark.network
-async def test_background_reconnection() -> None:
+async def test_background_reconnection(data: bytes) -> None:
     """Test that client reconnects after connection loss."""
     topic = conftest.unique_topic()
     first = True
+    connect_count = 0
+
+    async def connect_spy() -> None:
+        nonlocal connect_count
+        connect_count += 1
+        return await original_connect()
 
     async def read_mock(n: int = -1) -> bytes:
         nonlocal first
         if first:
             first = False
-            return b""
+            return data
         return await original_read(n)
 
     async with aiomqtt.Client(conftest.HOSTNAME, reconnect=True) as client:
         original_read = client._reader.read
+        original_connect = client._connect
         # First operation should work
         await client.publish(topic)
-        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+        with (
+            unittest.mock.patch.object(client._reader, "read", side_effect=read_mock),
+            unittest.mock.patch.object(client, "_connect", side_effect=connect_spy),
+        ):
             await client.disconnected()
-        await client.connected()
+            # Buffer should be cleared after disconnection
+            assert client._buffer_in.left == client._buffer_in.right
+            await client.connected()
+        # The client should reconnect on the first attempt
+        assert connect_count == 1
         # The client should be connected again
         await client.publish(topic)
 
@@ -546,10 +561,12 @@ async def test_unsubscribe_unsolicited_ack() -> None:
 @pytest.mark.network
 async def test_broker_disconnect() -> None:
     """Test that receiving a DISCONNECT from the broker doesn't send one back."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
-    original_send = client._send
     first = True
-    sent_packets: list[mqtt5.Packet] = []
+    packets_sent: list[mqtt5.Packet] = []
+
+    async def send_spy(packet: mqtt5.Packet) -> None:
+        packets_sent.append(packet)
+        return await original_send(packet)
 
     async def read_mock(n: int = -1) -> bytes:
         nonlocal first
@@ -560,15 +577,12 @@ async def test_broker_disconnect() -> None:
             ).write()
         return await original_read(n)
 
-    async def send_spy(packet: mqtt5.Packet) -> None:
-        sent_packets.append(packet)
-        return await original_send(packet)
-
-    async with client:
+    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+        original_send = client._send
         original_read = client._reader.read
         with (
             unittest.mock.patch.object(client._reader, "read", side_effect=read_mock),
             unittest.mock.patch.object(client, "_send", side_effect=send_spy),
         ):
             await client.disconnected()
-        assert not any(isinstance(p, mqtt5.DisconnectPacket) for p in sent_packets)
+        assert not any(isinstance(p, mqtt5.DisconnectPacket) for p in packets_sent)

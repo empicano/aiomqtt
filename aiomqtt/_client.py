@@ -256,7 +256,6 @@ class Client:
 
     async def _receive(self) -> Packet:
         while True:
-            # TODO(empicano): Check for _disconnected?
             try:
                 packet, nbytes = read(
                     self._buffer_in.view[self._buffer_in.left : self._buffer_in.right]
@@ -957,6 +956,8 @@ class Client:
         await self._writer.wait_closed()
         # Avoid dispatching messages to stale consumers
         self._getters.clear()
+        # Discard stale data from the old connection
+        self._buffer_in.left = self._buffer_in.right = 0
         self._connected = asyncio.Future()
         self._disconnected.set_result(None)
 
