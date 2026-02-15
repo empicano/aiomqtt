@@ -50,6 +50,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 
 - Implement `len(client.messages)` to return number of messages in queue (@empicano in #323)
+- Add support for application-controlled acknowledgements (@ale-rinaldi in #346)
 
 ### Changed
 

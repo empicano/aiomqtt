@@ -206,6 +206,9 @@ class Client:
         socket_options: Options to pass to the underlying socket.
         websocket_path: The path to use for websockets.
         websocket_headers: The headers to use for websockets.
+        manual_ack: If set to ``True``, the client will not automatically acknowledge
+            messages. Instead, the user must manually acknowledge messages using the
+            ``ack`` method.
     """
 
     def __init__(
@@ -239,6 +242,7 @@ class Client:
         socket_options: Iterable[SocketOption] | None = None,
         websocket_path: str | None = None,
         websocket_headers: WebSocketHeaders | None = None,
+        manual_ack: bool = False,
     ) -> None:
         self._hostname = hostname
         self._port = port
@@ -292,6 +296,7 @@ class Client:
             clean_session=clean_session,
             transport=transport,
             reconnect_on_failure=False,
+            manual_ack=manual_ack,
         )
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
@@ -430,6 +435,27 @@ class Client:
         with self._pending_call(mid, callback_result, self._pending_subscribes):
             # Wait for callback_result
             return await self._wait_for(callback_result, timeout=timeout)
+
+    @_outgoing_call
+    async def ack(
+        self,
+        /,
+        message: Message,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Sends an acknowledgement for a given message. Only useful in QoS>=1 and manual_ack=True (option of Client)
+
+        Args:
+            message: The message to acknowledge.
+            *args: Additional positional arguments to pass to paho-mqtt's ack
+                method.
+            **kwargs: Additional keyword arguments to pass to paho-mqtt's ack
+                method.
+        """
+        result = self._client.ack(message.mid, message.qos, *args, **kwargs)
+        if result != mqtt.MQTT_ERR_SUCCESS:
+            raise MqttCodeError(result, "Could not ack message")
 
     @_outgoing_call
     async def unsubscribe(
