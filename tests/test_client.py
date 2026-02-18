@@ -250,6 +250,98 @@ async def test_publish_disconnected_qos2() -> None:
 
 
 @pytest.mark.network
+async def test_publish_retry_qos1() -> None:
+    """Test QoS=1 publish retry after disconnection."""
+    topic = conftest.unique_topic()
+    ready = asyncio.Event()
+
+    async def send_mock(packet: mqtt5.Packet) -> None:
+        await original_send(packet)
+        if isinstance(packet, mqtt5.PublishPacket):
+            ready.set()
+
+    async def read_mock(n: int = -1) -> bytes:
+        await ready.wait()
+        return b""
+
+    async with aiomqtt.Client(conftest.HOSTNAME, reconnect=True) as client:
+        original_send = client._send
+        packet_id = next(client.packet_ids)
+        # Block reads until PUBLISH is sent, then EOF to disconnect
+        with (
+            unittest.mock.patch.object(client, "_send", side_effect=send_mock),
+            unittest.mock.patch.object(client._reader, "read", side_effect=read_mock),
+            pytest.raises(aiomqtt.ConnectError),
+        ):
+            await client.publish(
+                topic,
+                payload=b"hello",
+                qos=aiomqtt.QoS.AT_LEAST_ONCE,
+                packet_id=packet_id,
+            )
+        # Wait for automatic reconnection
+        await client.connected()
+        # Retry with same packet_id and duplicate flag
+        puback_packet = await client.publish(
+            topic,
+            payload=b"hello",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=packet_id,
+            duplicate=True,
+        )
+        assert puback_packet.reason_code in (
+            aiomqtt.PubAckReasonCode.SUCCESS,
+            aiomqtt.PubAckReasonCode.NO_MATCHING_SUBSCRIBERS,
+        )
+
+
+@pytest.mark.network
+async def test_publish_retry_qos2() -> None:
+    """Test QoS=2 publish retry after disconnection."""
+    topic = conftest.unique_topic()
+    ready = asyncio.Event()
+
+    async def send_mock(packet: mqtt5.Packet) -> None:
+        await original_send(packet)
+        if isinstance(packet, mqtt5.PublishPacket):
+            ready.set()
+
+    async def read_mock(n: int = -1) -> bytes:
+        await ready.wait()
+        return b""
+
+    async with aiomqtt.Client(conftest.HOSTNAME, reconnect=True) as client:
+        original_send = client._send
+        packet_id = next(client.packet_ids)
+        # Block reads until PUBLISH is sent, then EOF to disconnect
+        with (
+            unittest.mock.patch.object(client, "_send", side_effect=send_mock),
+            unittest.mock.patch.object(client._reader, "read", side_effect=read_mock),
+            pytest.raises(aiomqtt.ConnectError),
+        ):
+            await client.publish(
+                topic,
+                payload=b"hello",
+                qos=aiomqtt.QoS.EXACTLY_ONCE,
+                packet_id=packet_id,
+            )
+        # Wait for automatic reconnection
+        await client.connected()
+        # Retry with same packet_id and duplicate flag
+        pubrec_packet = await client.publish(
+            topic,
+            payload=b"hello",
+            qos=aiomqtt.QoS.EXACTLY_ONCE,
+            packet_id=packet_id,
+            duplicate=True,
+        )
+        assert pubrec_packet.reason_code == aiomqtt.PubRecReasonCode.SUCCESS
+        # Complete the QoS=2 flow
+        pubcomp_packet = await client.pubrel(packet_id)
+        assert pubcomp_packet.reason_code == aiomqtt.PubCompReasonCode.SUCCESS
+
+
+@pytest.mark.network
 async def test_publish_flow_control_qos1() -> None:
     """Test client backpressure for QoS=1 PUBLISH (resolved by PUBACK)."""
     topic = conftest.unique_topic()

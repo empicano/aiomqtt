@@ -61,6 +61,10 @@ class _SlidingWindowBuffer:
         self.left = 0
         self.right = 0
 
+    def clear(self) -> None:
+        """Discard all buffered data."""
+        self.left = self.right = 0
+
     def write(self, data: bytes) -> None:
         """Write data to buffer, compacting if necessary.
 
@@ -420,6 +424,10 @@ class Client:
             yield packet_id
             packet_id = packet_id % (2**16 - 1) + 1
 
+    @property
+    def packet_ids(self) -> typing.Iterator[int]:
+        return self._packet_ids
+
     async def _connect(self) -> None:
         self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self._socket.connect((self._hostname, self._port))
@@ -485,6 +493,8 @@ class Client:
         *,
         payload: bytes | None = ...,
         qos: typing.Literal[QoS.AT_LEAST_ONCE] = ...,
+        packet_id: int | None = ...,
+        duplicate: bool = ...,
         retain: bool = ...,
         message_expiry_interval: int | None = ...,
         content_type: str | None = ...,
@@ -500,6 +510,8 @@ class Client:
         *,
         payload: bytes | None = ...,
         qos: typing.Literal[QoS.EXACTLY_ONCE] = ...,
+        packet_id: int | None = ...,
+        duplicate: bool = ...,
         retain: bool = ...,
         message_expiry_interval: int | None = ...,
         content_type: str | None = ...,
@@ -515,6 +527,8 @@ class Client:
         *,
         payload: bytes | None = ...,
         qos: QoS = ...,
+        packet_id: int | None = ...,
+        duplicate: bool = ...,
         retain: bool = ...,
         message_expiry_interval: int | None = ...,
         content_type: str | None = ...,
@@ -529,6 +543,8 @@ class Client:
         *,
         payload: bytes | None = None,
         qos: QoS = QoS.AT_MOST_ONCE,
+        packet_id: int | None = None,
+        duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,
         content_type: str | None = None,
@@ -542,6 +558,9 @@ class Client:
             topic: The topic to publish to.
             payload: The message payload as bytes.
             qos: The QoS of the message.
+            packet_id: The packet identifier to use. If None, one is generated
+                automatically.
+            duplicate: Whether this is a retransmission of an earlier PUBLISH.
             retain: Whether to retain the message. If True, any existing retained
                 message for the topic will be replaced.
             message_expiry_interval: The lifetime of the message in seconds. When the
@@ -580,6 +599,8 @@ class Client:
                 return await self._publish_at_least_once(
                     topic,
                     payload=payload,
+                    packet_id=packet_id,
+                    duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
                     content_type=content_type,
@@ -594,6 +615,8 @@ class Client:
                 return await self._publish_exactly_once(
                     topic,
                     payload=payload,
+                    packet_id=packet_id,
+                    duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
                     content_type=content_type,
@@ -633,6 +656,8 @@ class Client:
         topic: str,
         *,
         payload: bytes | None = None,
+        packet_id: int | None = None,
+        duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,
         content_type: str | None = None,
@@ -640,7 +665,8 @@ class Client:
         correlation_data: bytes | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubAckPacket:
-        packet_id = next(self._packet_ids)
+        if packet_id is None:
+            packet_id = next(self.packet_ids)
         self._pending_pubacks[packet_id] = asyncio.Future()
         try:
             await self._send(
@@ -649,6 +675,7 @@ class Client:
                     topic=topic,
                     payload=payload,
                     qos=QoS.AT_LEAST_ONCE,
+                    duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
                     content_type=content_type,
@@ -674,6 +701,8 @@ class Client:
         topic: str,
         *,
         payload: bytes | None = None,
+        packet_id: int | None = None,
+        duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,
         content_type: str | None = None,
@@ -681,7 +710,8 @@ class Client:
         correlation_data: bytes | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubRecPacket:
-        packet_id = next(self._packet_ids)
+        if packet_id is None:
+            packet_id = next(self.packet_ids)
         self._pending_pubrecs[packet_id] = asyncio.Future()
         try:
             await self._send(
@@ -689,6 +719,7 @@ class Client:
                     topic=topic,
                     payload=payload,
                     qos=QoS.EXACTLY_ONCE,
+                    duplicate=duplicate,
                     retain=retain,
                     packet_id=packet_id,
                     message_expiry_interval=message_expiry_interval,
@@ -870,7 +901,7 @@ class Client:
         Returns:
             The SUBACK response from the broker.
         """
-        packet_id = next(self._packet_ids)
+        packet_id = next(self.packet_ids)
         self._pending_subacks[packet_id] = asyncio.Future()
         try:
             await self._send(
@@ -923,7 +954,7 @@ class Client:
         Returns:
             The UNSUBACK response from the broker.
         """
-        packet_id = next(self._packet_ids)
+        packet_id = next(self.packet_ids)
         self._pending_unsubacks[packet_id] = asyncio.Future()
         try:
             await self._send(
@@ -957,7 +988,7 @@ class Client:
         # Avoid dispatching messages to stale consumers
         self._getters.clear()
         # Discard stale data from the old connection
-        self._buffer_in.left = self._buffer_in.right = 0
+        self._buffer_in.clear()
         self._connected = asyncio.Future()
         self._disconnected.set_result(None)
 
