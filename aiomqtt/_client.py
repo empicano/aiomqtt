@@ -97,10 +97,10 @@ class Client:
             the client identifier and creates a new session. If False, the broker
             resumes the existing session. If no session is available, then the broker
             creates a new session.
+        session_expiry_interval: The time for the session to expire in seconds.
         will: The will message to publish if the client disconnects unexpectedly.
         keep_alive: The keep alive interval in seconds. The broker might override this
             value.
-        session_expiry_interval: The time for the session to expire in seconds.
         authentication_method: The name of the authentication method used for extended
             authentication.
         authentication_data: The contents of this data are defined by the authentication
@@ -132,10 +132,10 @@ class Client:
         username: str | None = None,
         password: str | None = None,
         clean_start: bool = False,
+        session_expiry_interval: int = 0,
         reconnect: bool = False,
         will: Will | None = None,
         keep_alive: int = 0,
-        session_expiry_interval: int = 0,
         authentication_method: str | None = None,
         authentication_data: bytes | None = None,
         request_problem_info: bool = True,
@@ -157,10 +157,10 @@ class Client:
         self._username = username
         self._password = password
         self._clean_start = clean_start
+        self._session_expiry_interval = session_expiry_interval
         self._reconnect = reconnect
         self._will = will
         self._keep_alive = keep_alive
-        self._session_expiry_interval = session_expiry_interval
         self._authentication_method = authentication_method
         self._authentication_data = authentication_data
         self._request_problem_info = request_problem_info
