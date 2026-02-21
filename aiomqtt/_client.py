@@ -111,8 +111,8 @@ class Client:
             where it is allowed.
         request_response_info: If False, the broker must not return response information
             in the CONNACK packet. If True, the broker may return response information.
-        receive_max: The maximum number of unacknowledged PUBLISH packets with QoS > 0
-            that the broker may send to the client.
+        receive_max: The maximum number of unacknowledged PUBLISH packets with QoS=1 and
+            QoS=2 that the broker may send to the client.
         topic_alias_max: The maximum number of topic aliases that the broker may use
             when sending PUBLISH packets.
         max_packet_size: The maximum size of a packet in bytes that we want to accept.
@@ -493,7 +493,7 @@ class Client:
         *,
         payload: bytes | None = ...,
         qos: typing.Literal[QoS.AT_LEAST_ONCE] = ...,
-        packet_id: int | None = ...,
+        packet_id: int,
         duplicate: bool = ...,
         retain: bool = ...,
         message_expiry_interval: int | None = ...,
@@ -510,7 +510,7 @@ class Client:
         *,
         payload: bytes | None = ...,
         qos: typing.Literal[QoS.EXACTLY_ONCE] = ...,
-        packet_id: int | None = ...,
+        packet_id: int,
         duplicate: bool = ...,
         retain: bool = ...,
         message_expiry_interval: int | None = ...,
@@ -558,8 +558,8 @@ class Client:
             topic: The topic to publish to.
             payload: The message payload as bytes.
             qos: The QoS of the message.
-            packet_id: The packet identifier to use. If None, one is generated
-                automatically.
+            packet_id: The packet identifier. Required for QoS=1 and QoS=2. Use
+                ``next(client.packet_ids)`` to generate.
             duplicate: Whether this is a retransmission of an earlier PUBLISH.
             retain: Whether to retain the message. If True, any existing retained
                 message for the topic will be replaced.
@@ -593,13 +593,13 @@ class Client:
                 )
                 return None
             case QoS.AT_LEAST_ONCE:
-                if not hasattr(self, "_send_semaphore"):
-                    raise ConnectError(self._hostname, self._port)
-                await self._send_semaphore.acquire()
+                if packet_id is None:
+                    msg = "Packet ID required for QoS=1 PUBLISH"
+                    raise ValueError(msg)
                 return await self._publish_at_least_once(
                     topic,
+                    packet_id,
                     payload=payload,
-                    packet_id=packet_id,
                     duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
@@ -609,13 +609,13 @@ class Client:
                     user_properties=user_properties,
                 )
             case QoS.EXACTLY_ONCE:
-                if not hasattr(self, "_send_semaphore"):
-                    raise ConnectError(self._hostname, self._port)
-                await self._send_semaphore.acquire()
+                if packet_id is None:
+                    msg = "Packet ID required for QoS=2 PUBLISH"
+                    raise ValueError(msg)
                 return await self._publish_exactly_once(
                     topic,
+                    packet_id,
                     payload=payload,
-                    packet_id=packet_id,
                     duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
@@ -654,9 +654,9 @@ class Client:
     async def _publish_at_least_once(
         self,
         topic: str,
+        packet_id: int,
         *,
         payload: bytes | None = None,
-        packet_id: int | None = None,
         duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,
@@ -665,8 +665,9 @@ class Client:
         correlation_data: bytes | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubAckPacket:
-        if packet_id is None:
-            packet_id = next(self.packet_ids)
+        if not hasattr(self, "_send_semaphore"):
+            raise ConnectError(self._hostname, self._port)
+        await self._send_semaphore.acquire()
         self._pending_pubacks[packet_id] = asyncio.Future()
         try:
             await self._send(
@@ -699,9 +700,9 @@ class Client:
     async def _publish_exactly_once(
         self,
         topic: str,
+        packet_id: int,
         *,
         payload: bytes | None = None,
-        packet_id: int | None = None,
         duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,
@@ -710,8 +711,9 @@ class Client:
         correlation_data: bytes | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubRecPacket:
-        if packet_id is None:
-            packet_id = next(self.packet_ids)
+        if not hasattr(self, "_send_semaphore"):
+            raise ConnectError(self._hostname, self._port)
+        await self._send_semaphore.acquire()
         self._pending_pubrecs[packet_id] = asyncio.Future()
         try:
             await self._send(
