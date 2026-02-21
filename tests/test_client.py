@@ -206,17 +206,25 @@ async def test_publish_disconnected_qos1() -> None:
             await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
-        await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+        await client.publish(
+            topic, qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=next(client.packet_ids)
+        )
     async with client:
         with (
             unittest.mock.patch.object(client, "_send", side_effect=send_mock),
             pytest.raises(aiomqtt.ConnectError),
         ):
-            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+            await client.publish(
+                topic, qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=next(client.packet_ids)
+            )
         with pytest.raises(aiomqtt.ConnectError):
-            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+            await client.publish(
+                topic, qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=next(client.packet_ids)
+            )
     with pytest.raises(aiomqtt.ConnectError):
-        await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+        await client.publish(
+            topic, qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=next(client.packet_ids)
+        )
 
 
 @pytest.mark.network
@@ -236,22 +244,30 @@ async def test_publish_disconnected_qos2() -> None:
             await client._disconnect()
 
     with pytest.raises(aiomqtt.ConnectError):
-        await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
+        await client.publish(
+            topic, qos=aiomqtt.QoS.EXACTLY_ONCE, packet_id=next(client.packet_ids)
+        )
     async with client:
         with (
             unittest.mock.patch.object(client, "_send", side_effect=send_mock),
             pytest.raises(aiomqtt.ConnectError),
         ):
-            await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
+            await client.publish(
+                topic, qos=aiomqtt.QoS.EXACTLY_ONCE, packet_id=next(client.packet_ids)
+            )
         with pytest.raises(aiomqtt.ConnectError):
-            await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
+            await client.publish(
+                topic, qos=aiomqtt.QoS.EXACTLY_ONCE, packet_id=next(client.packet_ids)
+            )
     with pytest.raises(aiomqtt.ConnectError):
-        await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
+        await client.publish(
+            topic, qos=aiomqtt.QoS.EXACTLY_ONCE, packet_id=next(client.packet_ids)
+        )
 
 
 @pytest.mark.network
 async def test_publish_retry_qos1() -> None:
-    """Test QoS=1 publish retry after disconnection."""
+    """Test QoS = 1 publish retry after disconnection."""
     topic = conftest.unique_topic()
     ready = asyncio.Event()
 
@@ -260,7 +276,7 @@ async def test_publish_retry_qos1() -> None:
         if isinstance(packet, mqtt5.PublishPacket):
             ready.set()
 
-    async def read_mock(n: int = -1) -> bytes:
+    async def read_mock(_n: int = -1) -> bytes:
         await ready.wait()
         return b""
 
@@ -297,7 +313,7 @@ async def test_publish_retry_qos1() -> None:
 
 @pytest.mark.network
 async def test_publish_retry_qos2() -> None:
-    """Test QoS=2 publish retry after disconnection."""
+    """Test QoS = 2 publish retry after disconnection."""
     topic = conftest.unique_topic()
     ready = asyncio.Event()
 
@@ -306,7 +322,7 @@ async def test_publish_retry_qos2() -> None:
         if isinstance(packet, mqtt5.PublishPacket):
             ready.set()
 
-    async def read_mock(n: int = -1) -> bytes:
+    async def read_mock(_n: int = -1) -> bytes:
         await ready.wait()
         return b""
 
@@ -336,14 +352,14 @@ async def test_publish_retry_qos2() -> None:
             duplicate=True,
         )
         assert pubrec_packet.reason_code == aiomqtt.PubRecReasonCode.SUCCESS
-        # Complete the QoS=2 flow
+        # Complete the QoS = 2 flow
         pubcomp_packet = await client.pubrel(packet_id)
         assert pubcomp_packet.reason_code == aiomqtt.PubCompReasonCode.SUCCESS
 
 
 @pytest.mark.network
 async def test_publish_flow_control_qos1() -> None:
-    """Test client backpressure for QoS=1 PUBLISH (resolved by PUBACK)."""
+    """Test client backpressure for QoS = 1 PUBLISH (resolved by PUBACK)."""
     topic = conftest.unique_topic()
     ready = asyncio.Event()
 
@@ -359,13 +375,19 @@ async def test_publish_flow_control_qos1() -> None:
             ):
                 connack_packet = await client.connected()
                 for _ in range(connack_packet.receive_max + 1):
-                    tg.create_task(client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE))
+                    tg.create_task(
+                        client.publish(
+                            topic,
+                            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+                            packet_id=next(client.packet_ids),
+                        )
+                    )
                 # Yield control so that other tasks can run
                 await asyncio.sleep(0)
                 assert client._send_semaphore._value == 0
                 assert client._send_semaphore._waiters is not None
                 assert len(client._send_semaphore._waiters) == 1
-                # We can still send QoS=0 PUBLISH
+                # We can still send QoS = 0 PUBLISH
                 await client.publish(topic)
                 # Resolve backpressure
                 ready.set()
@@ -374,7 +396,7 @@ async def test_publish_flow_control_qos1() -> None:
 
 @pytest.mark.network
 async def test_publish_flow_control_qos2() -> None:
-    """Test client backpressure for QoS=2 PUBLISH (resolved by PUBCOMP)."""
+    """Test client backpressure for QoS = 2 PUBLISH (resolved by PUBCOMP)."""
     topic = conftest.unique_topic()
     ready = asyncio.Event()
 
@@ -387,7 +409,9 @@ async def test_publish_flow_control_qos2() -> None:
         connack_packet = await client.connected()
         packet_ids = []
         for _ in range(connack_packet.receive_max):
-            pubrec_packet = await client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
+            pubrec_packet = await client.publish(
+                topic, qos=aiomqtt.QoS.EXACTLY_ONCE, packet_id=next(client.packet_ids)
+            )
             packet_ids.append(pubrec_packet.packet_id)
         async with asyncio.TaskGroup() as tg:
             with unittest.mock.patch.object(
@@ -397,14 +421,18 @@ async def test_publish_flow_control_qos2() -> None:
                     tg.create_task(client.pubrel(packet_id))
                 # This next PUBLISH should block
                 blocked = tg.create_task(
-                    client.publish(topic, qos=aiomqtt.QoS.EXACTLY_ONCE)
+                    client.publish(
+                        topic,
+                        qos=aiomqtt.QoS.EXACTLY_ONCE,
+                        packet_id=next(client.packet_ids),
+                    )
                 )
                 # Yield control so that other tasks can run
                 await asyncio.sleep(0)
                 assert client._send_semaphore._value == 0
                 assert client._send_semaphore._waiters is not None
                 assert len(client._send_semaphore._waiters) == 1
-                # We can still send QoS=0 PUBLISH
+                # We can still send QoS = 0 PUBLISH
                 await client.publish(topic)
                 # Resolve backpressure
                 ready.set()
@@ -446,7 +474,9 @@ async def test_publish_unsolicited_ack(
     async with aiomqtt.Client(conftest.HOSTNAME) as client:
         original_read = client._reader.read
         with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
-            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+            await client.publish(
+                topic, qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=next(client.packet_ids)
+            )
 
 
 @pytest.mark.network
@@ -571,7 +601,7 @@ async def test_subscribe_unsolicited_ack() -> None:
     async with aiomqtt.Client(conftest.HOSTNAME) as client:
         original_read = client._reader.read
         with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
-            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+            await client.publish(topic)
 
 
 @pytest.mark.network
@@ -580,11 +610,27 @@ async def test_unsubscribe() -> None:
     topic = conftest.unique_topic()
     async with aiomqtt.Client(conftest.HOSTNAME) as client:
         await client.subscribe(topic)
-        await client.publish(topic, payload=b"foo", qos=aiomqtt.QoS.AT_LEAST_ONCE)
+        # QoS = 1 guarantees delivery before subscribe/unsubscribe takes effect
+        await client.publish(
+            topic,
+            payload=b"foo",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=next(client.packet_ids),
+        )
         await client.unsubscribe(topic)
-        await client.publish(topic, payload=b"bar", qos=aiomqtt.QoS.AT_LEAST_ONCE)
+        await client.publish(
+            topic,
+            payload=b"bar",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=next(client.packet_ids),
+        )
         await client.subscribe(topic)
-        await client.publish(topic, payload=b"baz", qos=aiomqtt.QoS.AT_LEAST_ONCE)
+        await client.publish(
+            topic,
+            payload=b"baz",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=next(client.packet_ids),
+        )
         # We should only receive the first and last message
         message = await anext(client.messages())
         assert isinstance(message, aiomqtt.PublishPacket)
@@ -647,7 +693,7 @@ async def test_unsubscribe_unsolicited_ack() -> None:
     async with aiomqtt.Client(conftest.HOSTNAME) as client:
         original_read = client._reader.read
         with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
-            await client.publish(topic, qos=aiomqtt.QoS.AT_LEAST_ONCE)
+            await client.publish(topic)
 
 
 @pytest.mark.network
