@@ -280,7 +280,12 @@ async def test_publish_retry_qos1() -> None:
         await ready.wait()
         return b""
 
-    async with aiomqtt.Client(conftest.HOSTNAME, reconnect=True) as client:
+    async with aiomqtt.Client(
+        conftest.HOSTNAME,
+        clean_start=False,
+        session_expiry_interval=600,
+        reconnect=True,
+    ) as client:
         original_send = client._send
         packet_id = next(client.packet_ids)
         # Block reads until PUBLISH is sent, then EOF to disconnect
@@ -296,7 +301,8 @@ async def test_publish_retry_qos1() -> None:
                 packet_id=packet_id,
             )
         # Wait for automatic reconnection
-        await client.connected()
+        connack_packet = await client.connected()
+        assert connack_packet.session_present is True
         # Retry with same packet_id and duplicate flag
         puback_packet = await client.publish(
             topic,
@@ -326,7 +332,12 @@ async def test_publish_retry_qos2() -> None:
         await ready.wait()
         return b""
 
-    async with aiomqtt.Client(conftest.HOSTNAME, reconnect=True) as client:
+    async with aiomqtt.Client(
+        conftest.HOSTNAME,
+        clean_start=False,
+        session_expiry_interval=600,
+        reconnect=True,
+    ) as client:
         original_send = client._send
         packet_id = next(client.packet_ids)
         # Block reads until PUBLISH is sent, then EOF to disconnect
@@ -342,7 +353,8 @@ async def test_publish_retry_qos2() -> None:
                 packet_id=packet_id,
             )
         # Wait for automatic reconnection
-        await client.connected()
+        connack_packet = await client.connected()
+        assert connack_packet.session_present is True
         # Retry with same packet_id and duplicate flag
         pubrec_packet = await client.publish(
             topic,

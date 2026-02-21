@@ -68,6 +68,45 @@ except pydantic.ValidationError as e:
 > [!TIP]
 > aiomqtt (more specifically, the underlying [mqtt5](https://github.com/empicano/mqtt5) protocol library) serializes packets to minimal wire format. However, the number of bytes that are sent over the wire still depends a lot on how you encode your payloads. If you need to optimize for bandwidth, consider efficient schemes like Protobuf or MessagePack over JSON.
 
+### Publishing with QoS=1
+
+Unlike QoS=0, publishing with QoS=1 and QoS=2 requires a `packet_id`. QoS=1 and QoS=2 guarantee delivery through retransmission. If the connection is lost before the broker acknowledges the message, we have to resend it with the same `packet_id` and `duplicate=True`:
+
+```python
+import asyncio
+import aiomqtt
+
+
+async def main():
+    async with aiomqtt.Client(
+        "test.mosquitto.org",
+        clean_start=False,
+        session_expiry_interval=600,
+        reconnect=True,
+    ) as client:
+        packet_id = next(client.packet_ids)
+        duplicate = False
+        while True:
+            try:
+                await client.publish(
+                    "ducks/louie/status",
+                    payload=b"quack",
+                    qos=aiomqtt.QoS.AT_LEAST_ONCE,
+                    packet_id=packet_id,
+                    duplicate=duplicate,
+                )
+                break
+            except aiomqtt.ConnectError:
+                duplicate = True
+                await client.connected()
+
+
+asyncio.run(main())
+```
+
+> [!IMPORTANT]
+> For retries to work correctly, the client's session must be persistent. Set `clean_start=False` and a non-zero `session_expiry_interval`; Use a consistent `identifier` if you recreate the client.
+
 ### TODO: Publishing with QoS=2
 
 ### Retained messages
