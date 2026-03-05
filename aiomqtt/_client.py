@@ -92,7 +92,8 @@ class Client:
             override this value.
         logger: Optional logger to override the default logger.
         username: The username to authenticate with.
-        password: The password to authenticate with.
+        password: The password to authenticate with. This field is called password, but
+            it can be used to carry any binary credential information.
         clean_start: If True, the broker discards any existing session associated with
             the client identifier and creates a new session. If False, the broker
             resumes the existing session. If no session is available, then the broker
@@ -130,7 +131,7 @@ class Client:
         identifier: str | None = None,
         logger: logging.Logger | None = None,
         username: str | None = None,
-        password: str | None = None,
+        password: bytes | None = None,
         clean_start: bool = False,
         session_expiry_interval: int = 0,
         reconnect: bool = False,
