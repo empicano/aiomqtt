@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-03-05
+
+### Fixed
+
+- Fix failure to load TLS with `tls_params` and `tls_insecure=True` (@okaresz in 386)
+
 ## [2.5.0] - 2026-01-04
 
 ### Fixed
