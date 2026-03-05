@@ -26,17 +26,7 @@ async def test_aenter_reusable() -> None:
 
 
 @pytest.mark.network
-async def test_aenter_not_reentrant() -> None:
-    """Test that the client context manager is not reentrant."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
-    async with client:
-        with pytest.raises(RuntimeError):
-            async with client:
-                pass
-
-
-@pytest.mark.network
-async def test_aenter_invalid_hostname() -> None:
+async def test_aenter_reusable_invalid_hostname() -> None:
     """Test reusing the client after failure to connect in ``aenter``."""
     client = aiomqtt.Client("INVALID.HOSTNAME")
     with pytest.raises(socket.gaierror):
@@ -47,12 +37,41 @@ async def test_aenter_invalid_hostname() -> None:
 
 
 @pytest.mark.network
-async def test_aenter_negative_connack() -> None:
+async def test_aenter_reusable_negative_connack() -> None:
     """Test reusing the client after negative CONNACK in ``aenter``."""
     client = aiomqtt.Client(conftest.HOSTNAME, authentication_method="INVALID")
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
     # Second attempt should also fail but not raise reentry error
+    with pytest.raises(aiomqtt.NegativeAckError):
+        await client.__aenter__()
+
+
+@pytest.mark.network
+async def test_aenter_not_reentrant() -> None:
+    """Test that the client context manager is not reentrant."""
+    client = aiomqtt.Client(conftest.HOSTNAME)
+    async with client:
+        with pytest.raises(RuntimeError):
+            async with client:
+                pass
+
+
+@pytest.mark.network
+async def test_aenter_auth() -> None:
+    """Test that the client can connect with username and password."""
+    async with aiomqtt.Client(
+        conftest.HOSTNAME, port=1884, username="mosquitto", password=b"bzzz"
+    ):
+        pass
+
+
+@pytest.mark.network
+async def test_aenter_auth_invalid_password() -> None:
+    """Test that the client fails to connect with an invalid password."""
+    client = aiomqtt.Client(
+        conftest.HOSTNAME, port=1884, username="mosquitto", password=b"INVALID"
+    )
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
 
