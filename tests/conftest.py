@@ -2,7 +2,9 @@
 
 import inspect
 import os
+import pathlib
 import secrets
+import ssl
 import sys
 
 _OS_NAME = sys.platform
@@ -11,6 +13,13 @@ _RANDOM_STR = secrets.token_hex(4)
 
 # Tests run faster with a local broker
 HOSTNAME = os.environ.get("AIOMQTT_TEST_HOSTNAME", "test.mosquitto.org")
+# Choose the CA certificate based on the broker
+_SCRIPTS_DIR = pathlib.Path(__file__).parent.parent / "scripts"
+_FILENAME = "mosquitto.org.crt" if HOSTNAME == "test.mosquitto.org" else "mosquitto.crt"
+SSL_CONTEXT = ssl.create_default_context(cafile=str(_SCRIPTS_DIR / _FILENAME))
+
+USERNAME = "rw"
+PASSWORD = b"readwrite"
 
 
 def unique_topic() -> str:

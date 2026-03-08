@@ -8,6 +8,7 @@ import logging
 import random
 import secrets
 import socket
+import ssl
 import time
 import types
 import typing
@@ -91,6 +92,8 @@ class Client:
         identifier: Client identifier (auto-generated if None). The broker might
             override this value.
         logger: Optional logger to override the default logger.
+        ssl_context: SSL context for TLS encryption. If None, the connection is
+            unencrypted.
         username: The username to authenticate with.
         password: The password to authenticate with. This field is called password, but
             it can be used to carry any binary credential information.
@@ -130,6 +133,7 @@ class Client:
         port: int = 1883,
         identifier: str | None = None,
         logger: logging.Logger | None = None,
+        ssl_context: ssl.SSLContext | None = None,
         username: str | None = None,
         password: bytes | None = None,
         clean_start: bool = False,
@@ -155,6 +159,7 @@ class Client:
             logger = logging.getLogger("aiomqtt")
             logger.setLevel(logging.WARNING)
         self._logger = logger
+        self._ssl_context = ssl_context
         self._username = username
         self._password = password
         self._clean_start = clean_start
@@ -432,7 +437,11 @@ class Client:
     async def _connect(self) -> None:
         self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         self._socket.connect((self._hostname, self._port))
-        self._reader, self._writer = await asyncio.open_connection(sock=self._socket)
+        self._reader, self._writer = await asyncio.open_connection(
+            sock=self._socket,
+            ssl=self._ssl_context,
+            server_hostname=self._hostname if self._ssl_context else None,
+        )
         await self._send(
             ConnectPacket(
                 client_id=self.identifier,
