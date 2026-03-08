@@ -2,6 +2,7 @@
 
 import asyncio
 import socket
+import ssl
 import unittest.mock
 
 import conftest
@@ -31,9 +32,11 @@ async def test_aenter_reusable_invalid_hostname() -> None:
     client = aiomqtt.Client("INVALID.HOSTNAME")
     with pytest.raises(socket.gaierror):
         await client.__aenter__()
+    await client.__aexit__(None, None, None)
     # Second attempt should also fail but not raise reentry error
     with pytest.raises(socket.gaierror):
         await client.__aenter__()
+    await client.__aexit__(None, None, None)
 
 
 @pytest.mark.network
@@ -42,9 +45,11 @@ async def test_aenter_reusable_negative_connack() -> None:
     client = aiomqtt.Client(conftest.HOSTNAME, authentication_method="INVALID")
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
+    await client.__aexit__(None, None, None)
     # Second attempt should also fail but not raise reentry error
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
+    await client.__aexit__(None, None, None)
 
 
 @pytest.mark.network
@@ -53,15 +58,46 @@ async def test_aenter_not_reentrant() -> None:
     client = aiomqtt.Client(conftest.HOSTNAME)
     async with client:
         with pytest.raises(RuntimeError):
-            async with client:
-                pass
+            await client.__aenter__()
+
+
+@pytest.mark.network
+async def test_aenter_tls() -> None:
+    """Test connecting with TLS encryption."""
+    async with aiomqtt.Client(
+        conftest.HOSTNAME, port=8883, ssl_context=conftest.SSL_CONTEXT
+    ):
+        pass
+
+
+@pytest.mark.network
+async def test_aenter_tls_missing() -> None:
+    """Test that connecting without TLS to an encrypted port fails."""
+    client = aiomqtt.Client(conftest.HOSTNAME, port=8883)
+    with pytest.raises(aiomqtt.ConnectError):
+        await client.__aenter__()
+    await client.__aexit__(None, None, None)
+
+
+@pytest.mark.network
+async def test_aenter_tls_untrusted_certificate() -> None:
+    """Test that connecting with an untrusted certificate fails."""
+    client = aiomqtt.Client(
+        conftest.HOSTNAME, port=8883, ssl_context=ssl.create_default_context()
+    )
+    with pytest.raises(ssl.SSLCertVerificationError):
+        await client.__aenter__()
+    await client.__aexit__(None, None, None)
 
 
 @pytest.mark.network
 async def test_aenter_auth() -> None:
     """Test that the client can connect with username and password."""
     async with aiomqtt.Client(
-        conftest.HOSTNAME, port=1884, username="mosquitto", password=b"bzzz"
+        conftest.HOSTNAME,
+        port=1884,
+        username=conftest.USERNAME,
+        password=conftest.PASSWORD,
     ):
         pass
 
@@ -70,10 +106,11 @@ async def test_aenter_auth() -> None:
 async def test_aenter_auth_invalid_password() -> None:
     """Test that the client fails to connect with an invalid password."""
     client = aiomqtt.Client(
-        conftest.HOSTNAME, port=1884, username="mosquitto", password=b"INVALID"
+        conftest.HOSTNAME, port=1884, username=conftest.USERNAME, password=b"INVALID"
     )
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
+    await client.__aexit__(None, None, None)
 
 
 @pytest.mark.network
