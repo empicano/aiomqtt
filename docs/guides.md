@@ -13,7 +13,7 @@ import aiomqtt
 
 async def main() -> None:
     async with aiomqtt.Client("test.mosquitto.org") as client:
-        await client.publish("ducks/louie/status", payload=b"quack")
+        await client.publish("ducks/louie/status", b"quack")
 
 
 asyncio.run(main())
@@ -87,7 +87,7 @@ async def main() -> None:
             try:
                 await client.publish(
                     "ducks/louie/status",
-                    payload=b"quack",
+                    b"quack",
                     qos=aiomqtt.QoS.AT_LEAST_ONCE,
                     packet_id=packet_id,
                     duplicate=duplicate,
@@ -126,7 +126,7 @@ async def main() -> None:
             try:
                 await client.publish(
                     "ducks/louie/status",
-                    payload=b"quack",
+                    b"quack",
                     qos=aiomqtt.QoS.EXACTLY_ONCE,
                     packet_id=packet_id,
                     duplicate=duplicate,
@@ -430,11 +430,11 @@ import aiomqtt
 
 
 async def publish_status(client: aiomqtt.Client) -> None:
-    await client.publish("ducks/louie/status", payload=b"quack")
+    await client.publish("ducks/louie/status", b"quack")
 
 
 async def publish_location(client: aiomqtt.Client) -> None:
-    await client.publish("ducks/louie/location", payload=b"sky")
+    await client.publish("ducks/louie/location", b"sky")
 
 
 async def main() -> None:
@@ -516,5 +516,5 @@ async def get_mqtt(request: fastapi.Request) -> aiomqtt.Client:
 
 @app.get("/")
 async def publish(client: Annotated[aiomqtt.Client, fastapi.Depends(get_mqtt)]) -> None:
-    await client.publish("ducks/louie/status", payload=b"quack")
+    await client.publish("ducks/louie/status", b"quack")
 ```
