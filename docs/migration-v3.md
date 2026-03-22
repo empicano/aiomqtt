@@ -48,7 +48,7 @@ The opaque `message.properties` object has been replaced by individual attribute
 
 ## Publishing
 
-Payloads must now be `bytes` (or `None`). This makes serialization and deserialization explicit. Passing `str`, `int`, `float`, etc. is no longer supported:
+Payloads must now be `bytes`. This makes serialization and deserialization explicit. Passing `str`, `int`, `float`, etc. is no longer supported:
 
 ```python
 # v2
@@ -56,8 +56,8 @@ await client.publish("topic", payload="hello")
 await client.publish("topic", payload=42)
 
 # v3
-await client.publish("topic", payload=b"hello")
-await client.publish("topic", payload=b"42")
+await client.publish("topic", b"hello")
+await client.publish("topic", b"42")
 ```
 
 Publishing with QoS>0 now requires a `packet_id`. This is because QoS>0 is really only useful if you retry failed publishes:
@@ -69,7 +69,7 @@ await client.publish("topic", payload=b"hello", qos=1)
 # v3
 packet_id = next(client.packet_ids)
 await client.publish(
-    "topic", payload=b"hello", qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=packet_id
+    "topic", b"hello", qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=packet_id
 )
 ```
 

@@ -485,8 +485,8 @@ class Client:
     async def publish(
         self,
         topic: str,
+        payload: bytes,
         *,
-        payload: bytes | None = ...,
         qos: typing.Literal[QoS.AT_MOST_ONCE] = ...,
         retain: bool = ...,
         message_expiry_interval: int | None = ...,
@@ -500,8 +500,8 @@ class Client:
     async def publish(
         self,
         topic: str,
+        payload: bytes,
         *,
-        payload: bytes | None = ...,
         qos: typing.Literal[QoS.AT_LEAST_ONCE] = ...,
         packet_id: int,
         duplicate: bool = ...,
@@ -517,8 +517,8 @@ class Client:
     async def publish(
         self,
         topic: str,
+        payload: bytes,
         *,
-        payload: bytes | None = ...,
         qos: typing.Literal[QoS.EXACTLY_ONCE] = ...,
         packet_id: int,
         duplicate: bool = ...,
@@ -534,8 +534,8 @@ class Client:
     async def publish(
         self,
         topic: str,
+        payload: bytes,
         *,
-        payload: bytes | None = ...,
         qos: QoS = ...,
         packet_id: int | None = ...,
         duplicate: bool = ...,
@@ -550,8 +550,8 @@ class Client:
     async def publish(
         self,
         topic: str,
+        payload: bytes,
         *,
-        payload: bytes | None = None,
         qos: QoS = QoS.AT_MOST_ONCE,
         packet_id: int | None = None,
         duplicate: bool = False,
@@ -593,7 +593,7 @@ class Client:
             case QoS.AT_MOST_ONCE:
                 await self._publish_at_most_once(
                     topic,
-                    payload=payload,
+                    payload,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
                     content_type=content_type,
@@ -609,7 +609,7 @@ class Client:
                 return await self._publish_at_least_once(
                     topic,
                     packet_id,
-                    payload=payload,
+                    payload,
                     duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
@@ -625,7 +625,7 @@ class Client:
                 return await self._publish_exactly_once(
                     topic,
                     packet_id,
-                    payload=payload,
+                    payload,
                     duplicate=duplicate,
                     retain=retain,
                     message_expiry_interval=message_expiry_interval,
@@ -638,8 +638,8 @@ class Client:
     async def _publish_at_most_once(
         self,
         topic: str,
+        payload: bytes,
         *,
-        payload: bytes | None = None,
         retain: bool = False,
         message_expiry_interval: int | None = None,
         content_type: str | None = None,
@@ -665,8 +665,8 @@ class Client:
         self,
         topic: str,
         packet_id: int,
+        payload: bytes,
         *,
-        payload: bytes | None = None,
         duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,
@@ -711,8 +711,8 @@ class Client:
         self,
         topic: str,
         packet_id: int,
+        payload: bytes,
         *,
-        payload: bytes | None = None,
         duplicate: bool = False,
         retain: bool = False,
         message_expiry_interval: int | None = None,

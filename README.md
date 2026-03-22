@@ -8,7 +8,7 @@ The idiomatic asyncio MQTT client. Write code like this:
 
 ```python
 async with aiomqtt.Client("test.mosquitto.org") as client:
-    await client.publish("ducks/louie/status", payload=b"quack")
+    await client.publish("ducks/louie/status", b"quack")
 ```
 
 **Subscribe**
