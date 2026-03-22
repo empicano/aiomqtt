@@ -3,6 +3,7 @@
 import asyncio
 import socket
 import ssl
+import sys
 import unittest.mock
 
 import conftest
@@ -61,6 +62,10 @@ async def test_aenter_not_reentrant() -> None:
             await client.__aenter__()
 
 
+@pytest.mark.xfail(
+    sys.version_info >= (3, 13) and conftest.HOSTNAME == "test.mosquitto.org",
+    reason="test.mosquitto.org CA cert lacks key usage ext required by Python 3.13+",
+)
 @pytest.mark.network
 async def test_aenter_tls() -> None:
     """Test connecting with TLS encryption."""
