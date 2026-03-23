@@ -7,14 +7,14 @@ The idiomatic asyncio MQTT client. Write code like this:
 **Publish**
 
 ```python
-async with aiomqtt.Client("test.mosquitto.org") as client:
+async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
     await client.publish("ducks/louie/status", b"quack")
 ```
 
 **Subscribe**
 
 ```python
-async with aiomqtt.Client("test.mosquitto.org") as client:
+async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
     await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
     async for message in client.messages():
         print(message.payload)

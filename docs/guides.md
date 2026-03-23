@@ -12,7 +12,7 @@ import aiomqtt
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.publish("ducks/louie/status", b"quack")
 
 
@@ -76,7 +76,7 @@ import aiomqtt
 
 async def main() -> None:
     async with aiomqtt.Client(
-        "test.mosquitto.org",
+        hostname="test.mosquitto.org",
         clean_start=False,
         session_expiry_interval=600,
         reconnect=True,
@@ -115,7 +115,7 @@ import aiomqtt
 
 async def main() -> None:
     async with aiomqtt.Client(
-        "test.mosquitto.org",
+        hostname="test.mosquitto.org",
         clean_start=False,
         session_expiry_interval=600,
         reconnect=True,
@@ -164,7 +164,7 @@ import aiomqtt
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         async for message in client.messages():
             print(message.payload)
@@ -197,7 +197,7 @@ import aiomqtt
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_LEAST_ONCE)
         async for message in client.messages():
             print(message.payload)
@@ -221,7 +221,7 @@ import aiomqtt
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.subscribe("ducks/#")
         async for message in client.messages():
             match message:
@@ -332,7 +332,7 @@ async def consume(client: aiomqtt.Client) -> None:
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         async with asyncio.TaskGroup() as tg:
             tg.create_task(consume(client))
@@ -357,7 +357,7 @@ async def consume(client: aiomqtt.Client) -> None:
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         task = asyncio.create_task(consume(client))
         # Do something else for a while
@@ -388,7 +388,7 @@ async def consume(client: aiomqtt.Client) -> None:
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         try:
             # Cancel the consumer task after 5 seconds
@@ -438,7 +438,7 @@ async def publish_location(client: aiomqtt.Client) -> None:
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         await publish_status(client)
         await publish_location(client)
 
@@ -457,7 +457,7 @@ import aiomqtt
 
 async def main() -> None:
     async with aiomqtt.Client(
-        "test.mosquitto.org", will=aiomqtt.Will("ducks/louie/status", payload=b"zzzz")
+        hostname="test.mosquitto.org", will=aiomqtt.Will("ducks/louie/status", payload=b"zzzz")
     ) as client:
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         async for message in client.messages():
@@ -493,7 +493,7 @@ async def consume(client: aiomqtt.Client) -> None:
 
 @contextlib.asynccontextmanager
 async def lifespan(app: fastapi.FastAPI) -> collections.abc.AsyncIterator[None]:
-    async with aiomqtt.Client("test.mosquitto.org") as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
         app.state.mqtt = client
         await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
         task = asyncio.create_task(consume(client))

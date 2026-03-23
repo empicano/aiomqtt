@@ -15,8 +15,8 @@ from mqtt5 import (
 class ConnectError(Exception):
     """Raised when the connection to the broker fails or is lost."""
 
-    def __init__(self, hostname: str, port: int) -> None:
-        super().__init__(f"Not connected to {hostname}:{port}")
+    def __init__(self, endpoint: str) -> None:
+        super().__init__(f"Not connected to {endpoint}")
 
 
 class ProtocolError(Exception):

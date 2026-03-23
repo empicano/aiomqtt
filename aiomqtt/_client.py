@@ -87,8 +87,11 @@ class Client:
     """Asynchronous context manager for the connection to the MQTT broker.
 
     Args:
-        hostname: The broker's hostname or IP address.
+        hostname: The broker's hostname or IP address. Must not be set together
+            with ``unix_socket``.
         port: The broker's network port.
+        unix_socket: The path to the broker's Unix domain socket. Must not be set
+            together with ``hostname``.
         identifier: Client identifier (auto-generated if None). The broker might
             override this value.
         logger: Optional logger to override the default logger.
@@ -128,9 +131,10 @@ class Client:
 
     def __init__(
         self,
-        hostname: str,
         *,
+        hostname: str | None = None,
         port: int = 1883,
+        unix_socket: str | None = None,
         identifier: str | None = None,
         logger: logging.Logger | None = None,
         ssl_context: ssl.SSLContext | None = None,
@@ -150,8 +154,15 @@ class Client:
         max_packet_size: int | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
+        if (hostname is None) == (unix_socket is None):
+            msg = "Exactly one of hostname or unix_socket must be set"
+            raise ValueError(msg)
         self._hostname = hostname
         self._port = port
+        self._unix_socket = unix_socket
+        self._endpoint = (
+            unix_socket if unix_socket is not None else f"{hostname}:{port}"
+        )
         self.identifier = (
             identifier if identifier is not None else f"aiomqtt-{secrets.token_hex(2)}"
         )
@@ -252,16 +263,16 @@ class Client:
             )
             if fut.done():
                 return fut.result()
-        raise ConnectError(self._hostname, self._port)
+        raise ConnectError(self._endpoint)
 
     async def _send(self, packet: Packet) -> None:
         if not hasattr(self, "_writer"):
-            raise ConnectError(self._hostname, self._port)
+            raise ConnectError(self._endpoint)
         self._writer.write(packet.write())
         try:
             await self._writer.drain()
         except ConnectionResetError as exc:
-            raise ConnectError(self._hostname, self._port) from exc
+            raise ConnectError(self._endpoint) from exc
         self._most_recent_packet_sent_time = time.monotonic()
 
     async def _receive(self) -> Packet:
@@ -284,7 +295,7 @@ class Client:
             data = await self._reader.read(2**14)
             if not data:  # Reached EOF
                 await self._disconnect()
-                raise ConnectError(self._hostname, self._port)
+                raise ConnectError(self._endpoint)
             self._buffer_in.write(data)
 
     async def _receive_loop(self) -> None:
@@ -398,9 +409,7 @@ class Client:
                 await asyncio.sleep(delay)
                 try:
                     await self._connect()
-                    self._logger.info(
-                        "Reconnected to %s:%d", self._hostname, self._port
-                    )
+                    self._logger.info("Reconnected to %s", self._endpoint)
                     break
                 except (OSError, ProtocolError, NegativeAckError):
                     self._logger.exception("Failed to reconnect")
@@ -435,8 +444,12 @@ class Client:
         return self._packet_ids
 
     async def _connect(self) -> None:
-        self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        self._socket.connect((self._hostname, self._port))
+        if self._unix_socket is not None:
+            self._socket = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+            self._socket.connect(self._unix_socket)
+        else:
+            self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+            self._socket.connect((self._hostname, self._port))
         self._reader, self._writer = await asyncio.open_connection(
             sock=self._socket,
             ssl=self._ssl_context,
@@ -676,7 +689,7 @@ class Client:
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubAckPacket:
         if not hasattr(self, "_send_semaphore"):
-            raise ConnectError(self._hostname, self._port)
+            raise ConnectError(self._endpoint)
         await self._send_semaphore.acquire()
         self._pending_pubacks[packet_id] = asyncio.Future()
         try:
@@ -722,7 +735,7 @@ class Client:
         user_properties: list[tuple[str, str]] | None = None,
     ) -> PubRecPacket:
         if not hasattr(self, "_send_semaphore"):
-            raise ConnectError(self._hostname, self._port)
+            raise ConnectError(self._endpoint)
         await self._send_semaphore.acquire()
         self._pending_pubrecs[packet_id] = asyncio.Future()
         try:
