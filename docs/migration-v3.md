@@ -125,7 +125,7 @@ while True:
         await asyncio.sleep(5)
 
 # v3 -- built-in reconnection
-async with aiomqtt.Client("test.mosquitto.org", reconnect=True) as client:
+async with aiomqtt.Client(hostname="test.mosquitto.org", reconnect=True) as client:
     ...
 ```
 
@@ -140,7 +140,7 @@ During disconnection, operations raise `ConnectError`. Use `await client.connect
 The following `Client` arguments from v2 have been removed:
 
 - `protocol`: v3 only supports MQTTv5
-- `transport`: only TCP is supported (WebSocket support will be added later)
+- `transport`: use the `unix_socket` parameter for Unix domain sockets
 - `tls_context`: renamed to `ssl_context`
 - `tls_params`, `tls_insecure`: use `ssl_context` directly
 - `proxy`, `socket_options`: removed

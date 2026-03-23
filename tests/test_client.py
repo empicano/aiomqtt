@@ -19,7 +19,7 @@ pytestmark = pytest.mark.asyncio
 @pytest.mark.network
 async def test_aenter_reusable() -> None:
     """Test that the client context manager is reusable."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     topic = conftest.unique_topic()
     async with client:
         await client.publish(topic, b"")
@@ -30,7 +30,7 @@ async def test_aenter_reusable() -> None:
 @pytest.mark.network
 async def test_aenter_reusable_invalid_hostname() -> None:
     """Test reusing the client after failure to connect in ``aenter``."""
-    client = aiomqtt.Client("INVALID.HOSTNAME")
+    client = aiomqtt.Client(hostname="INVALID.HOSTNAME")
     with pytest.raises(socket.gaierror):
         await client.__aenter__()
     await client.__aexit__(None, None, None)
@@ -43,7 +43,7 @@ async def test_aenter_reusable_invalid_hostname() -> None:
 @pytest.mark.network
 async def test_aenter_reusable_negative_connack() -> None:
     """Test reusing the client after negative CONNACK in ``aenter``."""
-    client = aiomqtt.Client(conftest.HOSTNAME, authentication_method="INVALID")
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME, authentication_method="INVALID")
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
     await client.__aexit__(None, None, None)
@@ -56,7 +56,7 @@ async def test_aenter_reusable_negative_connack() -> None:
 @pytest.mark.network
 async def test_aenter_not_reentrant() -> None:
     """Test that the client context manager is not reentrant."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     async with client:
         with pytest.raises(RuntimeError):
             await client.__aenter__()
@@ -70,7 +70,7 @@ async def test_aenter_not_reentrant() -> None:
 async def test_aenter_tls() -> None:
     """Test connecting with TLS encryption."""
     async with aiomqtt.Client(
-        conftest.HOSTNAME, port=8883, ssl_context=conftest.SSL_CONTEXT
+        hostname=conftest.HOSTNAME, port=8883, ssl_context=conftest.SSL_CONTEXT
     ):
         pass
 
@@ -78,7 +78,7 @@ async def test_aenter_tls() -> None:
 @pytest.mark.network
 async def test_aenter_tls_missing() -> None:
     """Test that connecting without TLS to an encrypted port fails."""
-    client = aiomqtt.Client(conftest.HOSTNAME, port=8883)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME, port=8883)
     with pytest.raises(aiomqtt.ConnectError):
         await client.__aenter__()
     await client.__aexit__(None, None, None)
@@ -88,7 +88,7 @@ async def test_aenter_tls_missing() -> None:
 async def test_aenter_tls_untrusted_certificate() -> None:
     """Test that connecting with an untrusted certificate fails."""
     client = aiomqtt.Client(
-        conftest.HOSTNAME, port=8883, ssl_context=ssl.create_default_context()
+        hostname=conftest.HOSTNAME, port=8883, ssl_context=ssl.create_default_context()
     )
     with pytest.raises(ssl.SSLCertVerificationError):
         await client.__aenter__()
@@ -99,7 +99,7 @@ async def test_aenter_tls_untrusted_certificate() -> None:
 async def test_aenter_auth() -> None:
     """Test that the client can connect with username and password."""
     async with aiomqtt.Client(
-        conftest.HOSTNAME,
+        hostname=conftest.HOSTNAME,
         port=1884,
         username=conftest.USERNAME,
         password=conftest.PASSWORD,
@@ -111,7 +111,10 @@ async def test_aenter_auth() -> None:
 async def test_aenter_auth_invalid_password() -> None:
     """Test that the client fails to connect with an invalid password."""
     client = aiomqtt.Client(
-        conftest.HOSTNAME, port=1884, username=conftest.USERNAME, password=b"INVALID"
+        hostname=conftest.HOSTNAME,
+        port=1884,
+        username=conftest.USERNAME,
+        password=b"INVALID",
     )
     with pytest.raises(aiomqtt.NegativeAckError):
         await client.__aenter__()
@@ -121,14 +124,14 @@ async def test_aenter_auth_invalid_password() -> None:
 @pytest.mark.network
 async def test_aexit_no_prior_aenter() -> None:
     """Test that aexit without prior (or unsuccessful) aenter runs cleanly."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     await client.__aexit__(None, None, None)
 
 
 @pytest.mark.network
 async def test_aexit_consecutive_calls() -> None:
     """Test that aexit runs cleanly when it has already been called before."""
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         await client.__aexit__(None, None, None)
 
 
@@ -138,7 +141,7 @@ async def test_aexit_last_will() -> None:
     topic = conftest.unique_topic()
     with pytest.raises(ProcessLookupError):
         async with aiomqtt.Client(
-            conftest.HOSTNAME,
+            hostname=conftest.HOSTNAME,
             will=aiomqtt.Will(
                 topic, payload=b"foo", qos=aiomqtt.QoS.AT_LEAST_ONCE, retain=True
             ),
@@ -146,7 +149,7 @@ async def test_aexit_last_will() -> None:
             # Simulate an exception that should trigger LWT
             raise ProcessLookupError
     # Check that will message was published (and retained)
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         await client.subscribe(topic)
         message = await anext(client.messages())
         assert isinstance(message, aiomqtt.PublishPacket)
@@ -174,7 +177,7 @@ async def test_background_reconnection(data: bytes) -> None:
             return data
         return await original_read(n)
 
-    async with aiomqtt.Client(conftest.HOSTNAME, reconnect=True) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME, reconnect=True) as client:
         original_read = client._reader.read
         original_connect = client._connect
         # First operation should work
@@ -198,7 +201,10 @@ async def test_message_iterator_concurrency() -> None:
     """Test that message iterator can be used concurrently by multiple tasks."""
     topic = conftest.unique_topic()
     r1, r2 = asyncio.Event(), asyncio.Event()
-    async with aiomqtt.Client(conftest.HOSTNAME) as client, asyncio.TaskGroup() as tg:
+    async with (
+        aiomqtt.Client(hostname=conftest.HOSTNAME) as client,
+        asyncio.TaskGroup() as tg,
+    ):
 
         async def consume(
             ready: asyncio.Event,
@@ -224,7 +230,7 @@ async def test_message_iterator_concurrency() -> None:
 @pytest.mark.network
 async def test_message_iterator_disconnected() -> None:
     """Test that message iterator call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     with pytest.raises(aiomqtt.ConnectError):
         await anext(client.messages())
     async with client:
@@ -238,7 +244,7 @@ async def test_message_iterator_disconnected() -> None:
 @pytest.mark.network
 async def test_publish_disconnected_qos0() -> None:
     """Test that publish call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     topic = conftest.unique_topic()
     with pytest.raises(aiomqtt.ConnectError):
         await client.publish(topic, b"")
@@ -253,7 +259,7 @@ async def test_publish_disconnected_qos0() -> None:
 @pytest.mark.network
 async def test_publish_disconnected_qos1() -> None:
     """Test that publish call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     original_send = client._send
     topic = conftest.unique_topic()
     first = True
@@ -297,7 +303,7 @@ async def test_publish_disconnected_qos1() -> None:
 @pytest.mark.network
 async def test_publish_disconnected_qos2() -> None:
     """Test that publish call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     original_send = client._send
     topic = conftest.unique_topic()
     first = True
@@ -354,7 +360,7 @@ async def test_publish_retry_qos1() -> None:
         return b""
 
     async with aiomqtt.Client(
-        conftest.HOSTNAME,
+        hostname=conftest.HOSTNAME,
         clean_start=False,
         session_expiry_interval=600,
         reconnect=True,
@@ -406,7 +412,7 @@ async def test_publish_retry_qos2() -> None:
         return b""
 
     async with aiomqtt.Client(
-        conftest.HOSTNAME,
+        hostname=conftest.HOSTNAME,
         clean_start=False,
         session_expiry_interval=600,
         reconnect=True,
@@ -452,7 +458,7 @@ async def test_publish_flow_control_qos1() -> None:
         await ready.wait()
         return await original_read(n)
 
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         original_read = client._reader.read
         async with asyncio.TaskGroup() as tg:
             with unittest.mock.patch.object(
@@ -490,7 +496,7 @@ async def test_publish_flow_control_qos2() -> None:
         await ready.wait()
         return await original_read(n)
 
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         original_read = client._reader.read
         connack_packet = await client.connected()
         packet_ids = []
@@ -561,7 +567,7 @@ async def test_publish_unsolicited_ack(
             return packet.write() + data
         return data
 
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         original_read = client._reader.read
         with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
             await client.publish(
@@ -575,7 +581,7 @@ async def test_publish_unsolicited_ack(
 @pytest.mark.network
 async def test_puback_disconnected() -> None:
     """Test that puback call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     with pytest.raises(aiomqtt.ConnectError):
         await client.puback(1)
     async with client:
@@ -589,7 +595,7 @@ async def test_puback_disconnected() -> None:
 @pytest.mark.network
 async def test_pubrec_disconnected() -> None:
     """Test that pubrec call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubrec(1)
     async with client:
@@ -603,7 +609,7 @@ async def test_pubrec_disconnected() -> None:
 @pytest.mark.network
 async def test_pubrel_disconnected() -> None:
     """Test that pubrel call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     original_send = client._send
     first = True
 
@@ -632,7 +638,7 @@ async def test_pubrel_disconnected() -> None:
 @pytest.mark.network
 async def test_pubcomp_disconnected() -> None:
     """Test that pubcomp call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubcomp(1)
     async with client:
@@ -646,7 +652,7 @@ async def test_pubcomp_disconnected() -> None:
 @pytest.mark.network
 async def test_subscribe_disconnected() -> None:
     """Test that subscribe call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     topic = conftest.unique_topic()
     original_send = client._send
     first = True
@@ -691,7 +697,7 @@ async def test_subscribe_unsolicited_ack() -> None:
             return packet.write() + data
         return data
 
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         original_read = client._reader.read
         with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
             await client.publish(topic, b"")
@@ -701,7 +707,7 @@ async def test_subscribe_unsolicited_ack() -> None:
 async def test_unsubscribe() -> None:
     """Test that messages are no longer received after unsubscribing from a topic."""
     topic = conftest.unique_topic()
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         await client.subscribe(topic)
         # QoS = 1 guarantees delivery before subscribe/unsubscribe takes effect
         await client.publish(
@@ -738,7 +744,7 @@ async def test_unsubscribe() -> None:
 @pytest.mark.network
 async def test_unsubscribe_disconnected() -> None:
     """Test that unsubscribe call fails when the client is not connected."""
-    client = aiomqtt.Client(conftest.HOSTNAME)
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
     topic = conftest.unique_topic()
     original_send = client._send
     first = True
@@ -783,7 +789,7 @@ async def test_unsubscribe_unsolicited_ack() -> None:
             return packet.write() + data
         return data
 
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         original_read = client._reader.read
         with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
             await client.publish(topic, b"")
@@ -808,7 +814,7 @@ async def test_broker_disconnect() -> None:
             ).write()
         return await original_read(n)
 
-    async with aiomqtt.Client(conftest.HOSTNAME) as client:
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
         original_send = client._send
         original_read = client._reader.read
         with (
