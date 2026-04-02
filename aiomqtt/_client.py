@@ -157,6 +157,9 @@ class Client:
         if (hostname is None) == (unix_socket is None):
             msg = "Exactly one of hostname or unix_socket must be set"
             raise ValueError(msg)
+        if unix_socket is not None and not hasattr(socket, "AF_UNIX"):
+            msg = "Unix domain sockets are not supported on this platform"
+            raise OSError(msg)
         self._hostname = hostname
         self._port = port
         self._unix_socket = unix_socket
@@ -445,7 +448,10 @@ class Client:
 
     async def _connect(self) -> None:
         if self._unix_socket is not None:
-            self._socket = socket.socket(family=socket.AF_UNIX, type=socket.SOCK_STREAM)
+            self._socket = socket.socket(
+                family=getattr(socket, "AF_UNIX"),  # noqa: B009
+                type=socket.SOCK_STREAM,
+            )
             self._socket.connect(self._unix_socket)
         else:
             self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
