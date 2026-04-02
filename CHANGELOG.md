@@ -6,13 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-## [2.5.1] - 2026-03-05
+## [3.0.0-alpha.1] -- 2026-04-03
+
+- Replace paho-mqtt dependency with [mqtt5](https://github.com/empicano/mqtt5)
+- Drop support for MQTTv3.1 and MQTTv3.1.1
+- All `Client` parameters are now keyword-only
+- Messages are now `mqtt5.PublishPacket` instances instead of `aiomqtt.Message`
+- `publish` payload is now a positional `bytes` argument instead of keyword `payload=`
+- `client.messages` is now `client.messages()` (method call)
+- `message.mid` renamed to `message.packet_id`
+- `message.properties` replaced by individual attributes (e.g. `message.content_type`, `message.user_properties`)
+- Manual acknowledgment of QoS=1 and QoS=2 messages (no longer automatic)
+- `packet_id` parameter for QoS>0 publishes, enabling retries via `client.packet_ids`
+- Built-in reconnection with exponential backoff via `reconnect=True`
+- `client.connected()` and `client.disconnected()` awaitables for connection state
+- Flow control via `receive_max`
+- Unix domain socket support via `unix_socket` parameter
+- `ssl_context` replaces `tls_context`, `tls_params`, and `tls_insecure`
+- `qos` subscription parameter renamed to `max_qos`
+- `ConnectError`, `ProtocolError`, and `NegativeAckError` replace `MqttError`
+- Remove `protocol`, `transport`, `proxy`, `socket_options`, `timeout`, `queue_type`, `max_queued_incoming_messages`, `max_queued_outgoing_messages` parameters
+- Remove `message.topic.matches()` (see guides for routing with regular expressions)
+
+## [2.5.1] -- 2026-03-05
 
 ### Fixed
 
 - Fix failure to load TLS with `tls_params` and `tls_insecure=True` (@okaresz in 386)
 
-## [2.5.0] - 2026-01-04
+## [2.5.0] -- 2026-01-04
 
 ### Fixed
 
@@ -20,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Let exceptions bubble up in `Client.__aexit__` instead of suppressing them (@yujia21 in #375)
 - Load TLS certs from the executor thread (@allenporter in #382)
 
-## [2.4.0] - 2025-05-03
+## [2.4.0] -- 2025-05-03
 
 ### Added
 
@@ -30,7 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Fix retained message delayed on TLS connection (@wpickard in #343)
 
-## [2.3.2] - 2025-04-08
+## [2.3.2] -- 2025-04-08
 
 ### Added
 
@@ -40,7 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Add missing version attributes after uv switch (@empicano in #359)
 
-## [2.3.1] - 2025-03-31
+## [2.3.1] -- 2025-03-31
 
 ### Changed
 
@@ -51,7 +73,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Consistently use `sock.fileno()` to identify socket for monitoring (@airtower-luna in #357)
 - Replace deprecated `get_event_loop` with `get_running_loop`
 
-## [2.3.0] - 2024-08-07
+## [2.3.0] -- 2024-08-07
 
 ### Added
 
@@ -61,7 +83,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Update FastAPI docs to use dependency injection (@odie5533 in #321)
 
-## [2.2.0] - 2024-07-02
+## [2.2.0] -- 2024-07-02
 
 ### Changed
 
@@ -72,20 +94,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Fix `Client.messages` not being reusable (@ryan-summers in #312)
 
-## [2.1.0] - 2024-04-24
+## [2.1.0] -- 2024-04-24
 
 ### Changed
 
 - Migrate to paho-mqtt 2.0 (@JonathanPlasse in #286)
 
-## [2.0.1] - 2024-03-13
+## [2.0.1] -- 2024-03-13
 
 ## Fixed
 
 - Configure `poetry-dynamic-versioning` to replace `__version__` and `__version_tuple__` variables (@vvanglro in #273)
 - Reset internal state when connection attempt in `__aenter__` times out (@empicano in #285)
 
-## [2.0.0] - 2024-01-15
+## [2.0.0] -- 2024-01-15
 
 ### Added
 
@@ -108,7 +130,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Release reusability correctly to allow consecutive calls to `__aexit__` (@spacemanspiff2007 in #263)
 
-## [1.2.1] - 2023-09-19
+## [1.2.1] -- 2023-09-19
 
 ### Changed
 
@@ -118,7 +140,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Release lock in `__aexit__` only if acquired (@spacemanspiff2007 in #249)
 
-## [1.2.0] - 2023-09-03
+## [1.2.0] -- 2023-09-03
 
 ### Changed
 
@@ -128,7 +150,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Fix `__aenter__` failing to release lock when initial connection fails. Contributed by [Peanut (@vvanglro)](https://github.com/vvanglro) in [#245](https://github.com/sbtinstruments/aiomqtt/pull/245)
 
-## [1.1.0] - 2023-08-03
+## [1.1.0] -- 2023-08-03
 
 ### Added
 
@@ -140,7 +162,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Don't suppress exceptions in the client's `__aexit__`. Contributed by [Robert Resch (@edenhaus)](https://github.com/edenhaus) in [#232](https://github.com/sbtinstruments/aiomqtt/pull/232)
 - Match `topic/subtopic` with `topic/subtopic/#` wildcard according to MQTT documentation. Contributed by [Bob Steers (@steersbob)](https://github.com/steersbob) in [#241](https://github.com/sbtinstruments/asyncio-mqtt/pull/241)
 
-## [1.0.0] - 2023-06-16
+## [1.0.0] -- 2023-06-16
 
 ### Added
 
@@ -164,17 +186,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Consistently use a user-provided logger. Contributed by [Roman Novatorov (@rnovatorov)](https://github.com/rnovatorov) in [#176](https://github.com/sbtinstruments/asyncio-mqtt/pull/176)
 
-## [0.17.0] - 2023-06-12
+## [0.17.0] -- 2023-06-12
 
 Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is that the _old_ aiomqtt (by mossblaser) was still in use. These users suddenly experienced a breaking change when they updated from v0.1.2 to v0.17.0. Our mitigation is to yank v0.17.0 and release a v1.0.0 in it's place. It was about time for a v1.0.0 release anyhow!
 
-## [0.16.1]
+## [0.16.1] -- 2022-12-06
 
 ### Fixed
 
 - Add properties in Message, the last release skipped this commit. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse)
 
-## [0.16.0]
+## [0.16.0] -- 2022-12-05
 
 ### Added
 
@@ -189,7 +211,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 
 - Fix typo in description metadata. Contributed by [(@pi-slh)](https://github.com/pi-slh) in [#162](https://github.com/sbtinstruments/asyncio-mqtt/pull/162)
 
-## [0.15.0]
+## [0.15.0] -- 2022-11-27
 
 ### Added
 
@@ -200,7 +222,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 - Simplify message filtering. Contributed by [Felix Böhm (@empicano)](https://github.com/empicano) in [#147](https://github.com/sbtinstruments/asyncio-mqtt/pull/147)
 - Switch from `flake8` to `ruff` for linting. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) in [#155](https://github.com/sbtinstruments/asyncio-mqtt/pull/155)
 
-## [0.14.0]
+## [0.14.0] -- 2022-11-07
 
 ### Added
 
@@ -221,7 +243,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 
 - Fix lifespan example in `README.md`. Contributed by [Jonathan Plasse (@JonathanPlasse)](https://github.com/JonathanPlasse) and [Felix Böhm (@empicano)](https://github.com/empicano) in [#135](https://github.com/sbtinstruments/asyncio-mqtt/pull/135)
 
-## [0.13.0]
+## [0.13.0] -- 2022-10-16
 
 ### Added
 
@@ -246,19 +268,19 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 - Fix race conditions that may cause `InvalidStateError`. Contributed by [Andreas Hangauer (@aha79)](https://github.com/aha79) in [#123](https://github.com/sbtinstruments/asyncio-mqtt/pull/123)
 - Fix thread safety in socket close callback. Contributed by [Dustin C. Hatch (@AdmiralNemo)](https://github.com/AdmiralNemo) in [#114](https://github.com/sbtinstruments/asyncio-mqtt/pull/114)
 
-## [0.12.1] - 2022-01-19
+## [0.12.1] -- 2022-01-19
 
 ### Fixed
 
 - Fix `TypeError` with the new `_outgoing_call` decorator.
 
-## [0.12.0] - 2022-01-19
+## [0.12.0] -- 2022-01-19
 
 ### Added
 
 - Add backpressure mechanism to limit the number of concurrent outgoing calls. Contributed by [Aaron Bach (@bachya)](https://github.com/bachya) in [#101](https://github.com/sbtinstruments/asyncio-mqtt/pull/101)
 
-## [0.11.1] - 2022-01-10
+## [0.11.1] -- 2022-01-10
 
 ### Fixed
 
@@ -267,7 +289,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 - Fix false positive type error from Pyright regarding `asynccontextmanager`. Contributed by [Shawn Wilsher (@sdwilsh)](https://github.com/sdwilsh) in [#87](https://github.com/sbtinstruments/asyncio-mqtt/pull/87)
 - Fix type hints (mostly related to async_generator). Contributed by [@laundmo](https://github.com/laundmo) in [#86](https://github.com/sbtinstruments/asyncio-mqtt/pull/86)
 
-## [0.11.0] - 2021-11-04
+## [0.11.0] -- 2021-11-04
 
 ### Added
 
@@ -281,7 +303,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 
 - Fix event loop block caused by paho's reconnection feature. Contributed by [Martin Hjelmare (@MartinHjelmare)](https://github.cm/MartinHjelmare) in [#85](https://github.com/sbtinstruments/asyncio-mqtt/pull/85)
 
-## [0.10.0] - 2021-07-13
+## [0.10.0] -- 2021-07-13
 
 ### Added
 
@@ -294,14 +316,14 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 
 - Fix race condition that caused `InvalidStateError` in `force_disconnect()`. Contributed by [@functionpointer](https://github.com/functionpointer) in [#67](https://github.com/sbtinstruments/asyncio-mqtt/pull/67)
 
-## [0.9.1] - 2021-05-13
+## [0.9.1] -- 2021-05-13
 
 ### Fixed
 
 - Fix handling of MQTTv5 reason codes. Contributed by [Jakob Schlyter (@jschlyter)](https://github.com/jschlyter) in [#59](https://github.com/sbtinstruments/asyncio-mqtt/pull/59)
 - Account for `-1` socket handles in the close callback. Contributed by [@wrobell](https://github.com/wrobell) in [#60](https://github.com/sbtinstruments/asyncio-mqtt/pull/60)
 
-## [0.9.0] - 2021-05-03
+## [0.9.0] -- 2021-05-03
 
 ### Added
 
@@ -317,7 +339,7 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 - Check that \_misc_task is not None before trying to cancel it. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) in [#41](https://github.com/sbtinstruments/asyncio-mqtt/pull/41)
 - Fix exception in `on_socket_open`: Non-thread-safe operation invoked on an event loop other than the current one. Contributed by [Ellis Percival (@flyte)](https://github.com/flyte) in [#40](https://github.com/sbtinstruments/asyncio-mqtt/pull/40)
 
-## [0.8.1] - 2021-02-23
+## [0.8.1] -- 2021-02-23
 
 ### Fixed
 
@@ -326,14 +348,14 @@ Yanked. We recently renamed the project from asyncio-mqtt to aiomqtt. Problem is
 - Fix "Future exception was never retrieved" on disconnect. Contributed by [Martin Hjelmare (@martinhjelmare)](https://github.com/martinhjelmare) in [#25](https://github.com/sbtinstruments/asyncio-mqtt/pull/25)
 - Fix `connect` so it no longer blocks the event loop. Contributed by [Øystein Haug Olsen (@oholsen)](https://github.com/oholsen) in [#23](https://github.com/sbtinstruments/asyncio-mqtt/pull/23)
 
-## [0.8.0] - 2020-11-09
+## [0.8.0] -- 2020-11-09
 
 ### Added
 
 - Add `transport` argument to `Client`. Contributed by [@opengs](https://github.com/opengs) in [#21](https://github.com/sbtinstruments/asyncio-mqtt/pull/21)
 - Add `clean_session` argument to `Client`. Contributed by [@nadyka](https://github.com/madnadyka) in [#17](https://github.com/sbtinstruments/asyncio-mqtt/pull/17)
 
-## [0.7.0] - 2020-08-04
+## [0.7.0] -- 2020-08-04
 
 I've tested the library for production use at SBT Instruments. This uncovered a bunch of bugs and missing features that I've addressed in this release. We are approaching a 1.0.0 release. Let me know if you want something changed before that via the issue tracker on GitHub.
 
@@ -353,13 +375,13 @@ I've tested the library for production use at SBT Instruments. This uncovered a 
 - Fix "[asyncio] Future exception was never retrieved" debug message.
 - Fix support for python 3.6. Contributed by [Derrick Lyndon Pallas (@pallas)](https://github.com/pallas) in [#12](https://github.com/sbtinstruments/asyncio-mqtt/pull/12)
 
-## [0.6.0] - 2020-06-26
+## [0.6.0] -- 2020-06-26
 
 ### Changed
 
 - No longer logs exception in `Client.__aexit__`. It's perfectly valid to exit due to, e.g., `asyncio.CancelledError` so let's not treat it as an error.
 
-## [0.5.0] - 2020-06-08
+## [0.5.0] -- 2020-06-08
 
 ### Added
 
@@ -371,7 +393,7 @@ I've tested the library for production use at SBT Instruments. This uncovered a 
 
 - Propagate disconnection errors to subscribers. This enables user code to detect if a disconnect occurs. E.g., due to network errors.
 
-## [0.4.0] - 2020-05-06
+## [0.4.0] -- 2020-05-06
 
 ### Changed
 
@@ -383,7 +405,7 @@ I've tested the library for production use at SBT Instruments. This uncovered a 
 
   Contributed by [Matthew Bradbury (@MBradbury)](https://github.com/MBradbury) in [#3](https://github.com/sbtinstruments/asyncio-mqtt/pull/3).
 
-## [0.3.0] - 2020-04-13
+## [0.3.0] -- 2020-04-13
 
 ### Added
 
@@ -393,13 +415,13 @@ I've tested the library for production use at SBT Instruments. This uncovered a 
 
 - Fix log message context for `Client.filtered_messages`.
 
-## [0.2.1] - 2020-04-07
+## [0.2.1] -- 2020-04-07
 
 ### Fixed
 
 - Fix regression with the `Client._wait_for` helper method introduced in the latest release.
 
-## [0.2.0] - 2020-04-07
+## [0.2.0] -- 2020-04-07
 
 ### Changed
 
@@ -414,25 +436,25 @@ I've tested the library for production use at SBT Instruments. This uncovered a 
   - Network or protocol failures? `MqttError`.
   - Broken library state? `RuntimeError`.
 
-## [0.1.3] - 2020-04-07
+## [0.1.3] -- 2020-04-07
 
 ### Fixed
 
 - Fix how keyword arguments are forwarded in `Client.publish` and `Client.subscribe`.
 
-## [0.1.2] - 2020-04-06
+## [0.1.2] -- 2020-04-06
 
 ### Fixed
 
 - Remove log call that was erroneously put in while debugging the latest release.
 
-## [0.1.1] - 2020-04-06
+## [0.1.1] -- 2020-04-06
 
 ### Fixed
 
 - Add missing parameters to `Client.publish`.
 - Fix error in `Client.publish` when paho-mqtt publishes immediately.
 
-## [0.1.0] - 2020-04-06
+## [0.1.0] -- 2020-04-06
 
 Initial release.
