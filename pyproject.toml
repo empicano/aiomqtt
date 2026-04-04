@@ -58,9 +58,6 @@ ignore = [
     "COM812",  # missing-trailing-comma
 ]
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
 [tool.ruff.lint.per-file-ignores]
 "tests/**.py" = [
     "INP001",  # implicit-namespace-package
@@ -69,6 +66,12 @@ convention = "google"
     "S106",    # hardcoded-password-func-arg
     "SLF001",  # private-member-access
 ]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.mypy]
 python_version = "3.11"

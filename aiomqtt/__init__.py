@@ -23,14 +23,8 @@ from mqtt5 import (
     Will,
 )
 
-from ._client import (
-    Client,
-)
-from ._exceptions import (
-    ConnectError,
-    NegativeAckError,
-    ProtocolError,
-)
+from aiomqtt._client import Client
+from aiomqtt._exceptions import ConnectError, NegativeAckError, ProtocolError
 
 __version__ = importlib.metadata.version(__name__)
 __all__ = [
