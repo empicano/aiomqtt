@@ -44,7 +44,7 @@ from mqtt5 import (
     read,
 )
 
-from ._exceptions import ConnectError, NegativeAckError, ProtocolError
+from aiomqtt._exceptions import ConnectError, NegativeAckError, ProtocolError
 
 T = typing.TypeVar("T")
 
@@ -405,9 +405,8 @@ class Client:
             await self._disconnected
             attempt = 0
             while True:
-                delay = random.uniform(0, 1.5**attempt)  # noqa: S311
-                # Implements maximum delay
-                attempt = min(10, attempt + 1)
+                delay = random.uniform(0, 1.5**min(10, attempt))  # noqa: S311
+                attempt += 1
                 self._logger.info("Reconnecting in %.2f seconds", delay)
                 await asyncio.sleep(delay)
                 try:
