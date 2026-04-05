@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+- Treat PUBREC with reason code 16 (no matching subscribers) as successful (@empicano in #393)
+- Treat UNSUBACK with reason code 17 (no subscription existed) as successful (@empicano in #393)
+
 ## [3.0.0-alpha.1] -- 2026-04-03
 
 - Replace paho-mqtt dependency with [mqtt5](https://github.com/empicano/mqtt5)

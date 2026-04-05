@@ -337,6 +337,7 @@ class Client:
                     except KeyError:
                         self._logger.warning("Received unsolicited PUBREC")
                     else:
+                        # The QoS=2 flow stops here; No PUBCOMP is coming after error
                         if packet.reason_code not in [
                             PubRecReasonCode.SUCCESS,
                             PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
@@ -405,7 +406,7 @@ class Client:
             await self._disconnected
             attempt = 0
             while True:
-                delay = random.uniform(0, 1.5**min(10, attempt))  # noqa: S311
+                delay = random.uniform(0, 1.5 ** min(10, attempt))  # noqa: S311
                 attempt += 1
                 self._logger.info("Reconnecting in %.2f seconds", delay)
                 await asyncio.sleep(delay)
@@ -764,7 +765,10 @@ class Client:
             )
         finally:
             del self._pending_pubrecs[packet_id]
-        if pubrec_packet.reason_code != PubRecReasonCode.SUCCESS:
+        if pubrec_packet.reason_code not in (
+            PubRecReasonCode.SUCCESS,
+            PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
+        ):
             raise NegativeAckError(pubrec_packet)
         return pubrec_packet
 
@@ -1003,7 +1007,10 @@ class Client:
             await self._disconnect(reason_code=DisconnectReasonCode.MALFORMED_PACKET)
             msg = "Received malformed packet"
             raise ProtocolError(msg)
-        if unsuback_packet.reason_codes[0] != UnsubAckReasonCode.SUCCESS:
+        if unsuback_packet.reason_codes[0] not in (
+            UnsubAckReasonCode.SUCCESS,
+            UnsubAckReasonCode.NO_SUBSCRIPTION_EXISTED,
+        ):
             raise NegativeAckError(unsuback_packet)
         return unsuback_packet
 
