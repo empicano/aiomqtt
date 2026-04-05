@@ -242,6 +242,80 @@ async def test_message_iterator_disconnected() -> None:
 
 
 @pytest.mark.network
+async def test_publish_qos0_no_matching_subscribers() -> None:
+    """Test that QoS=0 publish to a topic with no subscribers succeeds."""
+    topic = conftest.unique_topic()
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        await client.publish(topic, b"")
+
+
+@pytest.mark.network
+async def test_publish_qos1_no_matching_subscribers() -> None:
+    """Test that QoS=1 publish to a topic with no subscribers succeeds."""
+    topic = conftest.unique_topic()
+    first = True
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
+    packet_id = next(client.packet_ids)
+
+    # The specification doesn't enforce notifying the client about no subscribers, but
+    # we want to explicitely test this case here
+    async def read_mock(n: int = -1) -> bytes:
+        nonlocal first, packet_id
+        if first:
+            first = False
+            return aiomqtt.PubAckPacket(
+                packet_id=packet_id,
+                reason_code=aiomqtt.PubAckReasonCode.NO_MATCHING_SUBSCRIBERS,
+            ).write()
+        return await original_read(n)
+
+    async with client:
+        original_read = client._reader.read
+        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+            puback_packet = await client.publish(
+                topic, b"", qos=aiomqtt.QoS.AT_LEAST_ONCE, packet_id=packet_id
+            )
+        assert (
+            puback_packet.reason_code
+            == aiomqtt.PubAckReasonCode.NO_MATCHING_SUBSCRIBERS
+        )
+
+
+@pytest.mark.network
+async def test_publish_qos2_no_matching_subscribers() -> None:
+    """Test that QoS=2 publish to a topic with no subscribers succeeds."""
+    topic = conftest.unique_topic()
+    first = True
+    client = aiomqtt.Client(hostname=conftest.HOSTNAME)
+    packet_id = next(client.packet_ids)
+
+    # The specification doesn't enforce notifying the client about no subscribers, but
+    # we want to explicitely test this case here
+    async def read_mock(n: int = -1) -> bytes:
+        nonlocal first, packet_id
+        if first:
+            first = False
+            return aiomqtt.PubRecPacket(
+                packet_id=packet_id,
+                reason_code=aiomqtt.PubRecReasonCode.NO_MATCHING_SUBSCRIBERS,
+            ).write()
+        return await original_read(n)
+
+    async with client:
+        original_read = client._reader.read
+        with unittest.mock.patch.object(client._reader, "read", side_effect=read_mock):
+            pubrec_packet = await client.publish(
+                topic, b"", qos=aiomqtt.QoS.EXACTLY_ONCE, packet_id=packet_id
+            )
+        assert (
+            pubrec_packet.reason_code
+            == aiomqtt.PubRecReasonCode.NO_MATCHING_SUBSCRIBERS
+        )
+        # Complete the QoS = 2 flow
+        await client.pubrel(packet_id)
+
+
+@pytest.mark.network
 async def test_publish_disconnected_qos0() -> None:
     """Test that publish call fails when the client is not connected."""
     client = aiomqtt.Client(hostname=conftest.HOSTNAME)
@@ -739,6 +813,18 @@ async def test_unsubscribe() -> None:
         assert isinstance(message, aiomqtt.PublishPacket)
         assert message.payload == b"baz"
         await client.puback(message.packet_id)  # type: ignore[arg-type]
+
+
+@pytest.mark.network
+async def test_unsubscribe_nonexistent_subscription() -> None:
+    """Test that unsubscribing from a topic that was never subscribed to succeeds."""
+    topic = conftest.unique_topic()
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        unsuback_packet = await client.unsubscribe(topic)
+        assert (
+            unsuback_packet.reason_codes[0]
+            == aiomqtt.UnsubAckReasonCode.NO_SUBSCRIPTION_EXISTED
+        )
 
 
 @pytest.mark.network
