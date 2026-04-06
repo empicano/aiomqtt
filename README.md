@@ -1,3 +1,6 @@
+> [!NOTE]
+> aiomqtt v3 is released! It switches the underlying protocol library from paho-mqtt to the sans-io [mqtt5](https://github.com/empicano/mqtt5) library. This means aiomqtt is now pure asyncio (no more threads). Try it with `pip install aiomqtt==3.0.0-alpha.1`.
+
 # aiomqtt
 
 <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI downloads" src="https://img.shields.io/pypi/dm/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="PyPI version" src="https://img.shields.io/pypi/v/aiomqtt"></a> <a href="https://pypi.org/project/aiomqtt"><img alt="Supported Python versions" src="https://img.shields.io/pypi/pyversions/aiomqtt.svg"></a>
@@ -23,9 +26,10 @@ async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
 ## Key features
 
 - No callbacks! 👍
-- Complete MQTTv5 support (flow control, user properties, ...)
+- Complete MQTTv5 support (backpressure, user properties, ...)
 - Automatic reconnection
 - Fine-grained control over acknowledgments
+- Pure asyncio
 - Fully type-hinted
 
 ## Installation
