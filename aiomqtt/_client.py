@@ -226,7 +226,9 @@ class Client:
             self._context_lock.release()
             raise
         # Start background tasks
-        self._tasks = asyncio.create_task(self._run_background_tasks())
+        self._tasks = asyncio.create_task(
+            self._run_background_tasks(), name=f"aiomqtt[{self.identifier}].background"
+        )
         return self
 
     async def __aexit__(
@@ -414,11 +416,19 @@ class Client:
 
     async def _run_background_tasks(self) -> None:
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(self._receive_loop())
+            tg.create_task(
+                self._receive_loop(), name=f"aiomqtt[{self.identifier}].receive_loop"
+            )
             if self._keep_alive > 0:
-                tg.create_task(self._pingreq_loop())
+                tg.create_task(
+                    self._pingreq_loop(),
+                    name=f"aiomqtt[{self.identifier}].pingreq_loop",
+                )
             if self._reconnect:
-                tg.create_task(self._reconnect_loop())
+                tg.create_task(
+                    self._reconnect_loop(),
+                    name=f"aiomqtt[{self.identifier}].reconnect_loop",
+                )
 
     async def messages(self) -> typing.AsyncIterator[PublishPacket | PubRelPacket]:
         """Iterate over incoming PUBLISH and PUBREL packets."""
