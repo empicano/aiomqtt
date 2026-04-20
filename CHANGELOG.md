@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Treat PUBREC with reason code 16 (no matching subscribers) as successful (@empicano in #393)
 - Treat UNSUBACK with reason code 17 (no subscription existed) as successful (@empicano in #393)
+- Make socket connection asynchronous (@empicano in #393)
+- Close socket cleanly on unexpected first packet (@empicano in #393)
 
 ## [3.0.0-alpha.1] -- 2026-04-03
 
@@ -35,7 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Fixed
 
-- Fix failure to load TLS with `tls_params` and `tls_insecure=True` (@okaresz in 386)
+- Fix failure to load TLS with `tls_params` and `tls_insecure=True` (@okaresz in #386)
 
 ## [2.5.0] -- 2026-01-04
 

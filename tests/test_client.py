@@ -234,7 +234,7 @@ async def test_message_iterator_disconnected() -> None:
     with pytest.raises(aiomqtt.ConnectError):
         await anext(client.messages())
     async with client:
-        await client._disconnect()
+        await client._close()
         with pytest.raises(aiomqtt.ConnectError):
             await anext(client.messages())
     with pytest.raises(aiomqtt.ConnectError):
@@ -323,7 +323,7 @@ async def test_publish_disconnected_qos0() -> None:
     with pytest.raises(aiomqtt.ConnectError):
         await client.publish(topic, b"")
     async with client:
-        await client._disconnect()
+        await client._close()
         with pytest.raises(aiomqtt.ConnectError):
             await client.publish(topic, b"")
     with pytest.raises(aiomqtt.ConnectError):
@@ -344,7 +344,7 @@ async def test_publish_disconnected_qos1() -> None:
         # Disconnect after the first call
         if first:
             first = False
-            await client._disconnect()
+            await client._close()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.publish(
@@ -388,7 +388,7 @@ async def test_publish_disconnected_qos2() -> None:
         # Disconnect after the first call
         if first:
             first = False
-            await client._disconnect()
+            await client._close()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.publish(
@@ -659,7 +659,7 @@ async def test_puback_disconnected() -> None:
     with pytest.raises(aiomqtt.ConnectError):
         await client.puback(1)
     async with client:
-        await client._disconnect()
+        await client._close()
         with pytest.raises(aiomqtt.ConnectError):
             await client.puback(1)
     with pytest.raises(aiomqtt.ConnectError):
@@ -673,7 +673,7 @@ async def test_pubrec_disconnected() -> None:
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubrec(1)
     async with client:
-        await client._disconnect()
+        await client._close()
         with pytest.raises(aiomqtt.ConnectError):
             await client.pubrec(1)
     with pytest.raises(aiomqtt.ConnectError):
@@ -693,7 +693,7 @@ async def test_pubrel_disconnected() -> None:
         # Disconnect after the first call
         if first:
             first = False
-            await client._disconnect()
+            await client._close()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubrel(1)
@@ -716,7 +716,7 @@ async def test_pubcomp_disconnected() -> None:
     with pytest.raises(aiomqtt.ConnectError):
         await client.pubcomp(1)
     async with client:
-        await client._disconnect()
+        await client._close()
         with pytest.raises(aiomqtt.ConnectError):
             await client.pubcomp(1)
     with pytest.raises(aiomqtt.ConnectError):
@@ -737,7 +737,7 @@ async def test_subscribe_disconnected() -> None:
         # Disconnect after the first call
         if first:
             first = False
-            await client._disconnect()
+            await client._close()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.subscribe(topic)
@@ -841,7 +841,7 @@ async def test_unsubscribe_disconnected() -> None:
         # Disconnect after the first call
         if first:
             first = False
-            await client._disconnect()
+            await client._close()
 
     with pytest.raises(aiomqtt.ConnectError):
         await client.unsubscribe(topic)

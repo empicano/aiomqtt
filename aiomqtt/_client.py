@@ -191,7 +191,6 @@ class Client:
         self._user_properties = user_properties
         # Network settings
         self._buffer_in = _SlidingWindowBuffer(size=2**24)
-        self._socket: socket.socket
         self._reader: asyncio.StreamReader
         self._writer: asyncio.StreamWriter
         # Connection status
@@ -244,7 +243,7 @@ class Client:
         # Disconnect with LWT if we exit the context manager with an exception
         if exc is not None and self._will is not None:
             reason_code = DisconnectReasonCode.DISCONNECT_WITH_WILL_MESSAGE
-        await self._disconnect(reason_code=reason_code)
+        await self._disconnect_and_close(reason_code=reason_code)
         # Release the reusability lock
         if self._context_lock.locked():
             self._context_lock.release()
@@ -287,8 +286,8 @@ class Client:
             except IndexError:  # Partial packet
                 pass
             except ValueError as exc:
-                await self._disconnect(
-                    reason_code=DisconnectReasonCode.MALFORMED_PACKET,
+                await self._disconnect_and_close(
+                    reason_code=DisconnectReasonCode.MALFORMED_PACKET
                 )
                 msg = "Received malformed packet"
                 raise ProtocolError(msg) from exc
@@ -297,7 +296,7 @@ class Client:
                 return packet
             data = await self._reader.read(2**14)
             if not data:  # Reached EOF
-                await self._disconnect()
+                await self._close()
                 raise ConnectError(self._endpoint)
             self._buffer_in.write(data)
 
@@ -305,12 +304,8 @@ class Client:
         while True:
             try:
                 packet = await self._receive()
-            except ConnectError:
-                await self._connected
-                continue
-            except ProtocolError:
-                self._logger.exception("Received malformed packet")
-                await self._disconnect()
+            except (ConnectError, ProtocolError) as exc:
+                self._logger.warning(str(exc))
                 await self._connected
                 continue
             self._logger.debug("Received packet of type: %s", type(packet).__name__)
@@ -378,7 +373,7 @@ class Client:
                     self._logger.error(
                         "Received packet of unexpected type: %s", type(packet).__name__
                     )
-                    await self._disconnect(
+                    await self._disconnect_and_close(
                         reason_code=DisconnectReasonCode.PROTOCOL_ERROR
                     )
                     await self._connected
@@ -396,7 +391,7 @@ class Client:
                 await self._connected
             except TimeoutError:
                 self._logger.warning("PINGREQ timed out")
-                await self._disconnect(
+                await self._disconnect_and_close(
                     reason_code=DisconnectReasonCode.KEEP_ALIVE_TIMEOUT
                 )
                 await self._connected
@@ -414,8 +409,8 @@ class Client:
                     await self._connect()
                     self._logger.info("Reconnected to %s", self._endpoint)
                     break
-                except (OSError, ProtocolError, NegativeAckError):
-                    self._logger.exception("Failed to reconnect")
+                except (OSError, ProtocolError, NegativeAckError) as exc:
+                    self._logger.warning("Failed to reconnect; %s", str(exc))
 
     async def _run_background_tasks(self) -> None:
         async with asyncio.TaskGroup() as tg:
@@ -448,48 +443,45 @@ class Client:
 
     async def _connect(self) -> None:
         if self._unix_socket is not None:
-            self._socket = socket.socket(
-                family=getattr(socket, "AF_UNIX"),  # noqa: B009
-                type=socket.SOCK_STREAM,
+            self._reader, self._writer = await asyncio.open_unix_connection(  # type: ignore[attr-defined, unused-ignore]
+                path=self._unix_socket, ssl=self._ssl_context
             )
-            self._socket.connect(self._unix_socket)
         else:
-            self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-            self._socket.connect((self._hostname, self._port))
-        self._reader, self._writer = await asyncio.open_connection(
-            sock=self._socket,
-            ssl=self._ssl_context,
-            server_hostname=self._hostname if self._ssl_context else None,
-        )
-        await self._send(
-            ConnectPacket(
-                client_id=self.identifier,
-                username=self._username,
-                password=self._password,
-                clean_start=self._clean_start,
-                will=self._will,
-                keep_alive=self._keep_alive,
-                session_expiry_interval=self._session_expiry_interval,
-                authentication_method=self._authentication_method,
-                authentication_data=self._authentication_data,
-                request_problem_info=self._request_problem_info,
-                request_response_info=self._request_response_info,
-                receive_max=self._receive_max,
-                topic_alias_max=self._topic_alias_max,
-                max_packet_size=self._max_packet_size,
-                user_properties=self._user_properties,
+            self._reader, self._writer = await asyncio.open_connection(
+                host=self._hostname, port=self._port, ssl=self._ssl_context
             )
-        )
-        # Wait for the acknowledgement
-        packet = await self._receive()
-        if not isinstance(packet, ConnAckPacket):
-            await self._disconnect(
-                reason_code=DisconnectReasonCode.PROTOCOL_ERROR,
+        try:
+            await self._send(
+                ConnectPacket(
+                    client_id=self.identifier,
+                    username=self._username,
+                    password=self._password,
+                    clean_start=self._clean_start,
+                    will=self._will,
+                    keep_alive=self._keep_alive,
+                    session_expiry_interval=self._session_expiry_interval,
+                    authentication_method=self._authentication_method,
+                    authentication_data=self._authentication_data,
+                    request_problem_info=self._request_problem_info,
+                    request_response_info=self._request_response_info,
+                    receive_max=self._receive_max,
+                    topic_alias_max=self._topic_alias_max,
+                    max_packet_size=self._max_packet_size,
+                    user_properties=self._user_properties,
+                )
             )
-            msg = f"Received packet of unexpected type: {type(packet).__name__}"
-            raise ProtocolError(msg)
-        if packet.reason_code != ConnAckReasonCode.SUCCESS:
-            raise NegativeAckError(packet)
+            # Wait for the acknowledgement
+            packet = await self._receive()
+            if not isinstance(packet, ConnAckPacket):
+                await self._disconnect(reason_code=DisconnectReasonCode.PROTOCOL_ERROR)
+                msg = f"Received packet of unexpected type: {type(packet).__name__}"
+                raise ProtocolError(msg)  # noqa: TRY301
+            if packet.reason_code != ConnAckReasonCode.SUCCESS:
+                raise NegativeAckError(packet)  # noqa: TRY301
+        except BaseException:
+            self._writer.close()
+            await self._writer.wait_closed()
+            raise
         if packet.assigned_client_id is not None:
             self._logger.info("Broker set client id: %s", packet.assigned_client_id)
             self.identifier = packet.assigned_client_id
@@ -960,7 +952,9 @@ class Client:
         finally:
             del self._pending_subacks[packet_id]
         if len(suback_packet.reason_codes) != 1:
-            await self._disconnect(reason_code=DisconnectReasonCode.MALFORMED_PACKET)
+            await self._disconnect_and_close(
+                reason_code=DisconnectReasonCode.MALFORMED_PACKET
+            )
             msg = "Received malformed packet"
             raise ProtocolError(msg)
         if suback_packet.reason_codes[0] not in (
@@ -1004,7 +998,9 @@ class Client:
         finally:
             del self._pending_unsubacks[packet_id]
         if len(unsuback_packet.reason_codes) != 1:
-            await self._disconnect(reason_code=DisconnectReasonCode.MALFORMED_PACKET)
+            await self._disconnect_and_close(
+                reason_code=DisconnectReasonCode.MALFORMED_PACKET
+            )
             msg = "Received malformed packet"
             raise ProtocolError(msg)
         if unsuback_packet.reason_codes[0] not in (
@@ -1019,22 +1015,6 @@ class Client:
         await self._send(PingReqPacket())
         return await self._disconnected_or(self._pending_pingresp)
 
-    async def _close_inner(self) -> None:
-        self._writer.close()
-        await self._writer.wait_closed()
-        # Avoid dispatching messages to stale consumers
-        self._getters.clear()
-        # Discard stale data from the old connection
-        self._buffer_in.clear()
-        self._connected = asyncio.Future()
-        self._disconnected.set_result(None)
-
-    async def _close(self) -> None:
-        async with self._disconnection_lock:
-            if not hasattr(self, "_disconnected") or self._disconnected.done():
-                return
-            await self._close_inner()
-
     async def _disconnect(
         self,
         *,
@@ -1044,26 +1024,62 @@ class Client:
         reason_str: str | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> None:
+        self._logger.info(
+            "Disconnecting %s will message",
+            "without"
+            if reason_code == DisconnectReasonCode.NORMAL_DISCONNECTION
+            else "with",
+        )
+        await self._send(
+            DisconnectPacket(
+                reason_code=reason_code,
+                session_expiry_interval=session_expiry_interval,
+                server_reference=server_reference,
+                reason_str=reason_str,
+                user_properties=user_properties,
+            )
+        )
+
+    async def _close(self) -> None:
         async with self._disconnection_lock:
-            # Return early if we're already disconnected
             if not hasattr(self, "_disconnected") or self._disconnected.done():
                 return
-            self._logger.info(
-                "Disconnecting %s will message",
-                "without"
-                if reason_code == DisconnectReasonCode.NORMAL_DISCONNECTION
-                else "with",
-            )
+            self._writer.close()
+            await self._writer.wait_closed()
+            # Avoid dispatching messages to stale consumers
+            self._getters.clear()
+            # Discard stale data from the old connection
+            self._buffer_in.clear()
+            self._connected = asyncio.Future()
+            self._disconnected.set_result(None)
+
+    async def _disconnect_and_close(
+        self,
+        *,
+        reason_code: DisconnectReasonCode = DisconnectReasonCode.NORMAL_DISCONNECTION,
+        session_expiry_interval: int | None = None,
+        server_reference: str | None = None,
+        reason_str: str | None = None,
+        user_properties: list[tuple[str, str]] | None = None,
+    ) -> None:
+        async with self._disconnection_lock:
+            if not hasattr(self, "_disconnected") or self._disconnected.done():
+                return
             try:
-                await self._send(
-                    DisconnectPacket(
-                        reason_code=reason_code,
-                        session_expiry_interval=session_expiry_interval,
-                        server_reference=server_reference,
-                        reason_str=reason_str,
-                        user_properties=user_properties,
-                    )
+                await self._disconnect(
+                    reason_code=reason_code,
+                    session_expiry_interval=session_expiry_interval,
+                    server_reference=server_reference,
+                    reason_str=reason_str,
+                    user_properties=user_properties,
                 )
             except ConnectError:
-                self._logger.exception("Failed to send DISCONNECT")
-            await self._close_inner()
+                self._logger.warning("Failed to send DISCONNECT")
+            self._writer.close()
+            await self._writer.wait_closed()
+            # Avoid dispatching messages to stale consumers
+            self._getters.clear()
+            # Discard stale data from the old connection
+            self._buffer_in.clear()
+            self._connected = asyncio.Future()
+            self._disconnected.set_result(None)
