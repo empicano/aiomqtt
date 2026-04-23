@@ -77,14 +77,20 @@ See the QoS=1 and QoS=2 guides for retry patterns.
 
 ## Subscribing
 
-The `qos` parameter has been renamed to `max_qos`:
+Subscribe now takes one or more `aiomqtt.TopicFilter` objects as positional arguments (sent in a single SUBSCRIBE packet). The `qos` parameter has been renamed to `max_qos`:
 
 ```python
 # v2
 await client.subscribe("topic", qos=1)
 
 # v3
-await client.subscribe("topic", max_qos=aiomqtt.QoS.AT_LEAST_ONCE)
+await client.subscribe(aiomqtt.TopicFilter("topic", max_qos=aiomqtt.QoS.AT_LEAST_ONCE))
+
+# v3 -- multiple subscriptions in a single SUBSCRIBE packet
+await client.subscribe(
+    aiomqtt.TopicFilter("a/#"),
+    aiomqtt.TopicFilter("b/#", max_qos=aiomqtt.QoS.AT_LEAST_ONCE),
+)
 ```
 
 ## Manual acknowledgments
@@ -118,7 +124,7 @@ client = aiomqtt.Client("test.mosquitto.org")
 while True:
     try:
         async with client:
-            await client.subscribe("topic")
+            await client.subscribe(aiomqtt.TopicFilter("topic"))
             async for message in client.messages:
                 print(message.payload)
     except aiomqtt.MqttError:

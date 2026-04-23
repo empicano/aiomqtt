@@ -18,7 +18,9 @@ async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
 
 ```python
 async with aiomqtt.Client(hostname="test.mosquitto.org") as client:
-    await client.subscribe("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE)
+    await client.subscribe(
+        aiomqtt.TopicFilter("ducks/#"), max_qos=aiomqtt.QoS.AT_MOST_ONCE,
+    )
     async for message in client.messages():
         print(message.payload)
 ```

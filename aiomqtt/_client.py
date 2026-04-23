@@ -32,11 +32,10 @@ from mqtt5 import (
     PubRelPacket,
     PubRelReasonCode,
     QoS,
-    RetainHandling,
     SubAckPacket,
     SubAckReasonCode,
     SubscribePacket,
-    Subscription,
+    TopicFilter,
     UnsubAckPacket,
     UnsubAckReasonCode,
     UnsubscribePacket,
@@ -901,32 +900,15 @@ class Client:
 
     async def subscribe(
         self,
-        pattern: str,
-        *,
-        max_qos: QoS = QoS.EXACTLY_ONCE,
-        no_local: bool = False,
-        retain_as_published: bool = True,
-        retain_handling: RetainHandling = RetainHandling.SEND_ALWAYS,
+        *topic_filters: TopicFilter,
         subscription_id: int | None = None,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> SubAckPacket:
-        """Subscribe to a topic or pattern.
+        """Subscribe to one or more topic filters.
 
         Args:
-            pattern: The topic or pattern to subscribe to.
-            max_qos: The maximum QoS that the client wants to accept for this
-                subscription. Messages with higher QoS are downgraded.
-            no_local: If True, messages published by the client itself are not sent to
-                this subscription.
-            retain_as_published: If True, messages sent to this subscription keep the
-                retain flag they were published with. If False, messages have the retain
-                flag set to 0. Retained messages sent when the subscription is created
-                always have the retain flag set to 1.
-            retain_handling: Specifies if retained messages are sent when the
-                subscription is created. If SEND_ALWAYS, retained messages are sent.
-                If SEND_IF_SUBSCRIPTION_NOT_EXISTS, retained messages are sent only if
-                the subscription does not yet exist. If SEND_NEVER, retained messages
-                are not sent.
+            topic_filters: One or more ``TopicFilter`` objects. Sent as a single
+                SUBSCRIBE packet.
             subscription_id: The identifier of the subscription. The broker includes
                 this value in every message to the client that matches the
                 subscription.
@@ -943,15 +925,7 @@ class Client:
             await self._send(
                 SubscribePacket(
                     packet_id=packet_id,
-                    subscriptions=[
-                        Subscription(
-                            pattern=pattern,
-                            max_qos=max_qos,
-                            no_local=no_local,
-                            retain_as_published=retain_as_published,
-                            retain_handling=retain_handling,
-                        ),
-                    ],
+                    topic_filters=list(topic_filters),
                     subscription_id=subscription_id,
                     user_properties=user_properties,
                 )
@@ -961,30 +935,33 @@ class Client:
             )
         finally:
             del self._pending_subacks[packet_id]
-        if len(suback_packet.reason_codes) != 1:
+        if len(suback_packet.reason_codes) != len(topic_filters):
             await self._disconnect_and_close(
                 reason_code=DisconnectReasonCode.MALFORMED_PACKET
             )
             msg = "Received malformed packet"
             raise ProtocolError(msg)
-        if suback_packet.reason_codes[0] not in (
-            SubAckReasonCode.GRANTED_QOS_AT_MOST_ONCE,
-            SubAckReasonCode.GRANTED_QOS_AT_LEAST_ONCE,
-            SubAckReasonCode.GRANTED_QOS_EXACTLY_ONCE,
+        if any(
+            reason_code
+            not in (
+                SubAckReasonCode.GRANTED_QOS_AT_MOST_ONCE,
+                SubAckReasonCode.GRANTED_QOS_AT_LEAST_ONCE,
+                SubAckReasonCode.GRANTED_QOS_EXACTLY_ONCE,
+            )
+            for reason_code in suback_packet.reason_codes
         ):
             raise NegativeAckError(suback_packet)
         return suback_packet
 
     async def unsubscribe(
         self,
-        pattern: str,
-        *,
+        *patterns: str,
         user_properties: list[tuple[str, str]] | None = None,
     ) -> UnsubAckPacket:
-        """Unsubscribe from a topic or pattern.
+        """Unsubscribe from one or more patterns.
 
         Args:
-            pattern: The topic or pattern to unsubscribe from.
+            patterns: One or more patterns. Sent as a single UNSUBSCRIBE packet.
             user_properties: Name/value pairs to send with the packet. The meaning of
                 these properties is not defined by the specification. The same name is
                 allowed to appear more than once. The order is preserved.
@@ -998,7 +975,7 @@ class Client:
             await self._send(
                 UnsubscribePacket(
                     packet_id=packet_id,
-                    patterns=[pattern],
+                    patterns=list(patterns),
                     user_properties=user_properties,
                 )
             )
@@ -1007,15 +984,19 @@ class Client:
             )
         finally:
             del self._pending_unsubacks[packet_id]
-        if len(unsuback_packet.reason_codes) != 1:
+        if len(unsuback_packet.reason_codes) != len(patterns):
             await self._disconnect_and_close(
                 reason_code=DisconnectReasonCode.MALFORMED_PACKET
             )
             msg = "Received malformed packet"
             raise ProtocolError(msg)
-        if unsuback_packet.reason_codes[0] not in (
-            UnsubAckReasonCode.SUCCESS,
-            UnsubAckReasonCode.NO_SUBSCRIPTION_EXISTED,
+        if any(
+            reason_code
+            not in (
+                UnsubAckReasonCode.SUCCESS,
+                UnsubAckReasonCode.NO_SUBSCRIPTION_EXISTED,
+            )
+            for reason_code in unsuback_packet.reason_codes
         ):
             raise NegativeAckError(unsuback_packet)
         return unsuback_packet
