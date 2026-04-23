@@ -150,7 +150,7 @@ async def test_aexit_last_will() -> None:
             raise ProcessLookupError
     # Check that will message was published (and retained)
     async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
-        await client.subscribe(topic)
+        await client.subscribe(aiomqtt.TopicFilter(topic))
         message = await anext(client.messages())
         assert isinstance(message, aiomqtt.PublishPacket)
         assert message.payload == b"foo"
@@ -216,7 +216,7 @@ async def test_message_iterator_concurrency() -> None:
         t2 = tg.create_task(consume(r2))
         await r1.wait()
         await r2.wait()
-        await client.subscribe(topic)
+        await client.subscribe(aiomqtt.TopicFilter(topic))
         await client.publish(topic, b"foo")
         await client.publish(topic, b"bar")
 
@@ -637,8 +637,7 @@ async def test_publish_unsolicited_ack(
         nonlocal first
         if first:
             first = False
-            packet = packet_type(packet_id=999)
-            return packet.write() + data
+            return packet_type(packet_id=999).write() + data
         return data
 
     async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
@@ -724,6 +723,64 @@ async def test_pubcomp_disconnected() -> None:
 
 
 @pytest.mark.network
+async def test_subscribe() -> None:
+    """Test that subscribing to a topic receives messages published to it."""
+    topic = conftest.unique_topic()
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        suback_packet = await client.subscribe(aiomqtt.TopicFilter(topic))
+        assert len(suback_packet.reason_codes) == 1
+        await client.publish(
+            topic,
+            b"foo",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=next(client.packet_ids),
+        )
+        message = await anext(client.messages())
+        assert isinstance(message, aiomqtt.PublishPacket)
+        assert message.payload == b"foo"
+        assert message.packet_id is not None
+        await client.puback(message.packet_id)
+
+
+@pytest.mark.network
+async def test_subscribe_multiple() -> None:
+    """Test that multiple subscriptions can be sent in a single SUBSCRIBE packet."""
+    topic = conftest.unique_topic()
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        await client.subscribe(
+            aiomqtt.TopicFilter(topic + "/1"), aiomqtt.TopicFilter(topic + "/2")
+        )
+        await client.publish(
+            topic + "/1",
+            b"foo",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=next(client.packet_ids),
+        )
+        await client.publish(
+            topic + "/2",
+            b"bar",
+            qos=aiomqtt.QoS.AT_LEAST_ONCE,
+            packet_id=next(client.packet_ids),
+        )
+        payloads = set()
+        for _ in range(2):
+            message = await anext(client.messages())
+            assert isinstance(message, aiomqtt.PublishPacket)
+            assert message.packet_id is not None
+            payloads.add(message.payload)
+            await client.puback(message.packet_id)
+        assert payloads == {b"foo", b"bar"}
+
+
+@pytest.mark.network
+async def test_subscribe_empty() -> None:
+    """Test that subscribe() with no subscriptions is rejected client-side."""
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        with pytest.raises(ValueError):  # noqa: PT011
+            await client.subscribe()
+
+
+@pytest.mark.network
 async def test_subscribe_disconnected() -> None:
     """Test that subscribe call fails when the client is not connected."""
     client = aiomqtt.Client(hostname=conftest.HOSTNAME)
@@ -740,17 +797,17 @@ async def test_subscribe_disconnected() -> None:
             await client._close()
 
     with pytest.raises(aiomqtt.ConnectError):
-        await client.subscribe(topic)
+        await client.subscribe(aiomqtt.TopicFilter(topic))
     async with client:
         with (
             unittest.mock.patch.object(client, "_send", side_effect=send_mock),
             pytest.raises(aiomqtt.ConnectError),
         ):
-            await client.subscribe(topic)
+            await client.subscribe(aiomqtt.TopicFilter(topic))
         with pytest.raises(aiomqtt.ConnectError):
-            await client.subscribe(topic)
+            await client.subscribe(aiomqtt.TopicFilter(topic))
     with pytest.raises(aiomqtt.ConnectError):
-        await client.subscribe(topic)
+        await client.subscribe(aiomqtt.TopicFilter(topic))
 
 
 @pytest.mark.network
@@ -782,7 +839,7 @@ async def test_unsubscribe() -> None:
     """Test that messages are no longer received after unsubscribing from a topic."""
     topic = conftest.unique_topic()
     async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
-        await client.subscribe(topic)
+        await client.subscribe(aiomqtt.TopicFilter(topic))
         # QoS = 1 guarantees delivery before subscribe/unsubscribe takes effect
         await client.publish(
             topic,
@@ -797,7 +854,7 @@ async def test_unsubscribe() -> None:
             qos=aiomqtt.QoS.AT_LEAST_ONCE,
             packet_id=next(client.packet_ids),
         )
-        await client.subscribe(topic)
+        await client.subscribe(aiomqtt.TopicFilter(topic))
         await client.publish(
             topic,
             b"baz",
@@ -805,14 +862,33 @@ async def test_unsubscribe() -> None:
             packet_id=next(client.packet_ids),
         )
         # We should only receive the first and last message
-        message = await anext(client.messages())
-        assert isinstance(message, aiomqtt.PublishPacket)
-        assert message.payload == b"foo"
-        await client.puback(message.packet_id)  # type: ignore[arg-type]
-        message = await anext(client.messages())
-        assert isinstance(message, aiomqtt.PublishPacket)
-        assert message.payload == b"baz"
-        await client.puback(message.packet_id)  # type: ignore[arg-type]
+        payloads = set()
+        for _ in range(2):
+            message = await anext(client.messages())
+            assert isinstance(message, aiomqtt.PublishPacket)
+            assert message.packet_id is not None
+            payloads.add(message.payload)
+            await client.puback(message.packet_id)
+        assert payloads == {b"foo", b"baz"}
+
+
+@pytest.mark.network
+async def test_unsubscribe_multiple() -> None:
+    """Test that multiple patterns can be sent in a single UNSUBSCRIBE packet."""
+    topic = conftest.unique_topic()
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        await client.subscribe(
+            aiomqtt.TopicFilter(topic + "/1"), aiomqtt.TopicFilter(topic + "/2")
+        )
+        await client.unsubscribe(topic + "/1", topic + "/2")
+
+
+@pytest.mark.network
+async def test_unsubscribe_empty() -> None:
+    """Test that unsubscribe() with no patterns is rejected client-side."""
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        with pytest.raises(ValueError):  # noqa: PT011
+            await client.unsubscribe()
 
 
 @pytest.mark.network
