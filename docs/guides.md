@@ -184,6 +184,14 @@ asyncio.run(main())
 > [!NOTE]
 > Setting the `max_qos` parameter in the subscription to `QoS.AT_MOST_ONCE` means that the broker downgrades all messages to your client to QoS=0. Setting it to `QoS.AT_LEAST_ONCE` means that the broker downgrades QoS=2 messages to QoS=1. Setting `max_qos` to `QoS.EXACTLY_ONCE` (the default) means that messages are delivered at the QoS level with which they were published.
 
+### Receiving messages with QoS=0
+
+aiomqtt does not queue incoming QoS=0 messages. When the receive loop handles a message, a consumer must already be waiting for the next item from `client.messages()`. Otherwise, aiomqtt drops the message. This is intentional.
+
+A consumer that is processing a message is not waiting for the next one. Even a fast consumer can miss messages in a burst. The receive loop can handle the next message before the consumer waits again. [Multiple consumer tasks](#handling-messages-concurrently) can reduce these drops, but they do not guarantee delivery.
+
+To avoid these drops, publish with QoS=1 or QoS=2 and set the subscription's `max_qos` to allow that level. Follow the acknowledgment steps for [QoS=1](#receiving-messages-with-qos1) or [QoS=2](#receiving-messages-with-qos2). Increasing `receive_max` does not add a queue for QoS=0.
+
 ### Receiving messages with QoS=1
 
 Messages sent with QoS=1 and QoS=2 must be acknowledged by the receiver. aiomqtt gives you full control over message acknowledgments. This allows you to ensure that messages are processed and/or persisted before acknowledgment, and lets you fine-tune how your code applies backpressure.
@@ -298,7 +306,7 @@ async def consume(client: aiomqtt.Client) -> None:
 
 
 async def main() -> None:
-    async with aiomqtt.Client("test.mosquitto.org", receive_max=16) as client:
+    async with aiomqtt.Client(hostname="test.mosquitto.org", receive_max=16) as client:
         await client.subscribe(aiomqtt.TopicFilter("ducks/#", max_qos=aiomqtt.QoS.AT_MOST_ONCE))
         async with asyncio.TaskGroup() as tg:
             for _ in range(4):  # The number of consumer tasks
