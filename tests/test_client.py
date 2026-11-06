@@ -1,6 +1,7 @@
 """Tests for the client."""
 
 import asyncio
+import contextlib
 import socket
 import ssl
 import sys
@@ -985,3 +986,78 @@ async def test_broker_disconnect() -> None:
         ):
             await client.disconnected()
         assert not any(isinstance(p, mqtt5.DisconnectPacket) for p in packets_sent)
+
+
+@pytest.mark.parametrize("use_timeout", [False, True], ids=["cancel", "timeout"])
+async def test_aenter_reusable_after_cancelled_handshake(*, use_timeout: bool) -> None:
+    """Reuse a client whose first real MQTT handshake was cancelled."""
+    accepted: asyncio.Queue[tuple[asyncio.StreamReader, asyncio.StreamWriter]] = (
+        asyncio.Queue()
+    )
+    writers: list[asyncio.StreamWriter] = []
+
+    def accept(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        writers.append(writer)
+        accepted.put_nowait((reader, writer))
+
+    async def receive(reader: asyncio.StreamReader) -> mqtt5.Packet:
+        data = bytearray()
+        while True:
+            data.extend(await reader.readexactly(1))
+            try:
+                with memoryview(data) as view:
+                    packet, _ = mqtt5.read(view)
+            except IndexError:
+                continue
+            return packet
+
+    server = await asyncio.start_server(accept, "127.0.0.1", 0)
+    client = aiomqtt.Client(
+        hostname="127.0.0.1", port=server.sockets[0].getsockname()[1]
+    )
+    pending = asyncio.create_task(client.__aenter__())
+    retry: asyncio.Task[asyncio.StreamReader] | None = None
+    try:
+        async with asyncio.timeout(5):
+            reader, _ = await accepted.get()
+            assert isinstance(await receive(reader), mqtt5.ConnectPacket)
+            if use_timeout:
+                with pytest.raises(TimeoutError):
+                    await asyncio.wait_for(pending, timeout=0)
+            else:
+                pending.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await pending
+            # The cancelled handshake closes its actual TCP connection.
+            assert await reader.read() == b""
+
+            async def acknowledge_retry() -> asyncio.StreamReader:
+                reader, writer = await accepted.get()
+                assert isinstance(await receive(reader), mqtt5.ConnectPacket)
+                writer.write(mqtt5.ConnAckPacket().write())
+                await writer.drain()
+                return reader
+
+            retry = asyncio.create_task(acknowledge_retry())
+            async with client:
+                reader = await retry
+                # Reuse must not weaken the existing non-reentrancy guard.
+                with pytest.raises(RuntimeError, match="not reentrant"):
+                    await client.__aenter__()
+                await client.publish("retry", b"connected")
+                packet = await receive(reader)
+                assert isinstance(packet, mqtt5.PublishPacket)
+                assert packet.payload == b"connected"
+            assert isinstance(await receive(reader), mqtt5.DisconnectPacket)
+            assert await reader.read() == b""
+    finally:
+        for task in (pending, retry):
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for writer in writers:
+            writer.close()
+            await writer.wait_closed()
+        server.close()
+        await server.wait_closed()
