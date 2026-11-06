@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+- Remove cancelled message consumers before dispatching later messages (@omrzk)
+
 - Treat PUBREC with reason code 16 (no matching subscribers) as successful (@empicano in #393)
 - Treat UNSUBACK with reason code 17 (no subscription existed) as successful (@empicano in #393)
 - Make socket connection asynchronous (@empicano in #399)
