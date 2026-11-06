@@ -985,3 +985,49 @@ async def test_broker_disconnect() -> None:
         ):
             await client.disconnected()
         assert not any(isinstance(p, mqtt5.DisconnectPacket) for p in packets_sent)
+
+
+@pytest.mark.parametrize("qos", [aiomqtt.QoS.AT_MOST_ONCE, aiomqtt.QoS.AT_LEAST_ONCE])
+@pytest.mark.parametrize("use_timeout", [False, True], ids=["cancel", "timeout"])
+@pytest.mark.network
+async def test_messages_after_cancelled_consumer(
+    qos: aiomqtt.QoS, *, use_timeout: bool
+) -> None:
+    """A cancelled consumer must not consume a later message."""
+    topic = conftest.unique_topic()
+    async with aiomqtt.Client(hostname=conftest.HOSTNAME) as client:
+        await client.subscribe(aiomqtt.TopicFilter(topic, max_qos=qos))
+        waiting = asyncio.Event()
+
+        async def consume() -> aiomqtt.PublishPacket | aiomqtt.PubRelPacket:
+            waiting.set()
+            return await anext(client.messages())
+
+        abandoned = asyncio.create_task(consume())
+        await waiting.wait()
+        if use_timeout:
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(abandoned, timeout=0)
+        else:
+            abandoned.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await abandoned
+
+        waiting.clear()
+        active = asyncio.create_task(consume())
+        await waiting.wait()
+        try:
+            await client.publish(topic, b"active consumer", qos=qos, packet_id=1)
+            async with asyncio.timeout(2):
+                packet = await active
+            assert isinstance(packet, aiomqtt.PublishPacket)
+            assert packet.payload == b"active consumer"
+            assert packet.qos == qos
+            if qos == aiomqtt.QoS.AT_LEAST_ONCE:
+                assert packet.packet_id is not None
+                await client.puback(packet.packet_id)
+        finally:
+            if not active.done():
+                active.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await active

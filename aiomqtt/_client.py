@@ -438,7 +438,13 @@ class Client:
             fut: asyncio.Future[PublishPacket | PubRelPacket] = asyncio.Future()
             self._getters.append(fut)
             # Wait until we either have a message or disconnect
-            yield await self._disconnected_or(fut)
+            try:
+                packet = await self._disconnected_or(fut)
+            finally:
+                if not fut.done():
+                    with contextlib.suppress(ValueError):
+                        self._getters.remove(fut)
+            yield packet
 
     def _packet_id_generator(self) -> typing.Iterator[int]:
         packet_id = 1
