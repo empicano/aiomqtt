@@ -221,7 +221,7 @@ class Client:
         await self._context_lock.acquire()
         try:
             await self._connect()
-        except (ProtocolError, NegativeAckError, OSError):
+        except BaseException:
             self._context_lock.release()
             raise
         # Start background tasks
